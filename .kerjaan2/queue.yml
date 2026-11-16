@@ -1,3 +1,2 @@
 goal: Build the skeleto lite rewrite end to end as CLAUDE.md specifies: project and public types, marker reader, dependency sorter, scanner, startup and container, README
 order:
-  - 261116100206   # README

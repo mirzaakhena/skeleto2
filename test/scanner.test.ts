@@ -28,6 +28,7 @@ test("a component is named after its return type exactly as written, and knows w
         metadata: { name: "SaveUser", dependencies: [], mainDecorator: { name: "Action", data: undefined }, additionalDecorators: [] },
         filePath: join(directory, "user.ts"),
         functionName: "implSaveUser",
+        awaited: false,
       },
     ]);
   });
@@ -40,6 +41,71 @@ test("a dotted or generic return type is kept as written", async () => {
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.functions.map((found) => found.metadata.name), ["winston.Logger", "Repository<User>"]);
 });
+
+// ---- 4.3: a config declared Promise<X> ----
+
+const PROMISED: [string, string][] = [
+  ["Promise<Database>", "Database"],
+  ["Promise< Database >", "Database"],
+  ["Promise<\n  Database\n>", "Database"],
+  ["Promise<winston.Logger>", "winston.Logger"],
+  ["Promise<Repository<User>>", "Repository<User>"],
+  // Opened once only: whoever asks for the inner name is asking for a promise by name.
+  ["Promise<Promise<Database>>", "Promise<Database>"],
+];
+
+for (const [written, name] of PROMISED) {
+  test(`a config declared ${JSON.stringify(written)} is the component ${name}, marked as one to wait for`, async () => {
+    const result = await scan({ "a.ts": `/** @Config */\nexport async function connect(settings: Settings): ${written} { return null as any; }\n` });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.functions.map((found) => [found.metadata.name, found.awaited, found.metadata.dependencies]), [[name, true, ["Settings"]]]);
+  });
+}
+
+test("a config declared Promise<X> without the async keyword is waited for all the same", async () => {
+  const result = await scan({ "a.ts": `/** @Config */\nexport function connect(): Promise<Database> { return null as any; }\n` });
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.functions.map((found) => [found.metadata.name, found.awaited]), [["Database", true]]);
+});
+
+for (const written of ["Database", "PromiseLike<Database>", "Promise<Database> | undefined", "Promise", "Promise<A, B>", "globalThis.Promise<Database>", "Pending", "Array<Promise<Database>>"]) {
+  test(`a config declared ${written} keeps that name as written and is not waited for`, async () => {
+    // Pending is an alias of a promise: its definition is never read, so it stays a name like any other.
+    const result = await scan({ "a.ts": `type Pending = Promise<Database>;\n/** @Config */\nexport function connect(): ${written} { return null as any; }\n` });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.functions.map((found) => [found.metadata.name, found.awaited]), [[written, false]]);
+  });
+}
+
+test("two configs, one returning X and one returning Promise<X>, are two functions returning the same type name", async () => {
+  const result = await scan({
+    "a.ts": `/** @Config */\nexport function implPlain(): Database { return null as any; }\n`,
+    "b.ts": `/** @Config */\nexport async function implAsync(): Promise<Database> { return null as any; }\n`,
+  });
+  assertOneError(result, /^Database: returned by both/, /implPlain \(a\.ts\)/, /implAsync \(b\.ts\)/);
+});
+
+test("two configs both returning Promise<X> are two functions returning the same type name", async () => {
+  const result = await scan({
+    "a.ts": `/** @Config */\nexport async function one(): Promise<Database> { return null as any; }\n/** @Config */\nexport async function two(): Promise< Database > { return null as any; }\n`,
+  });
+  assertOneError(result, /^Database: returned by both/, /one \(a\.ts\)/, /two \(a\.ts\)/);
+});
+
+for (const marker of ["Wrapper", "Action"]) {
+  test(`a @${marker} declared Promise<X> is a mistake naming the function, and is not marked as one to wait for`, async () => {
+    const result = await scan({ "a.ts": `/** @${marker} */\nexport async function implLate(): Promise<Late> { return null as any; }\n` });
+    assertOneError(result, /^implLate \(a\.ts\): /, new RegExp(`is marked @${marker} but returns Promise<Late>`), /only a @Config may be asynchronous/);
+    // Still listed under the inner name, so that a component that needs Late is not reported a second time as needing something unknown.
+    assert.deepEqual(result.functions.map((found) => [found.metadata.name, found.awaited]), [["Late", false]]);
+  });
+
+  test(`a @${marker} declared with another name that merely mentions a promise is no mistake`, async () => {
+    const result = await scan({ "a.ts": `/** @${marker} */\nexport function implLate(): PromiseLike<Late> { return null as any; }\n` });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.functions.map((found) => found.metadata.name), ["PromiseLike<Late>"]);
+  });
+}
 
 test("dependencies are the parameter types in parameter order", async () => {
   const result = await scan({
@@ -272,6 +338,8 @@ test("one scan returns every mistake of a fixture with several different ones", 
         `/**\n * @Action\n * @Transction\n */\nexport function implTypo(): Typo { return null as any; }`,
         `/**\n * @Action\n * @Logging {"level": }\n */\nexport function implBadJson(): BadJson { return null as any; }`,
         `/** @Config */\nexport function implDup(): Dup { return null as any; }`,
+        `/** @Action */\nexport async function implLateAction(): Promise<LateAction> { return null as any; }`,
+        `/** @Wrapper */\nexport async function implLateWrapper(): Promise<LateWrapper> { return null as any; }`,
         // Everything wrong at once on one function: each of its mistakes is still reported.
         `/**\n * @Config oops\n * @Nope\n */\nfunction implWorst(a, b) { return 1; }`,
       ].join("\n\n"),
@@ -288,6 +356,8 @@ test("one scan returns every mistake of a fixture with several different ones", 
     [/implWrap/, /@Wrapper takes no data or/],
     [/implTypo/, /@Transction is not an allowed marker/],
     [/implBadJson/, /@Logging has invalid JSON/],
+    [/implLateAction/, /is marked @Action but returns Promise<LateAction>/],
+    [/implLateWrapper/, /is marked @Wrapper but returns Promise<LateWrapper>/],
     [/implWorst/, /@Config takes no data/],
     [/implWorst/, /@Nope is not an allowed marker/],
     [/implWorst/, /not exported/],

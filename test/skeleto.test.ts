@@ -34,6 +34,18 @@ function component(kind: Kind, name: string, dependencies: string[] = [], result
   return `/** ${marker} */\nexport function make${name.replace(/\W/g, "")}(${parameters}): ${name} {\n  ${call}\n  const made: any = ${result ?? defaults[kind]};\n  ${S}.raw["${name}"] = made;\n  return made;\n}\n`;
 }
 
+/**
+ * Source of a config declared `Promise<name>`. It records its call, lets `delay` milliseconds pass, records `<name> ready` and then
+ * gives `result`, an expression evaluated after the delay: one that throws makes the config fail late, as a refused connection would.
+ */
+function asyncConfig(name: string, dependencies: string[] = [], result: string = `{ id: "${name}" }`, delay: number = 25): string {
+  const parameters = dependencies.map((dependency, index) => `p${index}: ${dependency}`).join(", ");
+  const call = `${S}.calls.push(["${name}", [${dependencies.map((_, index) => `p${index}`).join(", ")}]]);`;
+  const wait = `await new Promise((resolve) => setTimeout(resolve, ${delay}));`;
+  const ready = `${S}.raw["${name}"] = made;\n  ${S}.calls.push(["${name} ready", []]);`;
+  return `/** @Config */\nexport async function make${name}(${parameters}): Promise<${name}> {\n  ${call}\n  ${wait}\n  const made: any = ${result};\n  ${ready}\n  return made;\n}\n`;
+}
+
 async function failure(files: Record<string, string>, options?: SkeletoOptions): Promise<Error> {
   reset();
   return withFixture(files, async (directory) => {
@@ -425,3 +437,178 @@ test("a thrown value that is not an Error is still reported and kept as the caus
   assert.match(error.message, /^Settings: function makeSettings .* failed while creating it: plain text$/);
   assert.equal(error.cause, "plain text");
 });
+
+// ---- asynchronous configs (4.3, 4.7) ----
+
+test("an async config is waited for: what depends on it is created after it has finished, and receives the finished value under the plain name", async () => {
+  const state = reset();
+  const files = {
+    "a.ts": component("Action", "SaveUser", ["Database"]) + component("Wrapper", "Audit", ["Database"]) + component("Config", "Pool", ["Database"]),
+    "b.ts": asyncConfig("Database", ["Settings"]) + component("Config", "Settings"),
+  };
+  await withFixture(files, async (directory) => {
+    const started = Skeleto.start(directory);
+    // While the config is still on its way nothing that needs it exists yet.
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const container = (await started).getContainer();
+    assert.deepEqual(state.calls.map(([name]) => name), ["Settings", "Database", "Database ready", "Pool", "Audit", "SaveUser"]);
+    const database = state.raw["Database"];
+    assert.deepEqual(database, { id: "Database" });
+    const callsByName = new Map(state.calls);
+    assert.deepEqual(callsByName.get("Database"), ["Settings"]);
+    for (const dependant of ["Pool", "Audit", "SaveUser"]) {
+      const received = callsByName.get(dependant) ?? [];
+      assert.equal(received.length, 1);
+      assert.equal(received[0], database, `${dependant} did not receive the finished value`);
+      assert.ok(!(received[0] instanceof Promise));
+    }
+  });
+});
+
+test("startup is still pending while an async config has not finished", async () => {
+  const state = reset();
+  await withFixture({ "a.ts": asyncConfig("Database", [], undefined, 60) + component("Action", "SaveUser", ["Database"]) }, async (directory) => {
+    let done = false;
+    const started = Skeleto.start(directory).then((skeleto) => ((done = true), skeleto));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    assert.equal(done, false);
+    assert.deepEqual(state.calls.map(([name]) => name), ["Database"]);
+    await started;
+    assert.deepEqual(state.calls.map(([name]) => name), ["Database", "Database ready", "SaveUser"]);
+  });
+});
+
+test("an async config needed by other configs, a wrapper and several actions is called once, and all receive the very same instance, which the container lists under the plain name", async () => {
+  const state = reset();
+  const files = {
+    "a.ts": asyncConfig("Database") + component("Config", "Users", ["Database"]) + asyncConfig("Cache", ["Database", "Users"], undefined, 5),
+    "b.ts": component("Wrapper", "Audit", ["Database"]) + component("Action", "FindUser", ["Database", "Cache"]) + component("Action", "SaveUser", ["FindUser", "Database"]),
+  };
+  await withFixture(files, async (directory) => {
+    const [first, second] = await Promise.all([Skeleto.start(directory), Skeleto.start(directory)]);
+    assert.equal(first, second);
+    const container = first.getContainer();
+    assert.equal(state.calls.filter(([name]) => name === "Database").length, 1);
+    assert.equal(state.calls.filter(([name]) => name === "Database ready").length, 1);
+    assert.deepEqual(state.calls.map(([name]) => name), ["Database", "Database ready", "Users", "Cache", "Cache ready", "Audit", "FindUser", "SaveUser"]);
+
+    const database = state.raw["Database"];
+    const callsByName = new Map(state.calls);
+    assert.equal(callsByName.get("Users")?.[0], database);
+    assert.equal(callsByName.get("Cache")?.[0], database);
+    assert.equal(callsByName.get("Audit")?.[0], database);
+    assert.equal(callsByName.get("FindUser")?.[0], database);
+    assert.equal(callsByName.get("SaveUser")?.[1], database);
+    // An async config that itself needs an async config gets the finished value too, and is finished in its turn.
+    assert.equal(callsByName.get("FindUser")?.[1], state.raw["Cache"]);
+    assert.deepEqual(state.raw["Cache"], { id: "Cache" });
+
+    assert.deepEqual([...container.keys()].sort(), ["Audit", "Cache", "Database", "FindUser", "SaveUser", "Users"]);
+    assert.equal(container.get("Database")?.getInstance(), database);
+    assert.ok(!(container.get("Database")?.getInstance() instanceof Promise));
+    assert.equal(container.get("Cache")?.getInstance(), state.raw["Cache"]);
+    assert.deepEqual(container.get("Database")?.getMetadata(), { name: "Database", dependencies: [], mainDecorator: { name: "Config", data: undefined }, additionalDecorators: [] });
+    assert.deepEqual(container.get("FindUser")?.getMetadata().dependencies, ["Database", "Cache"]);
+    assert.equal(container.get("Promise<Database>"), undefined);
+  });
+});
+
+test("a config declared Promise<X> that returns a plain value, or is not written with async, gives that value", async () => {
+  const state = reset();
+  const plain = `/** @Config */\nexport function makeClock(): Promise<Clock> {\n  return "tick" as any;\n}\n`;
+  const thenable = `/** @Config */\nexport function makeDatabase(): Promise<Database> {\n  return new Promise((resolve) => setTimeout(() => resolve("db" as any), 10));\n}\n`;
+  await withFixture({ "a.ts": plain + thenable + component("Action", "SaveUser", ["Clock", "Database"]) }, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.equal(container.get("Clock")?.getInstance(), "tick");
+    assert.equal(container.get("Database")?.getInstance(), "db");
+    assert.deepEqual(new Map(state.calls).get("SaveUser"), ["tick", "db"]);
+  });
+});
+
+test("only the written Promise<X> is waited for: a config declared with an alias of a promise keeps its name and its promise", async () => {
+  reset();
+  const alias = `export type Pending = Promise<string>;\n/** @Config */\nexport function makePending(): Pending {\n  return Promise.resolve("later");\n}\n`;
+  await withFixture({ "a.ts": alias }, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual([...container.keys()], ["Pending"]);
+    const instance: unknown = container.get("Pending")?.getInstance();
+    assert.ok(instance instanceof Promise);
+    assert.equal(await instance, "later");
+  });
+});
+
+test("an async config that fails stops startup with an error naming component and function and carrying the cause, creates nothing later, and the next start scans again", async () => {
+  const state = reset();
+  state.fail = true;
+  const breaking = `(() => { if (${S}.fail) throw new TypeError("no connection"); return { id: "Database" }; })()`;
+  const files = {
+    "a.ts": component("Config", "Clock") + asyncConfig("Database", ["Clock"], breaking),
+    "b.ts": component("Config", "Settings", ["Database"]) + component("Wrapper", "Audit") + component("Action", "SaveUser", ["Database"]),
+  };
+  await withFixture(files, async (directory) => {
+    const error: Error = await Skeleto.start(directory).then(() => assert.fail("startup should have failed"), (reason: Error) => reason);
+    assert.equal(error.message, `Database: function makeDatabase (${join(directory, "a.ts")}) failed while waiting for it: no connection`);
+    assert.ok(error.cause instanceof TypeError);
+    assert.equal((error.cause as Error).message, "no connection");
+    // Nothing after the broken config was created: not the config that needs it, and no wrapper or action either.
+    assert.deepEqual(state.calls.map(([name]) => name), ["Clock", "Database"]);
+
+    // Still failing: the failure was not remembered, so the config is tried again.
+    await assert.rejects(Skeleto.start(directory), /Database: function makeDatabase .* failed while waiting for it: no connection/);
+    assert.deepEqual(state.calls.map(([name]) => name), ["Clock", "Database", "Clock", "Database"]);
+
+    state.fail = false;
+    await writeFile(join(directory, "c.ts"), component("Action", "FindUser", ["Database"]));
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual([...container.keys()].sort(), ["Audit", "Clock", "Database", "FindUser", "SaveUser", "Settings"]);
+    assert.equal(container.get("Database")?.getInstance(), state.raw["Database"]);
+  });
+});
+
+test("an async config that throws before its first await, or rejects with something that is not an Error, is reported the same way", async () => {
+  const early = `/** @Config */\nexport async function makeEarly(): Promise<Early> {\n  throw new RangeError("at once");\n}\n`;
+  const first = await failure({ "a.ts": early + component("Action", "SaveUser", ["Early"]) });
+  assert.match(first.message, /^Early: function makeEarly \(.*a\.ts\) failed while waiting for it: at once$/);
+  assert.ok(first.cause instanceof RangeError);
+  assert.deepEqual(shared.skeletoTest.calls, []);
+
+  const second = await failure({ "a.ts": `/** @Config */\nexport function makeOdd(): Promise<Odd> {\n  return Promise.reject("plain text");\n}\n` });
+  assert.match(second.message, /^Odd: function makeOdd .* failed while waiting for it: plain text$/);
+  assert.equal(second.cause, "plain text");
+
+  // Not written async, so the throw happens in the call itself.
+  const third = await failure({ "a.ts": `/** @Config */\nexport function makeSync(): Promise<Sync> {\n  throw new Error("in the call");\n}\n` });
+  assert.match(third.message, /^Sync: function makeSync .* failed while creating it: in the call$/);
+});
+
+test("two configs, one returning X and one returning Promise<X>, stop startup as two functions returning the same type name", async () => {
+  const error = await failure({ "a.ts": component("Config", "Database") + asyncConfig("Database").replace("makeDatabase", "connectDatabase") });
+  const lines = problems(error);
+  assert.equal(lines.length, 1, error.message);
+  assert.match(lines[0] ?? "", /^- Database: returned by both makeDatabase \(a\.ts\) and connectDatabase \(a\.ts\)/);
+  assert.deepEqual(shared.skeletoTest.calls, []);
+});
+
+for (const kind of ["Wrapper", "Action"] as const) {
+  test(`a @${kind} declared Promise<X> is a mistake naming the function, reported with the other mistakes and before any application file is imported`, async () => {
+    const boom = `throw new Error("module was imported");\n`;
+    const late = component(kind, "Late").replace("): Late {", "): Promise<Late> {").replace("export function", "export async function");
+    const error = await failure({
+      "a.ts": boom + late,
+      // Whatever needs Late is not reported a second time as needing something unknown.
+      "b.ts": boom + component("Action", "SaveUser", ["Late", "Nowhere"]) + `/** @Action */\nfunction makeHidden(): Hidden { return null as any; }\n`,
+    });
+    assert.doesNotMatch(error.message, /module was imported/);
+    assert.equal(error.cause, undefined);
+    assert.deepEqual(shared.skeletoTest.calls, []);
+    const lines = problems(error);
+    const lateLines = lines.filter((line) => line.includes("Late"));
+    assert.equal(lateLines[0], `- makeLate (a.ts): is marked @${kind} but returns Promise<Late>; only a @Config may be asynchronous, a @${kind} must return Late itself`);
+    assert.ok(lines.some((line) => /makeHidden \(b\.ts\): .*not exported/.test(line)), error.message);
+    assert.ok(lines.some((line) => /SaveUser: dependency Nowhere is not a known component/.test(line)), error.message);
+    assert.ok(!lines.some((line) => /Late is not a known component/.test(line)), error.message);
+    // A wrapper may not be needed by an action, which is a mistake of its own; an action may.
+    assert.equal(lines.length, kind === "Wrapper" ? 4 : 3, error.message);
+    assert.equal(lateLines.length, kind === "Wrapper" ? 2 : 1, error.message);
+  });
+}

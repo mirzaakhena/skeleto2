@@ -73,6 +73,9 @@ Inilah spesifikasi yang harus dipenuhi. Setiap butir di sini harus punya tes.
 ### 4.3 Nama dan dependency
 
 - **Nama komponen** adalah teks anotasi return type-nya, persis seperti tertulis (`SaveUser`, `winston.Logger`).
+- Pengecualian satu-satunya: `@Config` yang return type-nya tertulis `Promise<X>` adalah **config asinkron**, dan nama komponennya `X`, bukan `Promise<X>`. Yang dibaca tetap hanya teks anotasinya: hanya tulisan `Promise<...>` dengan tepat satu argumen yang dibuka, dan hanya satu lapis. Alias dari promise, `PromiseLike<X>`, atau `Promise<X> | undefined` tetap bernama seperti tertulis dan tidak ditunggu.
+- Karena namanya sama, config yang mengembalikan `X` dan config yang mengembalikan `Promise<X>` adalah dua fungsi yang mengembalikan nama tipe yang sama (kesalahan 4.2).
+- `@Wrapper` dan `@Action` selalu sinkron. Return type `Promise<...>` pada keduanya adalah kesalahan yang menyebut nama fungsinya, dilaporkan bersama kesalahan lain sebelum ada berkas yang diimpor. Komponen yang bergantung padanya tidak dilaporkan lagi sebagai dependency yang tidak ada.
 - **Dependency** adalah teks anotasi tipe setiap parameter, sesuai urutan parameter.
 - Dependency dicocokkan dengan nama komponen. Dependency yang tidak ada adalah kesalahan.
 
@@ -108,6 +111,10 @@ Data lain adalah kesalahan. Dengan begitu sisa `{"readTypeArguments": true}` dar
 
 - Urutannya: semua `@Config`, lalu semua `@Wrapper`, lalu semua `@Action`. Di dalam setiap kelompok, dependency selalu dibuat lebih dulu.
 - Setiap fungsi dipanggil **tepat satu kali**, dengan dependency sesuai urutan parameternya.
+- Hasil config asinkron (4.3) **ditunggu** sebelum komponen berikutnya dibuat. Yang disimpan di container dan disuntikkan ke setiap komponen yang bergantung padanya adalah nilai jadinya, instance yang sama untuk semuanya, bukan promise. Config asinkron ditunggu satu per satu menurut urutan pembuatan, tidak berbarengan.
+- Startup **tidak memasang batas waktu**: ia menunggu selama config itu menunggu. Batas waktu adalah urusan config itu sendiri (keputusan pemilik, 2026-11-16).
+- Config asinkron yang gagal (promise-nya ditolak) menghentikan startup sama seperti config yang melempar error: pesannya menyebut nama komponen dan fungsinya, error aslinya menjadi `cause`, komponen sesudahnya tidak dibuat, dan startup berikutnya memindai ulang.
+- Hasil komponen lain disimpan apa adanya dan tidak pernah ditunggu.
 - Hasil `@Action` dibungkus oleh **semua** `@Wrapper`. Wrapper dipanggil sebagai `wrapper(handler, metadata)` dan hasilnya menggantikan handler.
 - Urutan pembungkusan menurut `ordinal` (tanpa `ordinal` dianggap `0`): **angka lebih besar menjadi lapisan lebih luar**. Untuk `ordinal` yang sama, urutannya stabil menurut nama wrapper.
 - Wrapper yang mengembalikan `handler` apa adanya berarti tidak membungkus.

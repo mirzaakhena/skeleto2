@@ -19,14 +19,14 @@ Let a `@Config` be asynchronous. When its declared return type is `Promise<X>`, 
 
 ## Done when
 
-- [ ] A test shows an async config whose value arrives after a delay: a component depending on it declares the plain type name, receives the finished value, and is created only after the config has finished.
-- [ ] A test shows that an async config needed by several components (other configs and several actions) is called exactly once and that all of them receive the very same instance.
-- [ ] The container lists that config under the plain type name, with the finished value as its instance.
-- [ ] A test shows that an async config that fails stops startup with an error naming the component and its function and carrying the original error as its cause, that later components are not created, and that the next start scans again.
-- [ ] A test shows that two configs, one returning `X` and one returning `Promise<X>`, are reported as two functions returning the same type name.
-- [ ] Tests show that a `Promise<...>` return type on a `@Wrapper` and on an `@Action` is each a mistake naming the function, reported together with other mistakes and before any application file is imported.
-- [ ] `CLAUDE.md` sections 4.3 and 4.7 (in Indonesian) and the README (in English, with an example that its test starts) state the rule; the README also says that startup waits for a config without a time limit, so a config should set its own timeout.
-- [ ] The only runtime dependency is still `ts-morph` and the three commands of `CLAUDE.md` section 9 pass.
+- [x] A test shows an async config whose value arrives after a delay: a component depending on it declares the plain type name, receives the finished value, and is created only after the config has finished.
+- [x] A test shows that an async config needed by several components (other configs and several actions) is called exactly once and that all of them receive the very same instance.
+- [x] The container lists that config under the plain type name, with the finished value as its instance.
+- [x] A test shows that an async config that fails stops startup with an error naming the component and its function and carrying the original error as its cause, that later components are not created, and that the next start scans again.
+- [x] A test shows that two configs, one returning `X` and one returning `Promise<X>`, are reported as two functions returning the same type name.
+- [x] Tests show that a `Promise<...>` return type on a `@Wrapper` and on an `@Action` is each a mistake naming the function, reported together with other mistakes and before any application file is imported.
+- [x] `CLAUDE.md` sections 4.3 and 4.7 (in Indonesian) and the README (in English, with an example that its test starts) state the rule; the README also says that startup waits for a config without a time limit, so a config should set its own timeout.
+- [x] The only runtime dependency is still `ts-morph` and the three commands of `CLAUDE.md` section 9 pass.
 
 ## Out of scope
 
@@ -51,8 +51,28 @@ Running asynchronous configs side by side. Shutting resources down when the appl
 - A4 [unseen] No new file under src/ or test/: the tests go into test/scanner.test.ts and test/skeleto.test.ts and the README example into test/readme.test.ts. Configs are waited for one after another in the existing creation order
   Why: Section 6 fixes the file list, and 110902 is rewriting that list at the same time; running configs side by side is out of scope
   If wrong: Add the file and list it in CLAUDE.md section 6
+- A5 [unseen] The README example for the rule is the existing loadSettings config, turned into an async function declared Promise<Settings>, rather than a new example file; the printed output of the example is unchanged
+  Why: The README test allows one command and one output only, and the existing example then proves the rule end to end: the greeting delivered late is the one the action prints, and the container line reads Settings
+  If wrong: Make loadSettings synchronous again in README.md and add a separate async config file to the example, updating the output block and test/readme.test.ts
 
 ## Decisions
 - Lane standard: changes how the core names and creates configs, fully covered by the Done-when tests; nothing unrecoverable
 - Not solo and waits for nothing: 110902 edits other sections of CLAUDE.md (2, 4.8, 6) than this ticket (4.3, 4.7), and neither reads what the other builds, so they run side by side and the merge queue settles the shared file
 - This ticket overturns assumption A1 of 261116100205 (a result is stored as it is, never awaited) for configs declared Promise<X>; src/ is at 383 lines and will pass 400, which the owner allowed (reminder, not a limit)
+- The scanner recognises an async config from the syntax tree (a type reference named Promise with exactly one type argument), not from a pattern over the text, so Promise<A> | Promise<B> or Array<Promise<X>> are never opened by accident; it is still only the written annotation that is read
+- A failed async config reports the step 'waiting for it' (a config that throws in the call itself still reports 'creating it'), so the message tells whether the function or its promise failed
+
+## Handoff
+A @Config whose return type is written Promise<X> is now the component X. src/scanner.ts strips the wrapping (one level, exact spelling only) and sets ScannedFunction.awaited, true for configs only; a Promise<...> return on a @Wrapper or @Action is a scan mistake, still listed under the inner name so dependants get no second message. src/skeleto.ts awaits such a config, one at a time, before creating the next component; failure reports 'failed while waiting for it' with the cause. No time limit. Must not break: public types unchanged, other results never awaited, README example output unchanged. src/ is now 403 lines.
+
+## Review
+- 2026-11-16 standard, round 1, at fecb480: passed.
+  1: ran 'an async config is waited for' and 'startup is still pending...' by name: pass; order is Settings, Database, Database ready, then Pool/Audit/SaveUser, each given the identical finished object. Both fail in a copy with the await removed.
+  2: ran 'an async config needed by other configs, a wrapper and several actions is called once': pass; one call, one 'ready', identity asserted for two configs, a wrapper and two actions. Fails under the same mutation.
+  3: same test: container has Database and no Promise<Database>, getInstance() is the finished object, metadata name is Database; README example run lists 'Settings: @Config'.
+  4: ran 'an async config that fails stops startup...': pass; exact message names Database and makeDatabase, cause is the TypeError, calls stop at Clock, Database, second start calls again, a file added later is picked up. Fails under the mutation.
+  5: ran the scanner test and the startup test for X plus Promise<X>: both pass with the single line 'Database: returned by both ...' and nothing called.
+  6: ran scanner and startup tests for @Wrapper and @Action declared Promise<X>: pass; line names makeLate (a.ts), comes with the not-exported and unknown-dependency mistakes, module-level throw never ran.
+  7: read CLAUDE.md 4.3/4.7 (Indonesian) and README 'Asynchronous configs' (no time limit, own timeout); ran readme tests: example with async loadSettings type-checks, starts and prints the README output.
+  8: package.json untouched, dependencies is ts-morph only, only src/scanner.ts imports it. The three commands were not rerun, per the brief (recorded passing on this content); 39 targeted tests pass.
+  note: k2 test passes its arguments through sh, so a test-name pattern with | or spaces needs inner quotes. src/ at 403 lines is covered by Out of scope. The repo offers no checks beyond the section 9 commands.

@@ -11,3 +11,4 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - Skeleto.start imports the scanned .ts files and node caches modules by URL: a test that restarts a directory must change behaviour through a global flag or a new file, not by rewriting an imported file
 - README.md code blocks are run by test/readme.test.ts: a ts block needs '// path.ts' as its first line, and the text block must equal the real output of 'npx tsx main.ts'
 - Test fixtures run on a file system that may ignore case (macOS): two folders that differ only in case become one folder, so put them in separate fixtures
+- ScannedFunction (src/scanner.ts) has a fourth field, awaited; a test that deepEquals scan results must include it, and only a config declared exactly Promise<X> has it true

@@ -9,7 +9,7 @@ export type ActionHandler<REQUEST = any, RESPONSE = any> = (ctx: Context, reques
 export type Decorator = { name: string; data: any };
 
 export type FuncMetadata = {
-  /** Component name: the return type annotation, exactly as written. */
+  /** Component name: the return type annotation, exactly as written; for a config declared `Promise<X>` it is `X`. */
   name: string;
   /** Parameter type annotations, in parameter order. */
   dependencies: string[];

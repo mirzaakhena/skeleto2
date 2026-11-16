@@ -7,7 +7,7 @@ Skeleto wires up an application made of plain functions. You mark a function wit
 It does **binding only**:
 
 - It scans every `.ts` file below one directory for marked, exported, top-level functions, except the files and folders on its [exclusion list](#files-the-scan-leaves-out).
-- The **name** of a component is its return type, exactly as written (`Greet`, `winston.Logger`). Its **dependencies** are the types of its parameters, in order. Nothing else is read: Skeleto never opens a type definition.
+- The **name** of a component is its return type, exactly as written (`Greet`, `winston.Logger`); a config written `Promise<Settings>` is [asynchronous](#asynchronous-configs) and is named `Settings`. Its **dependencies** are the types of its parameters, in order. Nothing else is read: Skeleto never opens a type definition.
 - Every mistake (a missing dependency, a cycle, a misspelled marker, two functions returning the same type, ...) is reported at startup, all in one error, before any of your files is imported.
 
 It deliberately does **not** know about HTTP, routing, validation, OpenAPI, databases or logging. Anything of that sort belongs to your application, usually as a wrapper or as code that reads the container. Its only runtime dependency is `ts-morph`.
@@ -16,7 +16,7 @@ It deliberately does **not** know about HTTP, routing, validation, OpenAPI, data
 
 | Marker | What the function returns | May depend on |
 | --- | --- | --- |
-| `@Config` | anything: settings, a client, a logger | `@Config` |
+| `@Config` | anything: settings, a client, a logger; or a promise of it, which startup waits for | `@Config` |
 | `@Wrapper` | a function that takes an action and returns the action to use instead | `@Config` |
 | `@Action` | an async function `(ctx, input) => result` | `@Config`, `@Action` |
 
@@ -24,7 +24,7 @@ Any other dependency, and any circular one, stops startup. Configs are created f
 
 ## Example
 
-Configs. Each is called once, and its result is passed to whoever asks for its type:
+Configs. Each is called once, and its result is passed to whoever asks for its type. `loadSettings` is asynchronous: it is declared `Promise<Settings>`, so its component is `Settings`, startup waits for it, and `makeGreet` below receives the finished settings, not a promise.
 
 ```ts
 // src/config.ts
@@ -32,7 +32,9 @@ export type Settings = { greeting: string };
 export type Logger = (line: string) => void;
 
 /** @Config */
-export function loadSettings(): Settings {
+export async function loadSettings(): Promise<Settings> {
+  // Stands in for something slow: a secret read from a remote service, a connection that has to be opened first.
+  await new Promise((resolve) => setTimeout(resolve, 10));
   return { greeting: "Hello" };
 }
 
@@ -160,6 +162,18 @@ The output shows the layering: `LogWrapper` (ordinal 10) is outside `Transaction
 - A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Standard JSDoc tags (`@param`, `@returns`, ...) are ignored.
 - `Skeleto.start(directory)` defaults to `"src"` and gives one instance per directory: a second call for the same directory returns the first instance, and its options are ignored. A failed start is not remembered.
 - The container holds every component, configs and wrappers included, under its type name.
+
+## Asynchronous configs
+
+Some things are usable only after an asynchronous start: a database connection, a cache client, a secret kept elsewhere. Write such a config with the return type `Promise<X>`, as `loadSettings` does above:
+
+- Its component is `X`. Whoever needs it names the plain type `X` and receives the finished value; nobody gets a promise. The container lists it under `X` as well, with the finished value as its instance.
+- Startup waits for it before it creates anything that depends on it. It is still called once only, however many components need it, and they all receive the same instance. Configs are waited for one after another, not side by side.
+- A config that fails (its promise is rejected) stops startup, exactly as a config that throws does: the error names the component and its function and carries the original error as its `cause`. Nothing after it is created.
+- **Startup sets no time limit.** It waits for as long as the config does, so a config that never finishes keeps `Skeleto.start` pending for ever. Give the config its own timeout, usually the connect timeout of the client it creates.
+- Only a `@Config` may be asynchronous. A `@Wrapper` or an `@Action` whose return type is `Promise<...>` is a mistake, reported at startup with the others. (An action's *handler* is asynchronous as always; the function that creates it is not.)
+- The rule goes by what is written, like every other: only a return type spelled `Promise<...>` counts. A config declared with an alias of a promise, or `PromiseLike<X>`, keeps that name and its result is stored as it is.
+- `X` and `Promise<X>` are the same name, so two configs returning them are two functions returning the same type.
 
 ## Files the scan leaves out
 

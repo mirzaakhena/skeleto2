@@ -74,14 +74,17 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
   if (errors.length > 0) throw new Error(`Skeleto cannot start ${root}, ${errors.length} problem(s):\n${errors.map((line) => `- ${line}`).join("\n")}`);
 
   const container: Container = new Map();
-  const wrappers: { name: string; ordinal: number; wrap: WrapperHandler }[] = [];
+  const wrappers: { name: string; at: string; ordinal: number; wrap: WrapperHandler }[] = [];
   // A kind depends on earlier kinds or on itself only, so filtering the one sorted order by kind keeps dependencies first.
   for (const kind of Object.keys(ALLOWED_DEPENDENCIES)) {
     for (const name of sorted.order) {
       const { metadata, filePath, functionName, awaited } = byName.get(name)!;
       if (metadata.mainDecorator.name !== kind) continue;
+      const at = `${name}: function ${functionName} (${filePath})`;
       let step = "importing its file";
       let instance: any;
+      // A result that is not a function would be stored and injected as it is, and fail far from here: on the first request.
+      let notFunction: string | undefined;
       try {
         const create = (await import(pathToFileURL(filePath).href))[functionName];
         step = "creating it";
@@ -91,23 +94,31 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
           step = "waiting for it";
           instance = await instance;
         }
-        if (kind === "Action") {
-          // Applied from the innermost to the outermost: the wrapper applied last is the one a caller enters first.
-          for (const wrapper of wrappers) {
-            step = `wrapping it with ${wrapper.name}`;
-            instance = wrapper.wrap(instance, metadata);
-          }
+        if (kind !== "Config" && typeof instance !== "function") notFunction = `${at} returned ${describe(instance)}; a @${kind} must return a function`;
+        // Applied from the innermost to the outermost: the wrapper applied last is the one a caller enters first.
+        for (const wrapper of kind === "Action" && !notFunction ? wrappers : []) {
+          step = `wrapping it with ${wrapper.name}`;
+          instance = wrapper.wrap(instance, metadata);
+          if (typeof instance === "function") continue;
+          // The wrapper is at fault here, not the action, so the message leads with the wrapper.
+          notFunction = `${wrapper.at} returned ${describe(instance)} when wrapping ${name}; a wrapper must return a function for every action`;
+          break;
         }
       } catch (cause) {
         // Not collected like the checks: later components need this one, so going on would only produce follow-up failures.
         const reason = cause instanceof Error ? cause.message : String(cause);
-        throw new Error(`${name}: function ${functionName} (${filePath}) failed while ${step}: ${reason}`, { cause });
+        throw new Error(`${at} failed while ${step}: ${reason}`, { cause });
       }
+      if (notFunction) throw new Error(notFunction);
       container.set(name, new FuncInstanceMetadata(instance, metadata));
-      if (kind === "Wrapper") wrappers.push({ name, ordinal: metadata.mainDecorator.data?.ordinal ?? 0, wrap: instance });
+      if (kind === "Wrapper") wrappers.push({ name, at, ordinal: metadata.mainDecorator.data?.ordinal ?? 0, wrap: instance });
     }
     // Plain code-unit comparison of names, so the layering does not depend on the locale of the machine.
     if (kind === "Wrapper") wrappers.sort((a, b) => a.ordinal - b.ordinal || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   }
   return container;
+}
+
+function describe(value: unknown): string {
+  return value === null ? "null" : value instanceof Promise ? "a promise" : typeof value;
 }

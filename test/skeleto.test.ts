@@ -497,6 +497,77 @@ test("a thrown value that is not an Error is still reported and kept as the caus
   assert.equal(error.cause, "plain text");
 });
 
+// ---- actions and wrappers must yield a function (4.7) ----
+
+/** Starts the directory expecting a failure, then makes the fixture behave (the flag) and proves that the next start scans again by adding a file. */
+async function failsThenScansAgain(files: Record<string, string>, check: (error: Error, directory: string, state: Shared) => void): Promise<void> {
+  const state = reset();
+  state.fail = true;
+  await withFixture(files, async (directory) => {
+    const error: Error = await Skeleto.start(directory).then(() => assert.fail("startup should have failed"), (reason: Error) => reason);
+    check(error, directory, state);
+    state.fail = false;
+    await writeFile(join(directory, "later.ts"), component("Action", "AddedLater"));
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.ok(container.has("AddedLater"));
+    for (const [name, entry] of container) if (entry.getMetadata().mainDecorator.name !== "Config") assert.equal(typeof entry.getInstance(), "function", name);
+  });
+}
+
+const handlerSource = `async (ctx: any) => { ctx.data.trace.push("SaveUser"); return "SaveUser"; }`;
+
+for (const [written, described] of [["undefined", "undefined"], ["null", "null"], [`{ run() {} }`, "object"], [`"text"`, "string"], ["Promise.resolve(() => 1)", "a promise"]] as const) {
+  test(`an action function that returns ${written} stops startup with an error naming the action and its function, and the next start scans again`, async () => {
+    const files = { "a.ts": component("Wrapper", "Audit") + component("Action", "SaveUser", [], `${S}.fail ? ${written} : ${handlerSource}`) + component("Action", "Report", ["SaveUser"]) };
+    await failsThenScansAgain(files, (error, directory, state) => {
+      assert.equal(error.message, `SaveUser: function makeSaveUser (${join(directory, "a.ts")}) returned ${described}; a @Action must return a function`);
+      // No wrapper was handed the bad result, and nothing that needs the action was created.
+      assert.deepEqual(state.seen, []);
+      assert.deepEqual(state.calls.map(([name]) => name), ["Audit", "SaveUser"]);
+    });
+  });
+
+  test(`a wrapper function that returns ${written} stops startup with an error naming the wrapper and its function, not an action, and the next start scans again`, async () => {
+    const good = `(handler: any) => handler`;
+    const files = { "a.ts": component("Wrapper", "Audit", [], `${S}.fail ? ${written} : ${good}`) + component("Action", "SaveUser") };
+    await failsThenScansAgain(files, (error, directory, state) => {
+      assert.equal(error.message, `Audit: function makeAudit (${join(directory, "a.ts")}) returned ${described}; a @Wrapper must return a function`);
+      assert.ok(!error.message.includes("SaveUser"), error.message);
+      assert.deepEqual(state.calls.map(([name]) => name), ["Audit"]);
+    });
+  });
+
+  test(`a wrapper that returns ${written} for an action stops startup with an error naming the wrapper, its function and the action, and the next start scans again`, async () => {
+    const wrap = `(handler: any) => (${S}.fail ? ${written} : handler)`;
+    const files = { "w.ts": component("Wrapper", "Audit", [], wrap), "a.ts": component("Action", "SaveUser") + component("Action", "Report", ["SaveUser"]) };
+    await failsThenScansAgain(files, (error, directory, state) => {
+      assert.equal(error.message, `Audit: function makeAudit (${join(directory, "w.ts")}) returned ${described} when wrapping SaveUser; a wrapper must return a function for every action`);
+      assert.deepEqual(state.calls.map(([name]) => name), ["Audit", "SaveUser"]);
+    });
+  });
+}
+
+test("a wrapper that returns the handler only for actions with a certain marker stops startup naming the wrapper and the action without it", async () => {
+  const wrap = `(handler: any, metadata: any) => { ${S}.seen.push(["Transactional", metadata.name]); if (metadata.additionalDecorators.some((marker: any) => marker.name === "Transaction")) return handler; }`;
+  const files = {
+    "w.ts": component("Wrapper", "Transactional", [], wrap) + component("Wrapper", "Outer", [], undefined, `@Wrapper {"ordinal": 5}`),
+    "a.ts": component("Action", "FindUser", [], undefined, "@Action\n * @Transaction") + component("Action", "SaveUser", ["FindUser"]),
+  };
+  const error = await failure(files);
+  assert.match(error.message, /^Transactional: function makeTransactional \(.*w\.ts\) returned undefined when wrapping SaveUser; a wrapper must return a function for every action$/);
+  // The marked action passed; the unmarked one stopped at the faulty wrapper, before the wrapper outside it.
+  assert.deepEqual(shared.skeletoTest.seen.map(([name, metadata]) => [name, (metadata as any).name ?? metadata]), [["Transactional", "FindUser"], ["Outer", "FindUser"], ["Transactional", "SaveUser"]]);
+});
+
+test("a wrapper that returns the handler unchanged and one that returns a new function work together", async () => {
+  reset();
+  const files = { "a.ts": component("Wrapper", "Skip", [], "(handler: any) => handler") + component("Wrapper", "Audit") + component("Action", "SaveUser") };
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["Audit", "SaveUser"]);
+  });
+});
+
 // ---- asynchronous configs (4.3, 4.7) ----
 
 test("an async config is waited for: what depends on it is created after it has finished, and receives the finished value under the plain name", async () => {

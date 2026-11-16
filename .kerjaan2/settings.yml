@@ -1,0 +1,40 @@
+# kerjaan2 board settings. One `key: value` per line; a comment gets a line of its own.
+
+# The language ticket prose is written in. Structure stays English.
+language: English
+main_branch: main
+
+# Runs the project's checks, in a ticket's worktree. Empty when there are none.
+# A run passes by its exit status alone, so the command must exit non-zero whenever a
+# test did not run to its end: avoid options that force the runner to exit early.
+test_command: npm run typecheck && npm test && npm run build
+
+# Run in each new worktree (install packages, copy .env), and before one is removed.
+# They, and the tests, get K2_MAIN_TREE, K2_WORKTREE, K2_TICKET and K2_SLOT (a small number
+# unique per worktree in flight): name ports and test data after them.
+worktree_setup: if [ -f package.json ]; then npm install; fi
+worktree_teardown:
+
+# Tickets somebody is working on at once (one that only waits for the owner uses no room);
+# and true when test runs in different worktrees share nothing.
+max_parallel: 3
+parallel_tests: false
+
+# Lanes: a change under strict_paths (globs) makes a ticket strict;
+# a light ticket changing more files than light_max_files becomes standard.
+# Globs work as in .gitignore: `*.sql` and `auth/` match at any depth, `src/pay/**` from the root.
+strict_paths: []
+light_max_files: 8
+
+# Minutes an agent may hold a step without handing over before `k2 next` calls it stuck.
+stuck_after_minutes: 60
+
+# Inside a kerjaan2 subagent, refuse the k2 commands that belong to the foreman or the owner.
+# It works by prefixing each of that agent's shell commands with `export K2_ROLE=...;`.
+role_guard: true
+
+# Model per role: sonnet, opus, haiku, a full model id, or inherit (the session's model).
+model_worker_light: sonnet
+model_worker: inherit
+model_reviewer: inherit
+model_planner: inherit

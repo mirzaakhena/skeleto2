@@ -27,12 +27,12 @@ Correct and complete the two documents on exactly these points: the README in En
 
 ## Done when
 
-- [ ] The README says a marked default export is a mistake, not that it is skipped.
-- [ ] The README tells where markers go in a JSDoc block (after the description, one per line, nothing but their data after them) and what happens otherwise.
-- [ ] The README says that a failed startup leaves already created configs alive and that starting again creates them again.
-- [ ] The README says type names are matched exactly as written, with the spacing example.
-- [ ] `CLAUDE.md` 4.1 states the lowercase rule, 4.7 states which name is outside for equal ordinals, and 4.8 states the limit of "before any import" and that a failed start does not undo created configs.
-- [ ] Every code example in the README still starts in its test, and nothing outside `README.md` and `CLAUDE.md` changed.
+- [x] The README says a marked default export is a mistake, not that it is skipped.
+- [x] The README tells where markers go in a JSDoc block (after the description, one per line, nothing but their data after them) and what happens otherwise.
+- [x] The README says that a failed startup leaves already created configs alive and that starting again creates them again.
+- [x] The README says type names are matched exactly as written, with the spacing example.
+- [x] `CLAUDE.md` 4.1 states the lowercase rule, 4.7 states which name is outside for equal ordinals, and 4.8 states the limit of "before any import" and that a failed start does not undo created configs.
+- [x] Every code example in the README still starts in its test, and nothing outside `README.md` and `CLAUDE.md` changed.
 
 ## Out of scope
 
@@ -43,3 +43,6 @@ Anything in `~/Workspace/nukitu`. A script that builds the package on install. S
 ## Decisions
 - Lane light: text in README.md and CLAUDE.md only, cheap to undo; test/readme.test.ts still guards the examples
 - Waits for 261116113701: that ticket changes the rules this one writes down (with the marker list a lowercase tag equal to a marker is a mistake, and a marked constant is a mistake rather than skipped), so CLAUDE.md 4.1 and the README line on what is not picked up must be written against main as 261116113701 left it, and must not contradict what it added to 4.2, 4.5 and the README. Does not wait for 261116113702 or 261116113703: it only shares CLAUDE.md with them
+
+## Handoff
+Docs only. README: marked default export is a mistake; where markers go (after description, one per line, data only, effects of a trailing sentence or an @example line starting with a main marker); failed start leaves created configs alive and a retry creates them again; type names matched exactly with the Map spacing example; lowercase tags are standard. CLAUDE.md 4.1 lowercase rule and placement rule, 4.7 later name outside for equal ordinals, 4.8 limit of before any import and no undo of created configs, exact type-name text. No code or tests changed.

@@ -157,14 +157,17 @@ The output shows the layering: `LogWrapper` (ordinal 10) is outside `Transaction
 
 ## Rules worth knowing
 
-- A component must be an exported top-level `function` declaration with a return type annotation, and every parameter needs a type annotation. Arrow functions, methods and default exports are not picked up.
+- A component must be an exported top-level `function` declaration with a return type annotation, and every parameter needs a type annotation. Arrow functions and methods are not picked up. A marked function that is a default export is a mistake, not something skipped: only a named `export` counts, and startup says so.
 - One component per type name. To offer two things of the same shape, give each its own type alias, as `LogWrapper` and `TransactionWrapper` do above.
-- A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Standard JSDoc tags (`@param`, `@returns`, ...) are ignored.
+- A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Any tag that starts with a lowercase letter (`@param`, `@returns`, `@example`, ...) is a standard JSDoc tag and is ignored.
+- **Where markers go.** Write the description first, then the markers, one per line, with nothing after a marker but its data. Data runs on to the next marker, so a sentence written after a marker becomes that marker's data: after `@Action` that stops startup (it takes no data), and after an additional marker such as `@Audit` it silently becomes the data of that marker. For the same reason a line inside an `@example` body that starts with a main marker is read as a real marker and turns that function into a component; do not begin an example line with `@Config`, `@Wrapper` or `@Action`.
 - Pass `decorators` to catch markers that are misspelt or misplaced. Without it, a function with no main marker is not looked at, so a wrapper marked `@Wraper` is skipped and every action runs without it. With it, these stop startup, each naming the function or constant, its file and the marker:
   - a top-level function whose JSDoc block has markers but no main marker (`@Wraper`, `@Actions`, or only `@Transaction`);
   - a lowercase tag on any top-level function that equals a main marker or one of your markers when letter case is ignored (`@transaction`, `@action`, `@wrapper`);
   - a main marker on an exported top-level constant or on a function inside a namespace: only top-level function declarations can be components.
 - `Skeleto.start(directory)` defaults to `"src"` and gives one instance per directory: a second call for the same directory returns the first instance, and its options are ignored. A failed start is not remembered.
+- **Retrying a failed start.** A failed start does not undo what it already did: configs created before the failure stay alive, and their connections stay open. The next `Skeleto.start` scans again and creates those configs again. A loop that retries `start` can therefore leak connections; give a config that opens something a way to be closed, or restart the process instead of retrying.
+- **Type names are matched exactly as written.** `Map<string,number>` and `Map<string, number>` are two different names, so a dependency spelt one way does not find a component spelt the other way; it is reported as a missing dependency. Copy the spelling, or give the type an alias and use that.
 - The container holds every component, configs and wrappers included, under its type name.
 
 ## Asynchronous configs

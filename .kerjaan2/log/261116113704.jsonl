@@ -1,2 +1,13 @@
 {"t":"2026-11-16 11:37:34","event":"created","status":"backlog","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 11:42:18","event":"moved","to":"todo","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"planner:ae7f3a0c0750eb800"}
+{"t":"2026-11-16 11:50:01","event":"started","branch":"k2/261116113704-document-marker-placement-retries","base":"631faf8","contract":"fda070ea3988","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:50:08","event":"agent","role":"worker","agent":"ac403d21b447d7879","step":"first:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:50:50","event":"check","n":1,"evidence":"README says a marked default export is a mistake","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:ac403d21b447d7879"}
+{"t":"2026-11-16 11:50:50","event":"check","n":2,"evidence":"README has a Where markers go bullet: description first, one per line, data only, and what happens otherwise","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:ac403d21b447d7879"}
+{"t":"2026-11-16 11:50:50","event":"check","n":3,"evidence":"README has a Retrying a failed start bullet","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:ac403d21b447d7879"}
+{"t":"2026-11-16 11:50:50","event":"check","n":4,"evidence":"README has the exact-spelling bullet with Map<string,number> example","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:ac403d21b447d7879"}
+{"t":"2026-11-16 11:50:51","event":"check","n":5,"evidence":"CLAUDE.md 4.1, 4.7 and 4.8 updated as asked","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:ac403d21b447d7879"}
+{"t":"2026-11-16 11:50:51","event":"check","n":6,"evidence":"npm test passes incl. readme.test.ts; git diff touches only README.md and CLAUDE.md; no code block changed","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:ac403d21b447d7879"}
+{"t":"2026-11-16 11:50:55","event":"test","by":"worker:ac403d21b447d7879","exit":0,"seconds":3,"fingerprint":"26507154a41551ad93ea4d2d3e797e6d15cbad52","command":"npm run typecheck && npm test && npm run build","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:50:55","event":"submitted","commit":"3990b22","lane":"light","to":"review","passed":true,"files":2,"fingerprint":"26507154a41551ad93ea4d2d3e797e6d15cbad52","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:ac403d21b447d7879"}
+{"t":"2026-11-16 11:51:04","event":"landed","branch":"k2/261116113704-document-marker-placement-retries","files":["CLAUDE.md","README.md"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

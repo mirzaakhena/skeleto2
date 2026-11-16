@@ -19,3 +19,8 @@
 {"t":"2026-11-16 10:15:02","event":"agent","role":"reviewer","agent":"aa1851fc30cea8f72","step":"review:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 10:16:44","event":"verdict","result":"pass","round":1,"commit":"b192fb1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:aa1851fc30cea8f72"}
 {"t":"2026-11-16 10:16:53","event":"landed","branch":"k2/261116100201-project-skeleton-and-public","files":["package-lock.json","package.json","src/index.ts","src/skeleto.ts","src/type.ts","test/skeleto.test.ts","test/type.test.ts","tsconfig.build.json","tsconfig.json"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:27:46","event":"assumption-confirmed","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:27:46","event":"assumption-confirmed","key":"A3","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:27:47","event":"assumption-confirmed","key":"A4","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:27:47","event":"assumption-confirmed","key":"A5","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:41:34","event":"assumption-confirmed","key":"A2","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

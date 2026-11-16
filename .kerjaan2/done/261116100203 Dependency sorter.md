@@ -33,9 +33,10 @@ Rules about which kind of component may depend on which kind (startup ticket).
 <!-- k2:record — written by k2 only; do not edit by hand -->
 
 ## Assumptions
-- A1 [unseen] Among components that do not depend on each other, the order follows the input order (depth-first from the first item); the sorter returns its problems as a list of messages next to the order instead of throwing
+- A1 [confirmed] Among components that do not depend on each other, the order follows the input order (depth-first from the first item); the sorter returns its problems as a list of messages next to the order instead of throwing
   Why: the ticket demands an order that depends on the input only and a report that startup can merge with other findings; CLAUDE.md fixes no tie-break
   If wrong: change the tie-break in src/dependency.ts and the expected order in its test
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - Lane standard: a pure ordering function with its own tests

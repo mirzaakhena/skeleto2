@@ -34,21 +34,26 @@ Any behaviour of markers, scanning, dependency ordering or startup. Publishing t
 <!-- k2:record — written by k2 only; do not edit by hand -->
 
 ## Assumptions
-- A1 [unseen] The newContext test lives in test/type.test.ts
+- A1 [confirmed] The newContext test lives in test/type.test.ts
   Why: CLAUDE.md section 6 pairs each source file with a test file of the same name; type.ts has none listed and npm test already picks up test/*.test.ts
   If wrong: move the test into test/skeleto.test.ts and delete test/type.test.ts
-- A2 [unseen] package.json: name skeleto, version 0.1.0, license MIT, 'exports'/'types' pointing at dist/index.js and dist/index.d.ts; the build compiles src/ only (tests are type-checked but not emitted); no author, repository or engines field; dev dependencies are typescript, tsx and @types/node only
+  Confirmed by owner, 2026-11-16
+- A2 [confirmed] package.json: name skeleto, version 0.1.0, license MIT, 'exports'/'types' pointing at dist/index.js and dist/index.d.ts; the build compiles src/ only (tests are type-checked but not emitted); no author, repository or engines field; dev dependencies are typescript, tsx and @types/node only
   Why: name is the owner's decision; MIT and the dist entry point are what the reference package declares; section 9 says dist holds .js and .d.ts; publishing is out of scope
   If wrong: edit the fields in package.json
-- A3 [unseen] FuncInstanceMetadata lives in src/type.ts and takes (instance, metadata) in its constructor; the placeholder Skeleto lives in src/skeleto.ts with a start() that rejects with 'not implemented'
+  Confirmed by owner, 2026-11-16
+- A3 [confirmed] FuncInstanceMetadata lives in src/type.ts and takes (instance, metadata) in its constructor; the placeholder Skeleto lives in src/skeleto.ts with a start() that rejects with 'not implemented'
   Why: section 6 puts public types in type.ts and the Skeleto class in skeleto.ts; the constructor is not part of section 5 so its shape is free
   If wrong: move the class or change the constructor; only skeleto.ts calls it
-- A4 [unseen] Only the files this ticket needs exist: src/index.ts, type.ts, skeleto.ts and their two test files. decorator.ts, dependency.ts, scanner.ts and test/fixture.ts of section 6 are left to the tickets that fill them
+  Confirmed by owner, 2026-11-16
+- A4 [confirmed] Only the files this ticket needs exist: src/index.ts, type.ts, skeleto.ts and their two test files. decorator.ts, dependency.ts, scanner.ts and test/fixture.ts of section 6 are left to the tickets that fill them
   Why: empty placeholder files carry no behaviour and those modules are out of scope here
   If wrong: add the missing files in the ticket that needs them
-- A5 [unseen] Toolchain versions are the current releases: typescript ^7.0.2, tsx ^4.23, @types/node ^22 (matching the local Node 22), ts-morph ^28; a package-lock.json is committed. test/skeleto.test.ts holds one placeholder test (start rejects with 'not implemented')
+  Confirmed by owner, 2026-11-16
+- A5 [confirmed] Toolchain versions are the current releases: typescript ^7.0.2, tsx ^4.23, @types/node ^22 (matching the local Node 22), ts-morph ^28; a package-lock.json is committed. test/skeleto.test.ts holds one placeholder test (start rejects with 'not implemented')
   Why: CLAUDE.md names the tools but no versions; a lockfile makes a fresh checkout reproducible
   If wrong: change the ranges in package.json and run npm install; the startup ticket replaces test/skeleto.test.ts
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - Lane standard: project setup and the public types every other ticket builds against; no money, login or unrecoverable data

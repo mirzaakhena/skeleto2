@@ -32,3 +32,6 @@
 {"t":"2026-11-16 10:31:46","event":"agent","role":"reviewer","agent":"af79b23ab80b62cc8","step":"review:2:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 10:32:37","event":"verdict","result":"pass","round":2,"commit":"7005f94","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:af79b23ab80b62cc8"}
 {"t":"2026-11-16 10:32:47","event":"landed","branch":"k2/261116100204-file-scanner","files":["src/scanner.ts","test/fixture.ts","test/scanner.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:36:14","event":"assumption-confirmed","key":"A3","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:36:14","event":"assumption-overturned","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:41:34","event":"assumption-confirmed","key":"A7","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

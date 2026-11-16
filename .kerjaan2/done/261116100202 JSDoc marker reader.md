@@ -38,12 +38,14 @@ Deciding whether a function is a component, and validating the data of main mark
   → Huruf kecil = standar (Recommended) — option (a): any tag starting with a lowercase letter is standard and ignored, though it still ends the data of the marker before it; Skeleto markers start with an uppercase letter. (owner, 2026-11-16)
 
 ## Assumptions
-- A1 [unseen] A marker whose JSON is invalid is still returned, with data undefined, next to the problem that names it.
+- A1 [confirmed] A marker whose JSON is invalid is still returned, with data undefined, next to the problem that names it.
   Why: The scanner then still sees the function as a component and can report its other problems in the same startup error.
   If wrong: Drop the push of the marker in the catch branch of close() in src/decorator.ts and adjust two tests.
-- A2 [unseen] Text data that continues over several lines keeps its line breaks (lines joined with a newline, then trimmed); text before the first marker is ignored.
+  Confirmed by owner, 2026-11-16
+- A2 [confirmed] Text data that continues over several lines keeps its line breaks (lines joined with a newline, then trimmed); text before the first marker is ignored.
   Why: CLAUDE.md 4.1 says data may continue on following lines but not how they are joined; keeping the breaks loses nothing.
   If wrong: Change the join separator in close() in src/decorator.ts.
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - Lane standard: a pure parsing function with its own tests

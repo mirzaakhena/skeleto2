@@ -62,7 +62,7 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
   // A kind depends on earlier kinds or on itself only, so filtering the one sorted order by kind keeps dependencies first.
   for (const kind of Object.keys(ALLOWED_DEPENDENCIES)) {
     for (const name of sorted.order) {
-      const { metadata, filePath, functionName } = byName.get(name)!;
+      const { metadata, filePath, functionName, awaited } = byName.get(name)!;
       if (metadata.mainDecorator.name !== kind) continue;
       let step = "importing its file";
       let instance: any;
@@ -70,6 +70,11 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
         const create = (await import(pathToFileURL(filePath).href))[functionName];
         step = "creating it";
         instance = create(...metadata.dependencies.map((dependency) => container.get(dependency)!.getInstance()));
+        if (awaited) {
+          // Without a time limit: how long a resource may take to answer is knowledge about the resource, so the config sets its own.
+          step = "waiting for it";
+          instance = await instance;
+        }
         if (kind === "Action") {
           // Applied from the innermost to the outermost: the wrapper applied last is the one a caller enters first.
           for (const wrapper of wrappers) {

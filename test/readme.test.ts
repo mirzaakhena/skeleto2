@@ -73,6 +73,24 @@ test("the README covers the three kinds, the start and the container", () => {
   assert.ok(Object.keys(example.files).length >= 4);
 });
 
+test("the README example has an async config, and says that startup waits for it without a time limit of its own", () => {
+  assert.match(example.files["src/config.ts"] ?? "", /@Config \*\/\nexport async function loadSettings\(\): Promise<Settings> \{\n[^}]*await /);
+  // Its dependant asks for the plain name.
+  assert.match(example.files["src/greet.ts"] ?? "", /makeGreet\(settings: Settings\)/);
+  assert.match(readme, /^## Asynchronous configs$/m);
+  assert.match(readme, /Startup sets no time limit/);
+  assert.match(readme, /Give the config its own timeout/);
+});
+
+test("CLAUDE.md states the rule for async configs in sections 4.3 and 4.7", () => {
+  const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
+  const section = (number: string): string => new RegExp(`^### ${number.replace(".", "\\.")} [\\s\\S]*?(?=^###? )`, "m").exec(guide)?.[0] ?? "";
+  assert.match(section("4.3"), /`Promise<X>`[\s\S]*nama komponennya `X`/);
+  assert.match(section("4.3"), /`@Wrapper` dan `@Action` selalu sinkron/);
+  assert.match(section("4.7"), /\*\*ditunggu\*\*/);
+  assert.match(section("4.7"), /tidak memasang batas waktu/);
+});
+
 test("the README examples type-check as written", async () => {
   await withFixture({ ...installation(), ...example.files }, async (directory) => {
     const result = await run("tsc", ["-p", "."], directory);
@@ -96,6 +114,10 @@ test("the README examples start and print exactly the output the README shows", 
     const metadata = (name: string): unknown => JSON.parse((lines.find((line) => line.startsWith(`${name}: `)) ?? "").replace(/^[^{]*/, ""));
     assert.deepEqual(metadata("GreetAll"), { dependencies: ["Greet"], additionalDecorators: [{ name: "Transaction" }, { name: "Audit", data: { level: "info" } }] });
     assert.deepEqual(metadata("Greet"), { dependencies: ["Settings"], additionalDecorators: [] });
+    // The async config is listed under the plain name, and the greeting it delivered late is the one the action used.
+    assert.ok(lines.includes('Settings: @Config {"dependencies":[],"additionalDecorators":[]}'));
+    assert.ok(!result.stdout.includes("Promise"));
+    assert.ok(lines.includes("[ 'Hello, Ada!', 'Hello, Linus!' ]"));
   });
 });
 

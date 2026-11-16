@@ -1,6 +1,6 @@
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
-import { Project } from "ts-morph";
+import { Node, Project } from "ts-morph";
 import type { FunctionDeclaration } from "ts-morph";
 import { readDecorators } from "./decorator.js";
 import { DEFAULT_EXCLUDE } from "./type.js";
@@ -12,6 +12,8 @@ export type ScannedFunction = {
   filePath: string;
   /** Name under which the file exports the function. */
   functionName: string;
+  /** True for a config declared `Promise<X>`: its result is waited for, and the finished value is the instance. */
+  awaited: boolean;
 };
 
 export type ScanResult = {
@@ -57,12 +59,13 @@ export function scanDirectory(directory: string, allowedDecorators?: string[], e
     for (const declaration of declarations) {
       const functionName = declaration.getName() ?? "(anonymous)";
       const where = `${functionName} (${relative(root, filePath)})`;
-      const metadata = readFunction(declaration, allowedDecorators, (message) => errors.push(`${where}: ${message}`));
-      if (!metadata) continue;
+      const read = readFunction(declaration, allowedDecorators, (message) => errors.push(`${where}: ${message}`));
+      if (!read) continue;
+      const { metadata, awaited } = read;
       const first = firstByName.get(metadata.name);
       if (first) errors.push(`${metadata.name}: returned by both ${first} and ${where}; a type name can have one component only`);
       else if (metadata.name !== "") firstByName.set(metadata.name, where);
-      functions.push({ metadata, filePath, functionName });
+      functions.push({ metadata, filePath, functionName, awaited });
     }
   }
   return { functions, errors };
@@ -91,7 +94,11 @@ function listFiles(root: string, folder: string, exclude: readonly string[], err
 }
 
 /** Returns undefined for a function that is not a component. A component with mistakes is still returned, so that all its mistakes are found. */
-function readFunction(declaration: FunctionDeclaration, allowedDecorators: string[] | undefined, report: (message: string) => void): FuncMetadata | undefined {
+function readFunction(
+  declaration: FunctionDeclaration,
+  allowedDecorators: string[] | undefined,
+  report: (message: string) => void,
+): { metadata: FuncMetadata; awaited: boolean } | undefined {
   // Only the block right above the function counts; an earlier one (a file header, say) is not about this function.
   const jsDoc = declaration.getJsDocs().at(-1);
   if (!jsDoc) return undefined;
@@ -115,8 +122,16 @@ function readFunction(declaration: FunctionDeclaration, allowedDecorators: strin
 
   // A default export has no name to import it by, so only the plain `export function` form counts.
   if (!declaration.hasExportKeyword() || declaration.hasDefaultKeyword()) report(`is marked @${mainDecorator.name} but is not exported by name`);
-  const name = declaration.getReturnTypeNode()?.getText() ?? "";
+  const returnType = declaration.getReturnTypeNode();
+  // Decided by what is written, never by what a type resolves to: only a literal `Promise<X>` is a promise here, and it is opened once.
+  const promised = Node.isTypeReference(returnType) && returnType.getTypeName().getText() === "Promise" ? returnType.getTypeArguments() : [];
+  const awaited = promised.length === 1;
+  // The inner name is used for every kind, so that a wrapper or action declared this way gives the one mistake below and no "unknown component" after it.
+  const name = (awaited ? promised[0]?.getText() : returnType?.getText()) ?? "";
   if (name === "") report(`is marked @${mainDecorator.name} but has no return type annotation`);
+  if (awaited && mainDecorator.name !== "Config") {
+    report(`is marked @${mainDecorator.name} but returns ${returnType?.getText()}; only a @Config may be asynchronous, a @${mainDecorator.name} must return ${name} itself`);
+  }
 
   const dependencies: string[] = [];
   for (const parameter of declaration.getParameters()) {
@@ -124,7 +139,7 @@ function readFunction(declaration: FunctionDeclaration, allowedDecorators: strin
     if (type === undefined) report(`parameter ${parameter.getName()} has no type annotation`);
     else dependencies.push(type);
   }
-  return { name, dependencies, mainDecorator, additionalDecorators };
+  return { metadata: { name, dependencies, mainDecorator, additionalDecorators }, awaited: awaited && mainDecorator.name === "Config" };
 }
 
 function checkMainData(decorator: Decorator): string | undefined {

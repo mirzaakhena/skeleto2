@@ -30,3 +30,8 @@
 {"t":"2026-11-16 10:58:46","event":"agent","role":"reviewer","agent":"ab80bd2ac4541e9ee","step":"review:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 11:00:42","event":"verdict","result":"pass","round":1,"commit":"9cb45e1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:ab80bd2ac4541e9ee"}
 {"t":"2026-11-16 11:00:51","event":"landed","branch":"k2/261116103601-excluded-files-in-the","files":["CLAUDE.md","README.md","src/index.ts","src/scanner.ts","src/skeleto.ts","src/type.ts","test/readme.test.ts","test/scanner.test.ts","test/skeleto.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A2","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A3","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A4","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A5","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

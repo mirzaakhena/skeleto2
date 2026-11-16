@@ -22,3 +22,8 @@
 {"t":"2026-11-16 11:22:34","event":"agent","role":"reviewer","agent":"a03526ec878954825","step":"review:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 11:24:08","event":"verdict","result":"pass","round":1,"commit":"fecb480","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:a03526ec878954825"}
 {"t":"2026-11-16 11:24:19","event":"landed","branch":"k2/261116110901-async-config-wait-for","files":["CLAUDE.md","README.md","src/scanner.ts","src/skeleto.ts","src/type.ts","test/readme.test.ts","test/scanner.test.ts","test/skeleto.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A2","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A3","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A4","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:26:38","event":"assumption-confirmed","key":"A5","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

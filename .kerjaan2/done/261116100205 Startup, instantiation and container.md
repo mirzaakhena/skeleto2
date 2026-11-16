@@ -41,9 +41,10 @@ Anything about HTTP, controllers, validation, logging or databases. Importing co
   → Berhenti, bungkus error (Recommended) — option (a): stop at once and reject with an Error that names the component and function and carries the original error as cause; nothing is remembered, so the next start() scans again. (owner, 2026-11-16)
 
 ## Assumptions
-- A1 [unseen] Only files that hold at least one component are imported, each by its absolute path as a file URL; a component function is called synchronously and its return value is stored as it is, never awaited
+- A1 [confirmed] Only files that hold at least one component are imported, each by its absolute path as a file URL; a component function is called synchronously and its return value is stored as it is, never awaited
   Why: the reference imports only the files of scanned functions; the consumer convention (nukitu CLAUDE.md section 4) defines stage one of every component as a synchronous closure, and an async function would be named Promise<X>
   If wrong: await the result or import every scanned file in src/skeleto.ts
+  Confirmed by owner, 2026-11-16
 - A2 [confirmed] Options are used by the first start of a directory only; a later start of the same directory with other options returns the existing instance. A missing dependency is listed once, not once per check
   Why: CLAUDE.md 4.8: one instance per directory; the reference documents options as applied on the first start only
   If wrong: compare options on later starts and reject a mismatch

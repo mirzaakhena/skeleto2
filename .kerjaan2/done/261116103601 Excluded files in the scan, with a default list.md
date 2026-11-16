@@ -54,21 +54,26 @@ Full glob syntax (`**`, braces, negation). Reporting a misspelt main marker such
   → ikut saranmu — (a): the additions to CLAUDE.md are written in Indonesian, like the rest of the file (owner, 2026-11-16)
 
 ## Assumptions
-- A1 [unseen] An excluded folder is not walked at all: nothing below it is listed, read or reported, including unreadable folders inside it
+- A1 [confirmed] An excluded folder is not walked at all: nothing below it is listed, read or reported, including unreadable folders inside it
   Why: The ticket's third trap is the cost of scanning all of node_modules; skipping only the files would still walk it
   If wrong: Walk excluded folders and drop their files after listing
-- A2 [unseen] Matching is exact and case-sensitive on one name at a time: an entry without a wildcard equals a folder name or a full file name ('node_modules', 'legacy.ts'), an entry starting with '*' is compared with the end of file names only, never folder names
+  Confirmed by owner, 2026-11-16
+- A2 [confirmed] Matching is exact and case-sensitive on one name at a time: an entry without a wildcard equals a folder name or a full file name ('node_modules', 'legacy.ts'), an entry starting with '*' is compared with the end of file names only, never folder names
   Why: The Request says 'names a folder or file' and 'matches file names by their ending'; the scanner already compares the .ts ending case-sensitively
   If wrong: Change the comparison in the one matcher function in src/scanner.ts
-- A3 [unseen] The constant is declared in src/type.ts as a readonly string array and re-exported from src/index.ts; the option is an optional string array in SkeletoOptions; scanDirectory receives the list as a further parameter
+  Confirmed by owner, 2026-11-16
+- A3 [confirmed] The constant is declared in src/type.ts as a readonly string array and re-exported from src/index.ts; the option is an optional string array in SkeletoOptions; scanDirectory receives the list as a further parameter
   Why: Section 6 puts public types in type.ts and keeps index.ts without logic; scanner.ts already imports from type.ts
   If wrong: Move the constant to src/scanner.ts and re-export it from there
-- A4 [unseen] A backslash in an entry is rejected like a slash, and so is an entry that is not text; when a list has a rejected entry, its other entries still apply for that failed scan
+  Confirmed by owner, 2026-11-16
+- A4 [confirmed] A backslash in an entry is rejected like a slash, and so is an entry that is not text; when a list has a rejected entry, its other entries still apply for that failed scan
   Why: A backslash is the path separator on Windows; keeping the usable entries means the report shows the bad entry and not a pile of mistakes from files that were meant to be left out
   If wrong: Loosen the one pattern in scanDirectory (src/scanner.ts), or pass an empty list to listFiles when any entry is rejected
-- A5 [unseen] DEFAULT_EXCLUDE is frozen and typed readonly string[], and the option exclude accepts readonly string[] (a plain string[] still fits)
+  Confirmed by owner, 2026-11-16
+- A5 [confirmed] DEFAULT_EXCLUDE is frozen and typed readonly string[], and the option exclude accepts readonly string[] (a plain string[] still fits)
   Why: A shared constant that one caller could push to would change the scan of every later start; the readonly option type lets DEFAULT_EXCLUDE itself be passed
   If wrong: Drop Object.freeze and the readonly in src/type.ts
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - Lane standard: adds a public option and constant and changes which files the scanner reads; no data at risk, easy to revert

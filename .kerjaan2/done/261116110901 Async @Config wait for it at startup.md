@@ -39,21 +39,26 @@ Running asynchronous configs side by side. Shutting resources down when the appl
   → Menunggu saja (Recommended) — (a): start() waits as long as the config does; a time limit is the config's own business, and the README says a config should set its own timeout (owner, 2026-11-16)
 
 ## Assumptions
-- A1 [unseen] The rule goes by the written text of the return type only: exactly Promise<...> (spaces around the inner text trimmed) is unwrapped, once, and only such a config is waited for. A config whose return type is written any other way (an alias of a promise, PromiseLike<X>) keeps its written name and its result is stored as it is, as today
+- A1 [confirmed] The rule goes by the written text of the return type only: exactly Promise<...> (spaces around the inner text trimmed) is unwrapped, once, and only such a config is waited for. A config whose return type is written any other way (an alias of a promise, PromiseLike<X>) keeps its written name and its result is stored as it is, as today
   Why: CLAUDE.md section 2: only the name of a type is read, never its definition. This also keeps types and values in agreement: who asks for X gets an X, who asks for an alias of a promise gets the promise
   If wrong: Await every config result in src/skeleto.ts instead of only the declared ones
-- A2 [unseen] The Promise<...> wrapping is stripped from the name for all three kinds, so a wrapper or action declared Promise<X> gives one mistake (naming the function) and not a second 'X is not a known component' line for each component that depends on it; the scanner reports it, since it knows the kind and already collects mistakes before any import
+  Confirmed by owner, 2026-11-16
+- A2 [confirmed] The Promise<...> wrapping is stripped from the name for all three kinds, so a wrapper or action declared Promise<X> gives one mistake (naming the function) and not a second 'X is not a known component' line for each component that depends on it; the scanner reports it, since it knows the kind and already collects mistakes before any import
   Why: Section 2: mistakes are reported early and all at once, without follow-up noise; section 6 puts 4.2 to 4.5 checks in scanner.ts
   If wrong: Move the check to src/skeleto.ts or keep the written name for wrappers and actions
-- A3 [unseen] No public type changes: FuncMetadata keeps its four fields and the container shows nothing about a config having been async. The scanner tells startup which configs to wait for through its own, non-exported result type
+  Confirmed by owner, 2026-11-16
+- A3 [confirmed] No public type changes: FuncMetadata keeps its four fields and the container shows nothing about a config having been async. The scanner tells startup which configs to wait for through its own, non-exported result type
   Why: CLAUDE.md section 5: public names are not changed without the owner, and nothing in the ticket asks for it
   If wrong: Add a field to FuncMetadata in src/type.ts and to section 5
-- A4 [unseen] No new file under src/ or test/: the tests go into test/scanner.test.ts and test/skeleto.test.ts and the README example into test/readme.test.ts. Configs are waited for one after another in the existing creation order
+  Confirmed by owner, 2026-11-16
+- A4 [confirmed] No new file under src/ or test/: the tests go into test/scanner.test.ts and test/skeleto.test.ts and the README example into test/readme.test.ts. Configs are waited for one after another in the existing creation order
   Why: Section 6 fixes the file list, and 110902 is rewriting that list at the same time; running configs side by side is out of scope
   If wrong: Add the file and list it in CLAUDE.md section 6
-- A5 [unseen] The README example for the rule is the existing loadSettings config, turned into an async function declared Promise<Settings>, rather than a new example file; the printed output of the example is unchanged
+  Confirmed by owner, 2026-11-16
+- A5 [confirmed] The README example for the rule is the existing loadSettings config, turned into an async function declared Promise<Settings>, rather than a new example file; the printed output of the example is unchanged
   Why: The README test allows one command and one output only, and the existing example then proves the rule end to end: the greeting delivered late is the one the action prints, and the container line reads Settings
   If wrong: Make loadSettings synchronous again in README.md and add a separate async config file to the example, updating the output block and test/readme.test.ts
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - Lane standard: changes how the core names and creates configs, fully covered by the Done-when tests; nothing unrecoverable

@@ -3,6 +3,7 @@ import { execFile } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { DEFAULT_EXCLUDE } from "../src/index.js";
 import { withFixture } from "./fixture.js";
 
 const repo = fileURLToPath(new URL("..", import.meta.url));
@@ -108,6 +109,12 @@ test("the list of allowed markers in the README example is in force: a misspelle
     assert.match(result.stderr, /makeGreetAll.*@Transction is not an allowed marker/);
     assert.equal(result.stdout, "");
   });
+});
+
+test("the README and CLAUDE.md name the exclude option, the constant and every default entry", () => {
+  for (const text of [readme, readFileSync(`${repo}CLAUDE.md`, "utf8")]) {
+    for (const needed of ["exclude", "DEFAULT_EXCLUDE", ...DEFAULT_EXCLUDE]) assert.ok(text.includes(`\`${needed}\``), `${needed} is not documented`);
+  }
 });
 
 test("the README stays clear of what Skeleto dropped", () => {

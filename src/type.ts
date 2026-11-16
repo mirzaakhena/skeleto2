@@ -19,8 +19,13 @@ export type FuncMetadata = {
 
 export type WrapperHandler = (actionHandler: ActionHandler, functionMetadata: FuncMetadata) => ActionHandler;
 
+/** What the scan leaves out when `SkeletoOptions.exclude` is not given. */
+export const DEFAULT_EXCLUDE: readonly string[] = Object.freeze(["node_modules", "*.d.ts", "*.test.ts", "*.spec.ts"]);
+
 export type SkeletoOptions = {
   decorators?: string[];
+  /** Replaces `DEFAULT_EXCLUDE`. An entry is a folder or file name at any depth, or `*` followed by the ending of file names. */
+  exclude?: readonly string[];
 };
 
 export class FuncInstanceMetadata {

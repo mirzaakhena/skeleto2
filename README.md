@@ -6,7 +6,7 @@ Skeleto wires up an application made of plain functions. You mark a function wit
 
 It does **binding only**:
 
-- It scans every `.ts` file below one directory for marked, exported, top-level functions.
+- It scans every `.ts` file below one directory for marked, exported, top-level functions, except the files and folders on its [exclusion list](#files-the-scan-leaves-out).
 - The **name** of a component is its return type, exactly as written (`Greet`, `winston.Logger`). Its **dependencies** are the types of its parameters, in order. Nothing else is read: Skeleto never opens a type definition.
 - Every mistake (a missing dependency, a cycle, a misspelled marker, two functions returning the same type, ...) is reported at startup, all in one error, before any of your files is imported.
 
@@ -160,6 +160,30 @@ The output shows the layering: `LogWrapper` (ordinal 10) is outside `Transaction
 - A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Standard JSDoc tags (`@param`, `@returns`, ...) are ignored.
 - `Skeleto.start(directory)` defaults to `"src"` and gives one instance per directory: a second call for the same directory returns the first instance, and its options are ignored. A failed start is not remembered.
 - The container holds every component, configs and wrappers included, under its type name.
+
+## Files the scan leaves out
+
+Without further word, the scan skips what `DEFAULT_EXCLUDE` lists:
+
+| Entry | What it leaves out |
+| --- | --- |
+| `node_modules` | every folder of that name, with all it holds |
+| `*.d.ts` | declaration files, whose functions have no body to call |
+| `*.test.ts` | test files |
+| `*.spec.ts` | test files |
+
+The `exclude` option **replaces** that list; it is not added to it. Import `DEFAULT_EXCLUDE` from `skeleto` to keep the defaults and add your own, as in `Skeleto.start("src", { exclude: [...DEFAULT_EXCLUDE, "generated"] })`. Pass `exclude: []` to scan everything.
+
+An entry takes one of two forms:
+
+- **A name**, such as `generated` or `legacy.ts`: a folder or a file of exactly that name, at any depth. An excluded folder is not entered at all.
+- **`*` and an ending**, such as `*.gen.ts`: every file whose name ends that way. It never matches a folder.
+
+Names are compared exactly, upper and lower case included, and only below the directory you start: that directory itself is always scanned, even when its own path contains an excluded name, as in `Skeleto.start("node_modules/some-package/src")`.
+
+Anything else is a mistake that stops startup like the others, naming the entry: a path (`generated/models`), a `*` that is not the first character (`foo*`, `*.test.*`, `**/x`), a lone `*`, and an empty string. Full glob syntax is not supported.
+
+A directory in which every `.ts` file is excluded is reported like a directory without `.ts` files.
 
 ## Runtime
 

@@ -54,14 +54,21 @@ Inilah spesifikasi yang harus dipenuhi. Setiap butir di sini harus punya tes.
 
 ### 4.2 Fungsi yang dipindai
 
-- Skeleto memindai semua berkas `**/*.ts` di direktori yang diberikan.
+- Skeleto memindai semua berkas `**/*.ts` di direktori yang diberikan, kecuali yang dikecualikan oleh daftar pengecualian.
+- **Daftar pengecualian** berasal dari `SkeletoOptions.exclude`. Kalau opsi itu tidak diberikan, yang berlaku adalah konstanta `DEFAULT_EXCLUDE`: `node_modules`, `*.d.ts`, `*.test.ts`, `*.spec.ts`.
+- Daftar yang diberikan **menggantikan** daftar bawaan, bukan menambahnya. Daftar kosong berarti semua berkas dipindai. Untuk menambah butir sendiri, tulis `[...DEFAULT_EXCLUDE, "generated"]`.
+- Butir tanpa `*` adalah nama folder atau nama berkas, di kedalaman berapa pun (`node_modules`, `legacy.ts`). Folder yang dikecualikan tidak dimasuki sama sekali.
+- Butir yang diawali `*` dicocokkan dengan **akhiran nama berkas** (`*.d.ts`), dan tidak pernah dengan nama folder.
+- Perbandingannya persis (huruf besar dan kecil dibedakan) dan hanya terhadap nama **di bawah** direktori yang dipindai. Direktori yang diberikan ke `Skeleto.start` selalu dipindai, walaupun path-nya sendiri memuat nama yang dikecualikan.
+- Direktori yang semua berkas `.ts`-nya dikecualikan dilaporkan sama seperti direktori tanpa berkas `.ts` (4.8).
 - Sebuah fungsi menjadi komponen kalau ia **deklarasi fungsi tingkat atas** dan JSDoc-nya memuat tepat satu penanda utama: `@Config`, `@Wrapper`, atau `@Action`.
 - Kesalahan:
   - fungsi berpenanda utama yang tidak di-`export`;
   - fungsi berpenanda utama tanpa anotasi return type;
   - fungsi dengan lebih dari satu penanda utama;
   - parameter tanpa anotasi tipe;
-  - dua fungsi yang mengembalikan nama tipe yang sama.
+  - dua fungsi yang mengembalikan nama tipe yang sama;
+  - butir `exclude` yang tidak bisa dinyatakan aturan di atas: memuat pemisah path (`generated/models`), memuat `*` selain di karakter pertama (`foo*`, `*.test.*`, `**/x`), hanya `*`, atau string kosong. Pesannya menyebut butir itu.
 
 ### 4.3 Nama dan dependency
 
@@ -141,7 +148,10 @@ export type WrapperHandler = (actionHandler: ActionHandler, functionMetadata: Fu
 
 export type SkeletoOptions = {
   decorators?: string[];
+  exclude?: readonly string[];          // menggantikan DEFAULT_EXCLUDE (4.2)
 };
+
+export const DEFAULT_EXCLUDE: readonly string[]; // ["node_modules", "*.d.ts", "*.test.ts", "*.spec.ts"]
 
 export class FuncInstanceMetadata {
   getInstance(): any;
@@ -156,7 +166,7 @@ export class Skeleto {
 export function newContext(): Context; // { data: {}, traceId: "", date: new Date() }
 ```
 
-Yang dipakai `nukitu` saat ini: `Skeleto.start`, `getContainer()`, `FuncInstanceMetadata.getInstance()`, `FuncMetadata.name`, `FuncMetadata.additionalDecorators`, `SkeletoOptions`, `ActionHandler`, `Context`, `WrapperHandler`, dan `newContext`. `getMetadata()` tidak dipakai `nukitu`, tetapi dipertahankan karena murah dan berguna untuk menelusuri isi container.
+Yang dipakai `nukitu` saat ini: `Skeleto.start`, `getContainer()`, `FuncInstanceMetadata.getInstance()`, `FuncMetadata.name`, `FuncMetadata.additionalDecorators`, `SkeletoOptions`, `ActionHandler`, `Context`, `WrapperHandler`, dan `newContext`. `exclude` dan `DEFAULT_EXCLUDE` ada supaya berkas tes, berkas `.d.ts`, dan `node_modules` tidak ikut terpindai. `getMetadata()` tidak dipakai `nukitu`, tetapi dipertahankan karena murah dan berguna untuk menelusuri isi container.
 
 ## 6. Struktur repo
 

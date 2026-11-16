@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { rm, writeFile } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { test } from "node:test";
-import { FuncInstanceMetadata, Skeleto, newContext } from "../src/index.js";
+import { DEFAULT_EXCLUDE, FuncInstanceMetadata, Skeleto, newContext } from "../src/index.js";
 import type { SkeletoOptions } from "../src/index.js";
 import { withFixture } from "./fixture.js";
 
@@ -142,6 +142,86 @@ test("a directory without .ts files, without components, or that does not exist 
       await assert.rejects(Skeleto.start(join(directory, "missing")), (error: Error) => error.message.includes(`${join(directory, "missing")}: directory cannot be read`));
     });
   }
+});
+
+// ---- exclusions (4.2, 4.8) ----
+
+const declared = `/** @Config */\nexport declare function makeDeclared(): Declared;\n`;
+const traps = (): Record<string, string> => ({
+  "types.d.ts": declared,
+  "a.test.ts": component("Config", "FromTest"),
+  "sub/a.spec.ts": component("Config", "FromSpec"),
+  "node_modules/pkg/a.ts": component("Config", "FromModules"),
+  "sub/node_modules/pkg/a.ts": component("Config", "FromNestedModules"),
+});
+
+test("without options.exclude the default list holds: only the normal file becomes a component, and the others are not imported", async () => {
+  const state = reset();
+  await withFixture({ ...traps(), "a.ts": component("Config", "Settings") }, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual([...container.keys()], ["Settings"]);
+    assert.deepEqual(state.calls.map(([name]) => name), ["Settings"]);
+  });
+});
+
+test("an empty options.exclude scans everything, and a list of the defaults plus one entry leaves out both", async () => {
+  const files: Record<string, string> = { ...traps(), "a.ts": component("Config", "Settings"), "generated/g.ts": component("Config", "Generated") };
+  delete files["types.d.ts"];
+  reset();
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory, { exclude: [] })).getContainer();
+    assert.deepEqual([...container.keys()].sort(), ["FromModules", "FromNestedModules", "FromSpec", "FromTest", "Generated", "Settings"]);
+  });
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory, { exclude: [...DEFAULT_EXCLUDE, "generated"] })).getContainer();
+    assert.deepEqual([...container.keys()], ["Settings"]);
+  });
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory, { exclude: ["generated"] })).getContainer();
+    assert.deepEqual([...container.keys()].sort(), ["FromModules", "FromNestedModules", "FromSpec", "FromTest", "Settings"]);
+  });
+});
+
+test("with an empty options.exclude a marked declaration in a .d.ts file is a component again, which then has nothing to call", async () => {
+  const error = await failure({ "types.d.ts": declared }, { exclude: [] });
+  assert.match(error.message, /Declared: function makeDeclared .* failed while/);
+});
+
+for (const entry of ["generated/models", "foo*", "*.test.*", "**/x", "*", ""]) {
+  test(`options.exclude with ${JSON.stringify(entry)} stops startup naming the entry, with the other mistakes and before any import`, async () => {
+    const boom = `throw new Error("module was imported");\n`;
+    const error = await failure({ "a.ts": boom + component("Action", "SaveUser", ["Nowhere"]), "b.ts": boom + component("Config", "Settings") }, { exclude: [...DEFAULT_EXCLUDE, entry] });
+    assert.doesNotMatch(error.message, /module was imported/);
+    assert.equal(error.cause, undefined);
+    const lines = problems(error);
+    assert.equal(lines.length, 2, error.message);
+    assert.ok(lines[0]?.startsWith(`- exclude entry ${JSON.stringify(entry)}: `), lines[0]);
+    assert.match(lines[1] ?? "", /SaveUser: dependency Nowhere is not a known component/);
+    assert.deepEqual(shared.skeletoTest.calls, []);
+  });
+}
+
+test("a bad exclusion stops a directory that is otherwise fine, and nothing is created", async () => {
+  const error = await failure({ "a.ts": component("Config", "Settings") }, { exclude: ["src/generated"] });
+  assert.deepEqual(problems(error).map((line) => line.split(":")[0]), ['- exclude entry "src/generated"']);
+  assert.deepEqual(shared.skeletoTest.calls, []);
+});
+
+test("the directory given is started even when its own path contains node_modules", async () => {
+  reset();
+  await withFixture({ "node_modules/app/src/a.ts": component("Config", "Settings"), "node_modules/app/src/node_modules/x.ts": component("Config", "Inner") }, async (directory) => {
+    const container = (await Skeleto.start(join(directory, "node_modules/app/src"))).getContainer();
+    assert.deepEqual([...container.keys()], ["Settings"]);
+  });
+});
+
+test("a directory whose only .ts files are excluded is reported like a directory without .ts files", async () => {
+  const empty = await failure({ "notes.txt": "@Config" });
+  const excluded = await failure({ "a.test.ts": component("Config", "A"), "b.spec.ts": component("Config", "B"), "c.d.ts": declared, "node_modules/d.ts": component("Config", "D") });
+  const shape = (error: Error): string => error.message.replace(/\S*skeleto-\w+/g, "<directory>");
+  assert.match(excluded.message, /: no \.ts file with a @Config, @Wrapper or @Action function was found/);
+  assert.equal(shape(excluded), shape(empty));
+  assert.deepEqual(shared.skeletoTest.calls, []);
 });
 
 test("the default directory is src of the working directory", async () => {

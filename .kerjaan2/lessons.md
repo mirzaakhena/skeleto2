@@ -8,3 +8,4 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - scanDirectory (src/scanner.ts) returns { functions, errors } and never throws; an empty directory gives an empty result, so startup must report it; tests reuse withFixture from test/fixture.ts
 - A scanner that lists paths by name must filter to regular files before reading them: a folder whose name ends in .ts must be walked, not opened as a file
 - readdirSync with recursive: true follows links to folders and hangs on a link back to a parent folder (node 22); src/scanner.ts walks the tree itself for that reason
+- Skeleto.start imports the scanned .ts files and node caches modules by URL: a test that restarts a directory must change behaviour through a global flag or a new file, not by rewriting an imported file

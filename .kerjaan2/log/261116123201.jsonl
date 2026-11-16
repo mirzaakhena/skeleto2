@@ -1,0 +1,13 @@
+{"t":"2026-11-16 12:32:10","event":"created","status":"backlog","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 12:32:10","event":"moved","to":"todo","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 12:32:14","event":"started","branch":"k2/261116123201-recommend-one-use-case","base":"3368354","contract":"b4b04567d256","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 12:32:21","event":"agent","role":"worker","agent":"aa91bb6dc129652e7","step":"first:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 12:32:48","event":"test","by":"worker:aa91bb6dc129652e7","exit":0,"seconds":5,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 12:32:56","event":"check","n":1,"evidence":"Added section 'One use case per file' with the user/ folder layout as a list and all four points","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:aa91bb6dc129652e7"}
+{"t":"2026-11-16 12:32:56","event":"check","n":2,"evidence":"Section opens by saying it is a recommendation Skeleto does not check","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:aa91bb6dc129652e7"}
+{"t":"2026-11-16 12:32:56","event":"check","n":3,"evidence":"Split greet.ts into usecase/greet/greet.ts and greet_all.ts; no other action example exists","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:aa91bb6dc129652e7"}
+{"t":"2026-11-16 12:32:56","event":"check","n":4,"evidence":"Layout is a list, not a fence; npm test passes, readme test still refuses unknown block kinds and runs the new files","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:aa91bb6dc129652e7"}
+{"t":"2026-11-16 12:32:57","event":"check","n":5,"evidence":"Only README.md and test/readme.test.ts changed; k2 test passed typecheck, test, build","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:aa91bb6dc129652e7"}
+{"t":"2026-11-16 12:33:01","event":"test","by":"worker:aa91bb6dc129652e7","exit":0,"seconds":4,"fingerprint":"a9ce1500f6a1035f27af15529d03ca41f1096396","command":"npm run typecheck && npm test && npm run build","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 12:33:01","event":"submitted","commit":"94c5789","lane":"light","to":"review","passed":true,"files":2,"fingerprint":"a9ce1500f6a1035f27af15529d03ca41f1096396","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"worker:aa91bb6dc129652e7"}
+{"t":"2026-11-16 12:33:11","event":"landed","branch":"k2/261116123201-recommend-one-use-case","files":["README.md","test/readme.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

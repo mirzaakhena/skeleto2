@@ -44,20 +44,29 @@ export function makeLogger(): Logger {
 }
 ```
 
-Actions. `GreetAll` asks for `Greet` simply by naming its type. It also carries two **additional markers**, `@Transaction` and `@Audit`: Skeleto gives them no meaning, it only records them, with their data, for wrappers and for your own code to read.
+Actions. Each use case has its own file, and the files of one business area share a folder (see [One use case per file](#one-use-case-per-file)). `GreetAll` asks for `Greet` simply by naming its type.
 
 ```ts
-// src/greet.ts
+// src/usecase/greet/greet.ts
 import type { ActionHandler } from "skeleto";
-import type { Settings } from "./config.js";
+import type { Settings } from "../../config.js";
 
 export type Greet = ActionHandler<string, string>;
-export type GreetAll = ActionHandler<string[], string[]>;
 
 /** @Action */
 export function makeGreet(settings: Settings): Greet {
   return async (ctx, name) => `${settings.greeting}, ${name}!`;
 }
+```
+
+`GreetAll` also carries two **additional markers**, `@Transaction` and `@Audit`: Skeleto gives them no meaning, it only records them, with their data, for wrappers and for your own code to read.
+
+```ts
+// src/usecase/greet/greet_all.ts
+import type { ActionHandler } from "skeleto";
+import type { Greet } from "./greet.js";
+
+export type GreetAll = ActionHandler<string[], string[]>;
 
 /**
  * Greets several people in one go.
@@ -154,6 +163,25 @@ GreetAll: @Action {"dependencies":["Greet"],"additionalDecorators":[{"name":"Tra
 ```
 
 The output shows the layering: `LogWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), `Greet` was left alone by the transaction wrapper, and the `Greet` that `GreetAll` received is the wrapped one.
+
+## One use case per file
+
+This is a recommendation for the applications you build. Skeleto does not check it.
+
+A **use case** is an `@Action` that stands for one business operation of your application. Put each use case in its own file, named after it, and group the files of one entity or business area in a folder:
+
+- `usecase/user/user_create.ts`
+- `usecase/user/user_get.ts`
+- `usecase/user/user_list.ts`
+- `usecase/user/user_update.ts`
+- `usecase/user/user_delete.ts`
+- `usecase/user/user_reset_password.ts`
+
+Do this for simple create, read, update and delete operations too. Nobody can say where "simple" ends and "complex" begins, so a rule with no exceptions is applied the same way by everyone, and a use case that grows never has to be moved to a file of its own.
+
+Gateways (actions that reach a database or another service), wrappers and configs may be grouped: all the gateways of one technology can live in one file, for example.
+
+The scan ignores file names and folders, so nothing breaks if you lay your files out differently. What the framework does enforce keeps use case names unique: two functions may not return the same type name.
 
 ## Rules worth knowing
 

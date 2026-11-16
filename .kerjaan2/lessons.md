@@ -16,3 +16,6 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - Option mistakes are collected in build() in src/skeleto.ts (listOption) and come before the scanner's lines in the startup error; src/ is at 420 lines, above the 400 target of CLAUDE.md section 2
 - readDecorators (src/decorator.ts) returns { decorators, tags, problems }; a test that deepEquals a whole reading must include tags (lowercase tag names, in order)
 - With options.decorators the scanner reports markers lacking a main marker, lowercase near-markers, and main markers on exported constants or namespace functions; scan a 'left alone' fixture without the list
+- README code blocks may be '// path.ts (excerpt)': test/readme.test.ts requires the body to be a verbatim part of the example file of that path; editing the full block can break an excerpt elsewhere
+- BEST_PRACTICES.md code blocks must be '// path.ts (excerpt)' blocks that appear verbatim in a README example file; test/readme.test.ts refuses anything else there
+- A guarantee that a document holds no unchecked code block must recognise every CommonMark fence form (info strings after the language, ~~~ fences, indented fences in lists), not only ^```lang$

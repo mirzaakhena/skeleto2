@@ -9,6 +9,48 @@ import { withFixture } from "./fixture.js";
 const repo = fileURLToPath(new URL("..", import.meta.url));
 const readme = readFileSync(`${repo}README.md`, "utf8");
 
+const bestPractices = readFileSync(`${repo}BEST_PRACTICES.md`, "utf8");
+
+type Blocks = {
+  /** Full example files, by the path each block names in its first line. */
+  files: Record<string, string>;
+  /** Pieces of example files, shown where the whole file would be too long; `// <path>.ts (excerpt)` is their first line. */
+  excerpts: { path: string; body: string }[];
+  commands: string[];
+  outputs: string[];
+};
+
+/** Sorts every fenced block of a document by kind; a block of a kind that no test would check is refused. */
+function readBlocks(document: string, text: string): Blocks {
+  const blocks: Blocks = { files: {}, excerpts: [], commands: [], outputs: [] };
+  const fence = /^```(\w*)\n([\s\S]*?)^```$/gm;
+  // Markdown renders code in more forms than the one sorted below; outside the sorted blocks, any other form is refused rather than silently skipped:
+  // a fence of backticks or tildes with an info string or indented (as inside a list), an indented code block, or raw HTML code.
+  text
+    .replace(fence, "")
+    .split("\n")
+    .forEach((line, index) => {
+      const other = /^\s*(`{3,}|~{3,})/.test(line) || /^( {4}|\t)/.test(line) || /<(pre|code)[\s>]/i.test(line);
+      assert.ok(!other, `${document} has code that no test checks, written in a form the test does not read (line ${index + 1} outside the checked blocks):\n${line}`);
+    });
+  for (const [, language, body] of text.matchAll(fence)) {
+    const [, path, excerpt] = /^\/\/ (\S+\.ts)( \(excerpt\))?\n/.exec(body ?? "") ?? [];
+    if (language === "ts" && path && excerpt) blocks.excerpts.push({ path, body: (body ?? "").replace(/^.*\n/, "") });
+    else if (language === "ts" && path) {
+      assert.ok(!(path in blocks.files), `two ${document} blocks are named ${path}`);
+      blocks.files[path] = body ?? "";
+    } else if (language === "sh") blocks.commands.push((body ?? "").trim());
+    else if (language === "text") blocks.outputs.push(body ?? "");
+    else assert.fail(`${document} has a code block that no test runs:\n${body}`);
+  }
+  return blocks;
+}
+
+/** An excerpt runs only as part of the file it names, so it must be a verbatim piece of an example file. */
+function checkExcerpts(document: string, blocks: Blocks, files: Record<string, string>): void {
+  for (const { path, body } of blocks.excerpts) assert.ok(files[path]?.includes(body), `${document} excerpt of ${path} is not part of that README example file:\n${body}`);
+}
+
 type Example = {
   /** Example files, by the path each block names in its first line. */
   files: Record<string, string>;
@@ -18,23 +60,20 @@ type Example = {
   output: string;
 };
 
-/** Sorts every fenced block of the README into the example; a block of a kind that no test would run is refused. */
-function readExample(text: string): Example {
-  const files: Record<string, string> = {};
-  const commands: string[] = [];
-  const outputs: string[] = [];
-  for (const [, language, body] of text.matchAll(/^```(\w*)\n([\s\S]*?)^```$/gm)) {
-    const path = /^\/\/ (\S+\.ts)\n/.exec(body ?? "")?.[1];
-    if (language === "ts" && path) {
-      assert.ok(!(path in files), `two README blocks are named ${path}`);
-      files[path] = body ?? "";
-    } else if (language === "sh") commands.push((body ?? "").trim());
-    else if (language === "text") outputs.push(body ?? "");
-    else assert.fail(`README has a code block that no test runs:\n${body}`);
-  }
+/** The README holds the one runnable example; every other code block of the README and of BEST_PRACTICES.md is an excerpt of it. */
+function readExample(readmeText: string, bestPracticesText: string): Example {
+  const blocks = readBlocks("README", readmeText);
+  const { files, commands, outputs } = blocks;
+  checkExcerpts("README", blocks, files);
   assert.equal(commands.length, 1, "the README shows exactly one command");
   assert.equal(outputs.length, 1, "the README shows exactly one output");
   assert.match(commands[0] ?? "", /^npx tsx \S+$/);
+
+  // BEST_PRACTICES.md runs nothing of its own: a full file, a command or an output there would be checked by no test.
+  const practices = readBlocks("BEST_PRACTICES.md", bestPracticesText);
+  assert.deepEqual(Object.keys(practices.files), [], "BEST_PRACTICES.md may show excerpts of the README example only, not whole files");
+  assert.deepEqual([...practices.commands, ...practices.outputs], [], "BEST_PRACTICES.md may show excerpts of the README example only, not commands or output");
+  checkExcerpts("BEST_PRACTICES.md", practices, files);
   return { files, command: (commands[0] ?? "").split(" ").slice(2), output: outputs[0] ?? "" };
 }
 
@@ -63,7 +102,7 @@ function run(tool: string, args: string[], cwd: string): Promise<Run> {
   });
 }
 
-const example = readExample(readme);
+const example = readExample(readme, bestPractices);
 
 test("the README covers the three kinds, the start and the container", () => {
   const sources = Object.values(example.files).join("\n");
@@ -74,9 +113,9 @@ test("the README covers the three kinds, the start and the container", () => {
 });
 
 test("the README example has an async config, and says that startup waits for it without a time limit of its own", () => {
-  assert.match(example.files["src/config.ts"] ?? "", /@Config \*\/\nexport async function loadSettings\(\): Promise<Settings> \{\n[^}]*await /);
+  assert.match(example.files["src/config.ts"] ?? "", /@Config \*\/\nexport async function connectDatabase\(\): Promise<Database> \{\n[^}]*await /);
   // Its dependant asks for the plain name.
-  assert.match(example.files["src/usecase/greet/greet.ts"] ?? "", /makeGreet\(settings: Settings\)/);
+  assert.match(example.files["src/gateway/database.ts"] ?? "", /makeFindWarehouse\(database: Database\)/);
   assert.match(readme, /^## Asynchronous configs$/m);
   assert.match(readme, /Startup sets no time limit/);
   assert.match(readme, /Give the config its own timeout/);
@@ -106,18 +145,21 @@ test("the README examples start and print exactly the output the README shows", 
 
     const lines = result.stdout.split("\n");
     // Larger ordinal outside: the ordinal 10 wrapper is entered before, and left after, the wrapper without an ordinal.
-    assert.deepEqual(lines.slice(0, 2), ["enter GreetAll", "begin"]);
-    assert.deepEqual(lines.slice(6, 8), ["commit", "leave GreetAll"]);
-    // The injected action is the wrapped one, and the wrapper that returned the handler added no layer to it.
-    assert.deepEqual(lines.slice(2, 6), ["enter Greet", "leave Greet", "enter Greet", "leave Greet"]);
+    assert.deepEqual(lines.slice(0, 2), ["enter StockTransfer", "begin"]);
+    assert.deepEqual(lines.slice(8, 10), ["commit", "leave StockTransfer"]);
+    // The injected actions are the wrapped ones, and the wrapper that returned the handler added no layer to them.
+    assert.deepEqual(lines.slice(2, 8), ["enter FindWarehouse", "leave FindWarehouse", "enter FindWarehouse", "leave FindWarehouse", "enter SaveWarehouses", "leave SaveWarehouses"]);
 
     const metadata = (name: string): unknown => JSON.parse((lines.find((line) => line.startsWith(`${name}: `)) ?? "").replace(/^[^{]*/, ""));
-    assert.deepEqual(metadata("GreetAll"), { dependencies: ["Greet"], additionalDecorators: [{ name: "Transaction" }, { name: "Audit", data: { level: "info" } }] });
-    assert.deepEqual(metadata("Greet"), { dependencies: ["Settings"], additionalDecorators: [] });
-    // The async config is listed under the plain name, and the greeting it delivered late is the one the action used.
-    assert.ok(lines.includes('Settings: @Config {"dependencies":[],"additionalDecorators":[]}'));
+    assert.deepEqual(metadata("StockTransfer"), {
+      dependencies: ["FindWarehouse", "SaveWarehouses"],
+      additionalDecorators: [{ name: "Transaction" }, { name: "Audit", data: { level: "info" } }],
+    });
+    assert.deepEqual(metadata("FindWarehouse"), { dependencies: ["Database"], additionalDecorators: [] });
+    // The async config is listed under the plain name, and the database it delivered late is the one the gateways used.
+    assert.ok(lines.includes('Database: @Config {"dependencies":[],"additionalDecorators":[]}'));
     assert.ok(!result.stdout.includes("Promise"));
-    assert.ok(lines.includes("[ 'Hello, Ada!', 'Hello, Linus!' ]"));
+    assert.ok(lines.includes("[ { id: 'north', units: 7 }, { id: 'south', units: 3 } ]"));
   });
 });
 
@@ -128,9 +170,80 @@ test("the list of allowed markers in the README example is in force: a misspelle
   await withFixture({ ...installation(), ...files }, async (directory) => {
     const result = await run("tsx", example.command, directory);
     assert.notEqual(result.code, 0);
-    assert.match(result.stderr, /makeGreetAll.*@Transction is not an allowed marker/);
+    assert.match(result.stderr, /makeStockTransfer.*@Transction is not an allowed marker/);
     assert.equal(result.stdout, "");
   });
+});
+
+test("the README example keeps business rules in plain entity functions, and no use case depends on another use case", async () => {
+  const entities = Object.keys(example.files).filter((path) => path.startsWith("src/entity/"));
+  assert.ok(entities.length > 0, "the README example has no entity file");
+  // An entity carries no marker at all, so it can never become a component.
+  for (const path of entities) assert.doesNotMatch(example.files[path] ?? "", /^\s*(\/\*\*|\*)\s*@/m, `${path} carries a marker`);
+  assert.match(example.files["src/entity/warehouse.ts"] ?? "", /^export function transfer\(from: Warehouse, to: Warehouse, units: number\)/m);
+  assert.match(example.files["src/usecase/stock/stock_transfer.ts"] ?? "", /Warehouse\.transfer\(/);
+
+  await withFixture({ ...installation(), ...example.files }, async (directory) => {
+    const result = await run("tsx", example.command, directory);
+    assert.equal(result.code, 0, result.stderr);
+    const components = new Map<string, string[]>();
+    for (const line of result.stdout.split("\n")) {
+      const match = /^(\w+): @\w+ (\{.*\})$/.exec(line);
+      if (match) components.set(match[1] ?? "", JSON.parse(match[2] ?? "{}").dependencies);
+    }
+    // Use cases are the actions declared below src/usecase/; the entity's functions are not in the container.
+    const useCases = Object.keys(example.files)
+      .filter((path) => path.startsWith("src/usecase/"))
+      .flatMap((path) => [...(example.files[path] ?? "").matchAll(/^export type (\w+) = ActionHandler</gm)].map((match) => match[1] ?? ""));
+    assert.ok(useCases.length > 0);
+    for (const useCase of useCases) {
+      const dependencies = components.get(useCase);
+      assert.ok(dependencies, `${useCase} is not in the container`);
+      for (const dependency of dependencies) assert.ok(!useCases.includes(dependency), `use case ${useCase} depends on use case ${dependency}`);
+    }
+    for (const name of ["Warehouse", "create", "transfer"]) assert.ok(!components.has(name), `${name} became a component`);
+  });
+});
+
+test("BEST_PRACTICES.md holds both recommendations, says Skeleto does not check them, and shows the rule and the use case", () => {
+  assert.match(bestPractices, /^## One use case per file$/m);
+  assert.match(bestPractices, /^## Entities hold the rules, use cases orchestrate$/m);
+  assert.match(bestPractices, /Skeleto does not check them/);
+  assert.match(bestPractices, /```ts\n\/\/ src\/entity\/warehouse\.ts \(excerpt\)\nexport function transfer/);
+  assert.match(bestPractices, /```ts\n\/\/ src\/usecase\/stock\/stock_transfer\.ts \(excerpt\)\n/);
+  assert.match(bestPractices, /still lets an action depend on another action/);
+  for (const reason of [/already a plain object/, /leaves the old state intact/, /inputs and outputs alone/, /`import \* as Warehouse from /]) assert.match(bestPractices, reason);
+});
+
+test("BEST_PRACTICES.md opens with the two levels and maps every architectural concept to what expresses it and what Skeleto checks", () => {
+  const opening = bestPractices.slice(0, bestPractices.indexOf("## One use case per file"));
+  assert.match(opening, /^## Two levels$/m);
+  assert.match(opening, /\*\*The technical level\*\* is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper` and `@Action`/);
+  assert.match(opening, /\*\*The architectural level\*\*[^\n]*entities, use cases, gateways\. Skeleto does not know about any of them/);
+  assert.match(opening, /mechanism versus policy/);
+  const rows = new Map(
+    [...opening.matchAll(/^\| ([^|]+?) \| ([^|]+?) \| ([^|]+?) \|$/gm)].slice(2).map((match) => [match[1] ?? "", { expressed: match[2] ?? "", checked: match[3] ?? "" }]),
+  );
+  assert.deepEqual([...rows.keys()], ["Entity", "Use case", "Gateway", "Resource, such as a database or settings", "Cross-cutting concern, such as logging or transactions"]);
+  assert.match(rows.get("Entity")?.expressed ?? "", /no marker, not a component/);
+  assert.equal(rows.get("Entity")?.checked, "nothing");
+  for (const role of ["use case", "gateway"]) {
+    const row = rows.get(role[0]?.toUpperCase() + role.slice(1));
+    assert.equal(row?.expressed, "`@Action`");
+    assert.match(row?.checked ?? "", new RegExp(`the rules of an action; not that it is a ${role}`));
+  }
+  assert.equal(rows.get("Resource, such as a database or settings")?.expressed, "`@Config`");
+  assert.match(rows.get("Cross-cutting concern, such as logging or transactions")?.expressed ?? "", /^`@Wrapper`, chosen per action by additional markers/);
+  // The opening comes first: before the two recommendations.
+  assert.ok(bestPractices.indexOf("## Two levels") < bestPractices.indexOf("## One use case per file"));
+  assert.ok(bestPractices.indexOf("## One use case per file") < bestPractices.indexOf("## Entities hold the rules"));
+});
+
+test("the README leaves the recommendations to BEST_PRACTICES.md and links to it on one line", () => {
+  assert.doesNotMatch(readme, /^## One use case per file$/m);
+  assert.doesNotMatch(readme, /^## Entities hold the rules/m);
+  assert.doesNotMatch(readme, /Skeleto does not check (it|them)/);
+  assert.equal(readme.split("\n").filter((line) => line.includes("(BEST_PRACTICES.md")).length, 1);
 });
 
 test("the README and CLAUDE.md name the exclude option, the constant and every default entry", () => {
@@ -139,8 +252,9 @@ test("the README and CLAUDE.md name the exclude option, the constant and every d
   }
 });
 
-test("the README stays clear of what Skeleto dropped", () => {
+test("the README and BEST_PRACTICES.md stay clear of what Skeleto dropped", () => {
   for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /\brequest\b/i, /\bresponse\b/i]) {
     assert.doesNotMatch(readme, banned);
+    assert.doesNotMatch(bestPractices, banned);
   }
 });

@@ -7,7 +7,7 @@ Skeleto wires up an application made of plain functions. You mark a function wit
 It does **binding only**:
 
 - It scans every `.ts` file below one directory for marked, exported, top-level functions, except the files and folders on its [exclusion list](#files-the-scan-leaves-out).
-- The **name** of a component is its return type, exactly as written (`Greet`, `winston.Logger`); a config written `Promise<Settings>` is [asynchronous](#asynchronous-configs) and is named `Settings`. Its **dependencies** are the types of its parameters, in order. Nothing else is read: Skeleto never opens a type definition.
+- The **name** of a component is its return type, exactly as written (`StockTransfer`, `winston.Logger`); a config written `Promise<Database>` is [asynchronous](#asynchronous-configs) and is named `Database`. Its **dependencies** are the types of its parameters, in order. Nothing else is read: Skeleto never opens a type definition.
 - Every mistake (a missing dependency, a cycle, a misspelled marker, two functions returning the same type, ...) is reported at startup, all in one error, before any of your files is imported.
 
 It deliberately does **not** know about HTTP, routing, validation, OpenAPI, databases or logging. Anything of that sort belongs to your application, usually as a wrapper or as code that reads the container. Its only runtime dependency is `ts-morph`.
@@ -24,18 +24,47 @@ Any other dependency, and any circular one, stops startup. Configs are created f
 
 ## Example
 
-Configs. Each is called once, and its result is passed to whoever asks for its type. `loadSettings` is asynchronous: it is declared `Promise<Settings>`, so its component is `Settings`, startup waits for it, and `makeGreet` below receives the finished settings, not a promise.
+The example moves stock from one warehouse to another. How to lay out an application on Skeleto (one use case per file, business rules in entities, use cases that only orchestrate) is recommended in [BEST_PRACTICES.md](BEST_PRACTICES.md), and the example follows it.
+
+The entity. A plain type and pure functions, with no marker: Skeleto reads the file like any other, finds no marked function, and makes no component of it.
+
+```ts
+// src/entity/warehouse.ts
+export type Warehouse = { readonly id: string; readonly units: number };
+
+/** The only way to make a warehouse: it refuses values the business does not allow. */
+export function create(id: string, units: number): Warehouse {
+  if (id === "") throw new Error("a warehouse needs an id");
+  if (!Number.isInteger(units) || units < 0) throw new Error(`warehouse ${id} cannot hold ${units} units`);
+  return { id, units };
+}
+
+/** A rule over two entities. It returns new copies of both and leaves the warehouses it was given as they were. */
+export function transfer(from: Warehouse, to: Warehouse, units: number): Warehouse[] {
+  if (from.id === to.id) throw new Error(`warehouse ${from.id} cannot send stock to itself`);
+  if (!Number.isInteger(units) || units <= 0) throw new Error(`cannot move ${units} units`);
+  if (from.units < units) throw new Error(`warehouse ${from.id} holds ${from.units} units, not ${units}`);
+  return [create(from.id, from.units - units), create(to.id, to.units + units)];
+}
+```
+
+Configs. Each is called once, and its result is passed to whoever asks for its type. `connectDatabase` is asynchronous: it is declared `Promise<Database>`, so its component is `Database`, startup waits for it, and the gateways below receive the finished database, not a promise.
 
 ```ts
 // src/config.ts
-export type Settings = { greeting: string };
+import * as Warehouse from "./entity/warehouse.js";
+
+export type Database = Map<string, Warehouse.Warehouse>;
 export type Logger = (line: string) => void;
 
 /** @Config */
-export async function loadSettings(): Promise<Settings> {
-  // Stands in for something slow: a secret read from a remote service, a connection that has to be opened first.
+export async function connectDatabase(): Promise<Database> {
+  // Stands in for something slow: a connection that has to be opened first.
   await new Promise((resolve) => setTimeout(resolve, 10));
-  return { greeting: "Hello" };
+  return new Map([
+    ["north", Warehouse.create("north", 10)],
+    ["south", Warehouse.create("south", 0)],
+  ]);
 }
 
 /** @Config */
@@ -44,42 +73,60 @@ export function makeLogger(): Logger {
 }
 ```
 
-Actions. Each use case has its own file, and the files of one business area share a folder (see [One use case per file](#one-use-case-per-file)). `GreetAll` asks for `Greet` simply by naming its type.
+Gateways. They are actions that reach the database, and the gateways of one technology may share a file.
 
 ```ts
-// src/usecase/greet/greet.ts
+// src/gateway/database.ts
 import type { ActionHandler } from "skeleto";
-import type { Settings } from "../../config.js";
+import type { Database } from "../config.js";
+import type { Warehouse } from "../entity/warehouse.js";
 
-export type Greet = ActionHandler<string, string>;
+export type FindWarehouse = ActionHandler<string, Warehouse>;
+export type SaveWarehouses = ActionHandler<Warehouse[], void>;
 
 /** @Action */
-export function makeGreet(settings: Settings): Greet {
-  return async (ctx, name) => `${settings.greeting}, ${name}!`;
+export function makeFindWarehouse(database: Database): FindWarehouse {
+  return async (ctx, id) => {
+    const found = database.get(id);
+    if (!found) throw new Error(`no warehouse ${id}`);
+    return found;
+  };
+}
+
+/** @Action */
+export function makeSaveWarehouses(database: Database): SaveWarehouses {
+  return async (ctx, warehouses) => {
+    for (const warehouse of warehouses) database.set(warehouse.id, warehouse);
+  };
 }
 ```
 
-`GreetAll` also carries two **additional markers**, `@Transaction` and `@Audit`: Skeleto gives them no meaning, it only records them, with their data, for wrappers and for your own code to read.
+The use case. It has its own file, in the folder of its business area, and asks for the gateways simply by naming their types. It fetches, calls the entity's rule and saves; the rule itself is not in it.
+
+It also carries two **additional markers**, `@Transaction` and `@Audit`: Skeleto gives them no meaning, it only records them, with their data, for wrappers and for your own code to read.
 
 ```ts
-// src/usecase/greet/greet_all.ts
+// src/usecase/stock/stock_transfer.ts
 import type { ActionHandler } from "skeleto";
-import type { Greet } from "./greet.js";
+import * as Warehouse from "../../entity/warehouse.js";
+import type { FindWarehouse, SaveWarehouses } from "../../gateway/database.js";
 
-export type GreetAll = ActionHandler<string[], string[]>;
+export type StockTransfer = ActionHandler<{ from: string; to: string; units: number }, Warehouse.Warehouse[]>;
 
 /**
- * Greets several people in one go.
+ * Moves units of stock from one warehouse to another.
  *
  * @Action
  * @Transaction
  * @Audit {"level": "info"}
  */
-export function makeGreetAll(greet: Greet): GreetAll {
-  return async (ctx, names) => {
-    const greetings: string[] = [];
-    for (const name of names) greetings.push(await greet(ctx, name));
-    return greetings;
+export function makeStockTransfer(findWarehouse: FindWarehouse, saveWarehouses: SaveWarehouses): StockTransfer {
+  return async (ctx, { from, to, units }) => {
+    const source = await findWarehouse(ctx, from);
+    const target = await findWarehouse(ctx, to);
+    const moved = Warehouse.transfer(source, target, units);
+    await saveWarehouses(ctx, moved);
+    return moved;
   };
 }
 ```
@@ -126,13 +173,13 @@ Starting it and reading the container. `decorators` lists the additional markers
 ```ts
 // main.ts
 import { Skeleto, newContext } from "skeleto";
-import type { ActionHandler } from "skeleto";
+import type { StockTransfer } from "./src/usecase/stock/stock_transfer.js";
 
 const skeleto = await Skeleto.start("src", { decorators: ["Transaction", "Audit"] });
 const container = skeleto.getContainer();
 
-const greetAll: ActionHandler<string[], string[]> = container.get("GreetAll")!.getInstance();
-console.log(await greetAll(newContext(), ["Ada", "Linus"]));
+const stockTransfer: StockTransfer = container.get("StockTransfer")!.getInstance();
+console.log(await stockTransfer(newContext(), { from: "north", to: "south", units: 3 }));
 
 for (const [name, component] of container) {
   const { mainDecorator, dependencies, additionalDecorators } = component.getMetadata();
@@ -145,43 +192,27 @@ npx tsx main.ts
 ```
 
 ```text
-enter GreetAll
+enter StockTransfer
 begin
-enter Greet
-leave Greet
-enter Greet
-leave Greet
+enter FindWarehouse
+leave FindWarehouse
+enter FindWarehouse
+leave FindWarehouse
+enter SaveWarehouses
+leave SaveWarehouses
 commit
-leave GreetAll
-[ 'Hello, Ada!', 'Hello, Linus!' ]
-Settings: @Config {"dependencies":[],"additionalDecorators":[]}
+leave StockTransfer
+[ { id: 'north', units: 7 }, { id: 'south', units: 3 } ]
+Database: @Config {"dependencies":[],"additionalDecorators":[]}
 Logger: @Config {"dependencies":[],"additionalDecorators":[]}
 LogWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
 TransactionWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
-Greet: @Action {"dependencies":["Settings"],"additionalDecorators":[]}
-GreetAll: @Action {"dependencies":["Greet"],"additionalDecorators":[{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
+FindWarehouse: @Action {"dependencies":["Database"],"additionalDecorators":[]}
+SaveWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[]}
+StockTransfer: @Action {"dependencies":["FindWarehouse","SaveWarehouses"],"additionalDecorators":[{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
 ```
 
-The output shows the layering: `LogWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), `Greet` was left alone by the transaction wrapper, and the `Greet` that `GreetAll` received is the wrapped one.
-
-## One use case per file
-
-This is a recommendation for the applications you build. Skeleto does not check it.
-
-A **use case** is an `@Action` that stands for one business operation of your application. Put each use case in its own file, named after it, and group the files of one entity or business area in a folder:
-
-- `usecase/user/user_create.ts`
-- `usecase/user/user_get.ts`
-- `usecase/user/user_list.ts`
-- `usecase/user/user_update.ts`
-- `usecase/user/user_delete.ts`
-- `usecase/user/user_reset_password.ts`
-
-Do this for simple create, read, update and delete operations too. Nobody can say where "simple" ends and "complex" begins, so a rule with no exceptions is applied the same way by everyone, and a use case that grows never has to be moved to a file of its own.
-
-Gateways (actions that reach a database or another service), wrappers and configs may be grouped: all the gateways of one technology can live in one file, for example.
-
-The scan ignores file names and folders, so nothing breaks if you lay your files out differently. What the framework does enforce keeps use case names unique: two functions may not return the same type name.
+The output shows the layering: `LogWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), the gateways were left alone by the transaction wrapper, and the gateways that `StockTransfer` received are the wrapped ones. The entity's functions are not in the container.
 
 ## Rules worth knowing
 
@@ -200,7 +231,7 @@ The scan ignores file names and folders, so nothing breaks if you lay your files
 
 ## Asynchronous configs
 
-Some things are usable only after an asynchronous start: a database connection, a cache client, a secret kept elsewhere. Write such a config with the return type `Promise<X>`, as `loadSettings` does above:
+Some things are usable only after an asynchronous start: a database connection, a cache client, a secret kept elsewhere. Write such a config with the return type `Promise<X>`, as `connectDatabase` does above:
 
 - Its component is `X`. Whoever needs it names the plain type `X` and receives the finished value; nobody gets a promise. The container lists it under `X` as well, with the finished value as its instance.
 - Startup waits for it before it creates anything that depends on it. It is still called once only, however many components need it, and they all receive the same instance. Configs are waited for one after another, not side by side.

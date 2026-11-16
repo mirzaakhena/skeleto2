@@ -35,7 +35,7 @@ export class Skeleto {
 }
 
 async function build(root: string, options: SkeletoOptions | undefined): Promise<Container> {
-  const { functions, errors } = scanDirectory(root, options?.decorators);
+  const { functions, errors } = scanDirectory(root, options?.decorators, options?.exclude);
   const byName = new Map<string, ScannedFunction>();
   // The first of two components with the same name wins, as in the sorter; the scanner has reported the duplicate.
   for (const found of functions) if (!byName.has(found.metadata.name)) byName.set(found.metadata.name, found);

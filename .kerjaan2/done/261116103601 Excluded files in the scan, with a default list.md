@@ -26,14 +26,14 @@ The option is `exclude` in `SkeletoOptions` and the constant is `DEFAULT_EXCLUDE
 
 ## Done when
 
-- [ ] With no option given, tests show that a marked function in a `.d.ts` file, in a `*.test.ts` file, in a `*.spec.ts` file and under a `node_modules` folder (also a nested one) is not a component and causes no mistake, while a normal file beside them is still found.
-- [ ] A test shows that an empty list scans everything, so those same files do produce components.
-- [ ] A test shows that a list built from the default constant plus one more entry leaves out both the defaults and the added entry, and that a list without the defaults no longer leaves the defaults out.
-- [ ] Tests show that each of these entries stops startup with a message that names the entry, reported together with another mistake in the same directory and before any application file is imported: `generated/models`, `foo*`, `*.test.*`, `**/x`, `*`, and an empty string.
-- [ ] A test shows that a directory whose own path contains `node_modules` is scanned when it is the directory given, with the default list.
-- [ ] A directory whose only `.ts` files are excluded is reported the same way as a directory without `.ts` files.
-- [ ] The default list is the one constant `DEFAULT_EXCLUDE` exported from the package, and the option `exclude` is part of `SkeletoOptions`; `CLAUDE.md` sections 4.2 and 5 and the README state both, with the four default entries.
-- [ ] The only runtime dependency is still `ts-morph`, the framework source outside tests is still under 400 lines, and the three commands of `CLAUDE.md` section 9 pass.
+- [x] With no option given, tests show that a marked function in a `.d.ts` file, in a `*.test.ts` file, in a `*.spec.ts` file and under a `node_modules` folder (also a nested one) is not a component and causes no mistake, while a normal file beside them is still found.
+- [x] A test shows that an empty list scans everything, so those same files do produce components.
+- [x] A test shows that a list built from the default constant plus one more entry leaves out both the defaults and the added entry, and that a list without the defaults no longer leaves the defaults out.
+- [x] Tests show that each of these entries stops startup with a message that names the entry, reported together with another mistake in the same directory and before any application file is imported: `generated/models`, `foo*`, `*.test.*`, `**/x`, `*`, and an empty string.
+- [x] A test shows that a directory whose own path contains `node_modules` is scanned when it is the directory given, with the default list.
+- [x] A directory whose only `.ts` files are excluded is reported the same way as a directory without `.ts` files.
+- [x] The default list is the one constant `DEFAULT_EXCLUDE` exported from the package, and the option `exclude` is part of `SkeletoOptions`; `CLAUDE.md` sections 4.2 and 5 and the README state both, with the four default entries.
+- [x] The only runtime dependency is still `ts-morph`, the framework source outside tests is still under 400 lines, and the three commands of `CLAUDE.md` section 9 pass.
 
 ## Out of scope
 
@@ -63,9 +63,33 @@ Full glob syntax (`**`, braces, negation). Reporting a misspelt main marker such
 - A3 [unseen] The constant is declared in src/type.ts as a readonly string array and re-exported from src/index.ts; the option is an optional string array in SkeletoOptions; scanDirectory receives the list as a further parameter
   Why: Section 6 puts public types in type.ts and keeps index.ts without logic; scanner.ts already imports from type.ts
   If wrong: Move the constant to src/scanner.ts and re-export it from there
+- A4 [unseen] A backslash in an entry is rejected like a slash, and so is an entry that is not text; when a list has a rejected entry, its other entries still apply for that failed scan
+  Why: A backslash is the path separator on Windows; keeping the usable entries means the report shows the bad entry and not a pile of mistakes from files that were meant to be left out
+  If wrong: Loosen the one pattern in scanDirectory (src/scanner.ts), or pass an empty list to listFiles when any entry is rejected
+- A5 [unseen] DEFAULT_EXCLUDE is frozen and typed readonly string[], and the option exclude accepts readonly string[] (a plain string[] still fits)
+  Why: A shared constant that one caller could push to would change the scan of every later start; the readonly option type lets DEFAULT_EXCLUDE itself be passed
+  If wrong: Drop Object.freeze and the readonly in src/type.ts
 
 ## Decisions
 - Lane standard: adds a public option and constant and changes which files the scanner reads; no data at risk, easy to revert
 - Waits for 205 and 206: the option is passed through Skeleto.start, which 205 builds, and the README it extends (with the test that runs its examples) is written by 206. Not solo: nothing else is queued beside it
 - Line budget: src/ is 370 lines once 205 lands (scanner 130, skeleto 92, decorator 54, type 46, dependency 45, index 3), so this ticket has about 29 lines for the constant, the option, the matcher and any check of the entries
 - Owner answered Q1 to Q5 with the recommended option each; Request and Done when now carry the names exclude and DEFAULT_EXCLUDE, the rejected entry forms and the below-the-directory rule. 205 and 206 are in main, so nothing blocks it
+- A rejected exclude entry is reported by scanDirectory, as a line starting with 'exclude entry "<entry>"', ahead of the file mistakes: the scanner already collects everything found before any import, so no second check in skeleto.ts was needed. src/ is now 383 lines
+
+## Handoff
+The scan now skips names on an exclusion list. DEFAULT_EXCLUDE (src/type.ts, frozen, exported from index.ts) holds node_modules, *.d.ts, *.test.ts, *.spec.ts; SkeletoOptions.exclude replaces it. scanDirectory takes the list as its third parameter, rejects entries with a separator, a non-leading or lone *, or no text as collected errors ('exclude entry ...'), and listFiles compares each name below the root: exact name for folders and files, leading * as a file-name ending only. Excluded folders are never entered. Must not break: the given root is never matched, the list replaces rather than adds, errors come before any import, src/ stays under 400 lines (now 383). README and CLAUDE.md 4.2/5 describe it; test/readme.test.ts checks they name every default entry.
+
+## Review
+- 2026-11-16 standard, round 1, at 9cb45e1: passed.
+  1: Named 'without a list' tests pass. Own probe: default start over a.ts plus .d.ts, .test.ts, .spec.ts, node_modules and nested node_modules files that throw at module level gave container ['A'], no throw.
+  2: Named empty-list tests pass. Own probe with exclude: [] gave A, G, H, N, NN, S, T: every trap file became a component.
+  3: Named tests pass. Own probe: [...DEFAULT_EXCLUDE, 'generated'] gave only A (generated at two depths out); ['generated'] alone gave A, N, NN, S, T.
+  4: The six start tests pass. Own probe per entry, files throwing at module level: each error had 'exclude entry "<entry>"' beside 'Save: dependency Missing is not a known component', never the module throw.
+  5: Named tests pass. Own probe: start of <tmp>/node_modules/app/src with the default list gave ['A']; the node_modules below it stayed out.
+  6: Own probe: a directory with only a .txt, one with only default-excluded .ts files, and a.ts under exclude ['*.ts'] gave the identical line 'no .ts file with a @Config, @Wrapper or @Action function was found'.
+  7: Probe imported DEFAULT_EXCLUDE from src/index.ts: four entries, frozen. dist/type.d.ts has exclude in SkeletoOptions. Readme test passes and can fail. By reading: CLAUDE.md 4.2 and 5 and the README section state both and the entries.
+  8: package.json and lock have no diff against main, dependencies is ['ts-morph']; wc -l src/*.ts is 383. The three commands: the board's recorded pass on d501643ae7, not rerun as the brief says.
+  note: no AGENTS.md; CLAUDE.md read, no rule broken. The repo offers no checks beyond the three commands.
+  note: not blocking, by reading scanner.ts: exclude: null from untyped JS throws a TypeError instead of a collected mistake; '.' and '..' pass the check and match nothing; a bad entry given twice is reported twice.
+  note: k2 test passes its arguments through a shell unquoted; a command with | or spaces in an argument has to go in a script.

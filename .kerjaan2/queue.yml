@@ -1,3 +1,2 @@
 goal: Let the application say which files the scan leaves out, with DEFAULT_EXCLUDE as the default list
 order:
-  - 261116103601   # Excluded files in the scan, with a default list

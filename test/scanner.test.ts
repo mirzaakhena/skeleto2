@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { scanDirectory } from "../src/scanner.js";
 import type { ScanResult } from "../src/scanner.js";
+import { DEFAULT_EXCLUDE } from "../src/type.js";
 import { withFixture } from "./fixture.js";
 
 function scan(files: Record<string, string>, allowedDecorators?: string[]): Promise<ScanResult> {
@@ -411,6 +412,131 @@ test("a directory that does not exist is a mistake naming the directory, not a t
 test("a directory without .ts files gives an empty result", async () => {
   const result = await scan({ "readme.md": "nothing here\n" });
   assert.deepEqual(result, { functions: [], errors: [] });
+});
+
+// ---- exclusions (4.2) ----
+
+function marked(name: string): string {
+  return `/** @Config */\nexport function make${name}(): ${name} { return null as any; }\n`;
+}
+
+// Each trap is a marked function without a body to import, or a second component of a name that the normal file already has.
+const trapFiles: Record<string, string> = {
+  "normal.ts": marked("Normal"),
+  "types.d.ts": `/** @Config */\nexport declare function makeDeclared(): Declared;\n`,
+  "normal.test.ts": marked("Normal"),
+  "deep/normal.spec.ts": marked("Normal"),
+  "node_modules/pkg/index.ts": marked("Normal"),
+  "deep/node_modules/pkg/lib/index.ts": marked("Nested"),
+};
+const trapNames = ["Declared", "Nested", "Normal", "Normal", "Normal", "Normal"];
+
+function names(result: ScanResult): string[] {
+  return result.functions.map((found) => found.metadata.name);
+}
+
+for (const path of Object.keys(trapFiles).slice(1)) {
+  test(`without a list, a marked function in ${path} is not a component and no mistake, and the file beside it is found`, async () => {
+    const result = await scan({ "normal.ts": trapFiles["normal.ts"]!, [path]: trapFiles[path]! });
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(names(result), ["Normal"]);
+  });
+}
+
+test("without a list, all default exclusions hold together", async () => {
+  const result = await scan(trapFiles);
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(names(result), ["Normal"]);
+});
+
+test("the default list is the four documented entries and cannot be changed in place", () => {
+  assert.deepEqual(DEFAULT_EXCLUDE, ["node_modules", "*.d.ts", "*.test.ts", "*.spec.ts"]);
+  assert.throws(() => (DEFAULT_EXCLUDE as string[]).push("x"), TypeError);
+});
+
+test("an empty list scans everything, so the default exclusions do produce components", async () => {
+  const result = await withFixture(trapFiles, (directory) => scanDirectory(directory, undefined, []));
+  assert.deepEqual(names(result).sort(), trapNames);
+  // The three extra functions returning Normal are now seen, which is the trap the default list avoids.
+  assert.equal(result.errors.length, 3, JSON.stringify(result.errors));
+  for (const error of result.errors) assert.match(error, /^Normal: returned by both/);
+});
+
+test("the default list plus one entry leaves out the defaults and that entry, as a folder or as a file at any depth", async () => {
+  const files = { ...trapFiles, "generated/a.ts": marked("GeneratedA"), "deep/generated/b.ts": marked("GeneratedB"), "kept/generated.ts": marked("Kept") };
+  const withFolder = await withFixture(files, (directory) => scanDirectory(directory, undefined, [...DEFAULT_EXCLUDE, "generated"]));
+  assert.deepEqual(withFolder.errors, []);
+  assert.deepEqual(names(withFolder), ["Kept", "Normal"]);
+  const withFile = await withFixture(files, (directory) => scanDirectory(directory, undefined, [...DEFAULT_EXCLUDE, "generated.ts"]));
+  assert.deepEqual(withFile.errors, []);
+  assert.deepEqual(names(withFile), ["GeneratedB", "GeneratedA", "Normal"]);
+});
+
+test("a list without the defaults no longer leaves the defaults out", async () => {
+  const result = await withFixture({ ...trapFiles, "generated/a.ts": marked("GeneratedA") }, (directory) => scanDirectory(directory, undefined, ["generated"]));
+  assert.deepEqual(names(result).sort(), trapNames);
+});
+
+test("a wildcard entry matches file names by their ending only: not a folder, not the middle of a name", async () => {
+  const files = { "a.gen.ts": marked("Ending"), "x.gen.ts/b.ts": marked("InFolder"), "a.gen.ts.ts": marked("Middle"), "gen.ts": marked("Bare"), "sub/c.gen.ts": marked("Deep") };
+  const result = await withFixture(files, (directory) => scanDirectory(directory, undefined, ["*.gen.ts"]));
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(names(result).sort(), ["Bare", "InFolder", "Middle"]);
+});
+
+test("an entry without a wildcard is the whole name, compared exactly", async () => {
+  const files = { "node_modules_old/a.ts": marked("Longer"), "my-node_modules/c.ts": marked("Prefixed"), "node_modules/d.ts": marked("Exact") };
+  const result = await scan(files);
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(names(result).sort(), ["Longer", "Prefixed"]);
+  // In a fixture of its own: a file system that ignores case would make this folder and node_modules one folder.
+  assert.deepEqual(names(await scan({ "Node_Modules/b.ts": marked("OtherCase") })), ["OtherCase"]);
+});
+
+test("an excluded folder is not entered: a file in it that cannot be parsed and a link loop in it are never seen", async () => {
+  await withFixture({ "a.ts": validA, "node_modules/pkg/b.ts": marked("B") }, (directory) => {
+    symlinkSync(directory, join(directory, "node_modules/pkg/back"));
+    symlinkSync(join(directory, "nowhere"), join(directory, "node_modules/pkg/dangling.ts"));
+    const result = scanDirectory(directory);
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(names(result), ["A"]);
+  });
+});
+
+test("the directory given is scanned even when its own path contains an excluded name", async () => {
+  await withFixture({ "node_modules/pkg/src/a.ts": validA, "node_modules/pkg/src/a.test.ts": validA, "node_modules/pkg/src/node_modules/b.ts": validA }, (directory) => {
+    for (const given of ["node_modules/pkg/src", "node_modules/pkg", "node_modules"]) {
+      const result = scanDirectory(join(directory, given));
+      assert.deepEqual(result.errors, [], given);
+      assert.deepEqual(result.functions.map((found) => found.filePath), [join(directory, "node_modules/pkg/src/a.ts")], given);
+    }
+    assert.deepEqual(scanDirectory(directory), { functions: [], errors: [] });
+  });
+});
+
+test("a directory whose only .ts files are excluded gives the same empty result as one without .ts files", async () => {
+  const result = await scan({ "a.test.ts": validA, "b.spec.ts": validA, "c.d.ts": validA, "node_modules/d.ts": validA });
+  assert.deepEqual(result, { functions: [], errors: [] });
+});
+
+const badEntries = ["generated/models", "foo*", "*.test.*", "**/x", "*", "", "generated\\models", "/abs", "a*b"];
+
+for (const entry of badEntries) {
+  test(`the exclusion ${JSON.stringify(entry)} is a mistake naming the entry, and the scan still reports the other mistakes`, async () => {
+    const files = { "a.ts": `/** @Config */\nfunction hidden(): Hidden { return null as any; }\n`, "b.test.ts": marked("Skipped") };
+    const result = await withFixture(files, (directory) => scanDirectory(directory, undefined, ["*.test.ts", entry]));
+    assert.equal(result.errors.length, 2, JSON.stringify(result.errors));
+    assert.ok(result.errors[0]?.startsWith(`exclude entry ${JSON.stringify(entry)}: `), result.errors[0]);
+    assert.match(result.errors[1] ?? "", /hidden \(a\.ts\).*not exported/);
+    // The usable entries of the same list still hold, so a bad entry does not add mistakes from files that were meant to be left out.
+    assert.deepEqual(names(result), ["Hidden"]);
+  });
+}
+
+test("every bad exclusion of one list is reported, each once, and an entry that is not text is one of them", async () => {
+  const result = await withFixture({ "a.ts": validA }, (directory) => scanDirectory(directory, undefined, ["a/b", "ok", "*", 7 as unknown as string]));
+  assert.deepEqual(result.errors.map((error) => error.split(":")[0]), ['exclude entry "a/b"', 'exclude entry "*"', "exclude entry 7"]);
+  assert.deepEqual(names(result), ["A"]);
 });
 
 // ---- structure ----

@@ -12,3 +12,5 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - README.md code blocks are run by test/readme.test.ts: a ts block needs '// path.ts' as its first line, and the text block must equal the real output of 'npx tsx main.ts'
 - Test fixtures run on a file system that may ignore case (macOS): two folders that differ only in case become one folder, so put them in separate fixtures
 - ScannedFunction (src/scanner.ts) has a fourth field, awaited; a test that deepEquals scan results must include it, and only a config declared exactly Promise<X> has it true
+- src/ is 414 lines against the CLAUDE.md target of under 400 (it was 403 before 261116113702); a later ticket adding to src/ should look for lines to remove
+- Option mistakes are collected in build() in src/skeleto.ts (listOption) and come before the scanner's lines in the startup error; src/ is at 420 lines, above the 400 target of CLAUDE.md section 2

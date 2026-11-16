@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { inspect } from "node:util";
 import { sortDependencies } from "./dependency.js";
 import { scanDirectory } from "./scanner.js";
 import type { ScannedFunction } from "./scanner.js";
@@ -34,14 +35,29 @@ export class Skeleto {
   }
 }
 
+/**
+ * A caller without type checking can pass anything. A text would even half work, since a text can be searched like a list, and accept
+ * every marker whose name it contains. A bad option is reported and then treated as left out, so that the scan still finds the rest.
+ */
+function listOption(options: SkeletoOptions | undefined, name: "decorators" | "exclude", errors: string[]): string[] | undefined {
+  const value: unknown = options?.[name];
+  if (value === undefined) return undefined;
+  if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) return value;
+  errors.push(`options.${name}: must be a list of texts, received ${inspect(value, { depth: 1, breakLength: Infinity })}`);
+  return undefined;
+}
+
 async function build(root: string, options: SkeletoOptions | undefined): Promise<Container> {
-  const { functions, errors } = scanDirectory(root, options?.decorators, options?.exclude);
+  const optionErrors: string[] = [];
+  const scanned = scanDirectory(root, listOption(options, "decorators", optionErrors), listOption(options, "exclude", optionErrors));
+  const { functions } = scanned;
+  const errors = [...optionErrors, ...scanned.errors];
   const byName = new Map<string, ScannedFunction>();
   // The first of two components with the same name wins, as in the sorter; the scanner has reported the duplicate.
   for (const found of functions) if (!byName.has(found.metadata.name)) byName.set(found.metadata.name, found);
 
   // The scanner returns nothing for a directory without .ts files, and a directory without any component has nothing to bind either.
-  if (functions.length === 0 && errors.length === 0) errors.push(`${root}: no .ts file with a @Config, @Wrapper or @Action function was found`);
+  if (functions.length === 0 && scanned.errors.length === 0) errors.push(`${root}: no .ts file with a @Config, @Wrapper or @Action function was found`);
   for (const { metadata } of functions) {
     const kind = metadata.mainDecorator.name;
     for (const dependency of metadata.dependencies) {
@@ -58,14 +74,17 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
   if (errors.length > 0) throw new Error(`Skeleto cannot start ${root}, ${errors.length} problem(s):\n${errors.map((line) => `- ${line}`).join("\n")}`);
 
   const container: Container = new Map();
-  const wrappers: { name: string; ordinal: number; wrap: WrapperHandler }[] = [];
+  const wrappers: { name: string; at: string; ordinal: number; wrap: WrapperHandler }[] = [];
   // A kind depends on earlier kinds or on itself only, so filtering the one sorted order by kind keeps dependencies first.
   for (const kind of Object.keys(ALLOWED_DEPENDENCIES)) {
     for (const name of sorted.order) {
       const { metadata, filePath, functionName, awaited } = byName.get(name)!;
       if (metadata.mainDecorator.name !== kind) continue;
+      const at = `${name}: function ${functionName} (${filePath})`;
       let step = "importing its file";
       let instance: any;
+      // A result that is not a function would be stored and injected as it is, and fail far from here: on the first request.
+      let notFunction: string | undefined;
       try {
         const create = (await import(pathToFileURL(filePath).href))[functionName];
         step = "creating it";
@@ -75,23 +94,31 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
           step = "waiting for it";
           instance = await instance;
         }
-        if (kind === "Action") {
-          // Applied from the innermost to the outermost: the wrapper applied last is the one a caller enters first.
-          for (const wrapper of wrappers) {
-            step = `wrapping it with ${wrapper.name}`;
-            instance = wrapper.wrap(instance, metadata);
-          }
+        if (kind !== "Config" && typeof instance !== "function") notFunction = `${at} returned ${describe(instance)}; a @${kind} must return a function`;
+        // Applied from the innermost to the outermost: the wrapper applied last is the one a caller enters first.
+        for (const wrapper of kind === "Action" && !notFunction ? wrappers : []) {
+          step = `wrapping it with ${wrapper.name}`;
+          instance = wrapper.wrap(instance, metadata);
+          if (typeof instance === "function") continue;
+          // The wrapper is at fault here, not the action, so the message leads with the wrapper.
+          notFunction = `${wrapper.at} returned ${describe(instance)} when wrapping ${name}; a wrapper must return a function for every action`;
+          break;
         }
       } catch (cause) {
         // Not collected like the checks: later components need this one, so going on would only produce follow-up failures.
         const reason = cause instanceof Error ? cause.message : String(cause);
-        throw new Error(`${name}: function ${functionName} (${filePath}) failed while ${step}: ${reason}`, { cause });
+        throw new Error(`${at} failed while ${step}: ${reason}`, { cause });
       }
+      if (notFunction) throw new Error(notFunction);
       container.set(name, new FuncInstanceMetadata(instance, metadata));
-      if (kind === "Wrapper") wrappers.push({ name, ordinal: metadata.mainDecorator.data?.ordinal ?? 0, wrap: instance });
+      if (kind === "Wrapper") wrappers.push({ name, at, ordinal: metadata.mainDecorator.data?.ordinal ?? 0, wrap: instance });
     }
     // Plain code-unit comparison of names, so the layering does not depend on the locale of the machine.
     if (kind === "Wrapper") wrappers.sort((a, b) => a.ordinal - b.ordinal || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   }
   return container;
+}
+
+function describe(value: unknown): string {
+  return value === null ? "null" : value instanceof Promise ? "a promise" : typeof value;
 }

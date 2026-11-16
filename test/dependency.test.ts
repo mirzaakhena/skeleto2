@@ -43,6 +43,15 @@ test("a component that lists the same dependency twice is still ordered once", (
   assert.deepEqual(sortDependencies([node("A", "B", "B"), node("B")]), { order: ["B", "A"], errors: [] });
 });
 
+test("a missing dependency listed twice by one component is reported once, and once more for each other component that misses it", () => {
+  const result = sortDependencies([node("A", "Gone", "B", "Gone"), node("B"), node("C", "Gone")]);
+  assert.deepEqual(result.errors, ["A: dependency Gone is not a known component", "C: dependency Gone is not a known component"]);
+});
+
+test("a component that lists itself twice is one cycle", () => {
+  assert.deepEqual(sortDependencies([node("Self", "Self", "Self")]).errors, ["circular dependency: Self -> Self"]);
+});
+
 test("a missing dependency names the component and the missing dependency", () => {
   const result = sortDependencies([node("SaveUser", "Database"), node("Logger")]);
   assert.equal(result.errors.length, 1);

@@ -37,3 +37,5 @@
 {"t":"2026-11-16 13:28:32","event":"agent","role":"reviewer","agent":"ab9e29a3c2f1612af","step":"review:2:0:3","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 13:29:23","event":"verdict","result":"pass","round":2,"commit":"c42f9ce","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:ab9e29a3c2f1612af"}
 {"t":"2026-11-16 13:29:37","event":"landed","branch":"k2/261116131101-recommend-where-business-rules","files":["BEST_PRACTICES.md","README.md","test/readme.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 13:31:25","event":"assumption-confirmed","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 13:31:25","event":"assumption-confirmed","key":"A2","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

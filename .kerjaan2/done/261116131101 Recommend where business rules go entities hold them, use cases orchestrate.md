@@ -51,12 +51,14 @@ Any check in the framework. Changes to `CLAUDE.md`. Changes to `~/Workspace/nuki
 <!-- k2:record — written by k2 only; do not edit by hand -->
 
 ## Assumptions
-- A1 [unseen] The owner's 'entities are not scanned by Skeleto' is written as: an entity file has no markers, Skeleto reads it like any file and makes no component of it; no exclusion is recommended
+- A1 [confirmed] The owner's 'entities are not scanned by Skeleto' is written as: an entity file has no markers, Skeleto reads it like any file and makes no component of it; no exclusion is recommended
   Why: The default exclusions do not cover entity files, and excluding them changes nothing at runtime
   If wrong: Add a sentence suggesting exclude: [...DEFAULT_EXCLUDE, "entity"]
-- A2 [unseen] The example's domain changed from greetings to moving stock between two warehouses, with one use case (StockTransfer), two gateways and an async connectDatabase config replacing loadSettings
+  Confirmed by owner, 2026-11-16
+- A2 [confirmed] The example's domain changed from greetings to moving stock between two warehouses, with one use case (StockTransfer), two gateways and an async connectDatabase config replacing loadSettings
   Why: The section must show a two-entity rule from the runnable example, and the greeting example had a use case depending on a use case
   If wrong: Rework the example files, the output block and the assertions in test/readme.test.ts
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - test/readme.test.ts accepts a ts block whose first line is '// <path>.ts (excerpt)' only if its body is a verbatim substring of the example file of that path, so the new section can show code from the example without a second full copy while every block stays run

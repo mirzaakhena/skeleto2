@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { chmodSync, existsSync, readdirSync, readFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { scanDirectory } from "../src/scanner.js";
@@ -319,6 +319,98 @@ test("a file with a syntax error or a broken import does not make the scan throw
     "broken.ts": `import { nothing } from "no-such-package";\nconst = ;\n/** @Config */\nexport function implDb(): Database { return null as any; }\n`,
   });
   assert.deepEqual(result.functions.map((found) => found.metadata.name), ["Database"]);
+});
+
+// ---- entries that are not readable files ----
+
+const validA = `/** @Config */\nexport function a(): A { return null as any; }\n`;
+
+test("a folder named like a .ts file is walked, not read as a file", async () => {
+  await withFixture({ "models.ts/a.ts": validA, "models.ts/deep.ts/b.ts": `/** @Config */\nexport function b(): B { return null as any; }\n` }, (directory) => {
+    const result = scanDirectory(directory);
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.functions.map((found) => found.metadata.name), ["A", "B"]);
+    assert.deepEqual(result.functions.map((found) => found.filePath), [join(directory, "models.ts/a.ts"), join(directory, "models.ts/deep.ts/b.ts")]);
+  });
+});
+
+test("an empty folder named like a .ts file is skipped", async () => {
+  await withFixture({ "a.ts": validA, "empty.ts/keep.txt": "" }, (directory) => {
+    const result = scanDirectory(directory);
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.functions.map((found) => found.metadata.name), ["A"]);
+  });
+});
+
+test("a dangling link named like a .ts file is skipped and the other files are still scanned", async () => {
+  await withFixture({ "a.ts": validA, "z.ts": `/** @Action */\nfunction implHidden(): Hidden { return null as any; }\n` }, (directory) => {
+    symlinkSync(join(directory, "does-not-exist"), join(directory, "gone.ts"));
+    symlinkSync("user@host.1234:5678", join(directory, ".#lock.ts"));
+    const result = scanDirectory(directory);
+    assert.deepEqual(result.functions.map((found) => found.metadata.name), ["A", "Hidden"]);
+    assertOneError(result, /implHidden/, /not exported/);
+  });
+});
+
+test("a link to a .ts file is read, and a link to a folder is not followed", async () => {
+  await withFixture({ "a.ts": validA }, async (directory) => {
+    await withFixture({ "real.ts": `/** @Config */\nexport function b(): B { return null as any; }\n` }, (elsewhere) => {
+      symlinkSync(join(elsewhere, "real.ts"), join(directory, "linked.ts"));
+      symlinkSync(elsewhere, join(directory, "folder.ts"));
+      const result = scanDirectory(directory);
+      assert.deepEqual(result.errors, []);
+      assert.deepEqual(result.functions.map((found) => [found.metadata.name, found.filePath]), [["A", join(directory, "a.ts")], ["B", join(directory, "linked.ts")]]);
+    });
+  });
+});
+
+test("a link that points back to a parent folder does not make the scan loop", async () => {
+  await withFixture({ "a.ts": validA, "sub/b.ts": `/** @Config */\nexport function b(): B { return null as any; }\n` }, (directory) => {
+    symlinkSync(directory, join(directory, "sub/back"));
+    symlinkSync("..", join(directory, "sub/up.ts"));
+    const result = scanDirectory(directory);
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(result.functions.map((found) => found.metadata.name), ["A", "B"]);
+  });
+});
+
+test("a folder that cannot be read is a mistake naming the folder, and the other files are still scanned", { skip: process.getuid?.() === 0 || process.platform === "win32" }, async () => {
+  await withFixture({ "a.ts": validA, "locked/b.ts": validA }, (directory) => {
+    chmodSync(join(directory, "locked"), 0o000);
+    try {
+      const result = scanDirectory(directory);
+      assert.deepEqual(result.functions.map((found) => found.metadata.name), ["A"]);
+      assertOneError(result, /locked: directory cannot be read/);
+    } finally {
+      // Without this the fixture could not be removed.
+      chmodSync(join(directory, "locked"), 0o700);
+    }
+  });
+});
+
+test("a file that cannot be read is a mistake naming the file, and the other files are still scanned", { skip: process.getuid?.() === 0 || process.platform === "win32" }, async () => {
+  await withFixture({ "a.ts": validA, "locked.ts": validA, "z.ts": `/** @Action */\nfunction implHidden(): Hidden { return null as any; }\n` }, (directory) => {
+    chmodSync(join(directory, "locked.ts"), 0o000);
+    const result = scanDirectory(directory);
+    assert.deepEqual(result.functions.map((found) => found.metadata.name), ["A", "Hidden"]);
+    assert.equal(result.errors.length, 2, JSON.stringify(result.errors));
+    assert.match(result.errors[0] ?? "", /^locked\.ts: file cannot be read/);
+    assert.match(result.errors[1] ?? "", /implHidden/);
+  });
+});
+
+test("a directory that does not exist is a mistake naming the directory, not a throw", async () => {
+  await withFixture({}, (directory) => {
+    const missing = join(directory, "no-such-folder");
+    const result = scanDirectory(missing);
+    assert.deepEqual(result.functions, []);
+    assertOneError(result, /no-such-folder/, /directory cannot be read/);
+  });
+});
+
+test("a directory without .ts files gives an empty result", async () => {
+  const result = await scan({ "readme.md": "nothing here\n" });
+  assert.deepEqual(result, { functions: [], errors: [] });
 });
 
 // ---- structure ----

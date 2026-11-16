@@ -3,7 +3,7 @@ export type DependencyNode = { name: string; dependencies: string[] };
 export type DependencyOrder = {
   /** Names with every dependency before what needs it. Only meaningful when `errors` is empty. */
   order: string[];
-  /** One message per missing dependency and per cycle. */
+  /** One message per component and missing dependency, and one per cycle. */
   errors: string[];
 };
 
@@ -25,7 +25,8 @@ export function sortDependencies(nodes: DependencyNode[]): DependencyOrder {
 
   function visit(node: DependencyNode): void {
     path.push(node.name);
-    for (const dependencyName of node.dependencies) {
+    // A name written in two parameters is looked at once, so that what is wrong with it is reported once.
+    for (const dependencyName of new Set(node.dependencies)) {
       const dependency = byName.get(dependencyName);
       if (!dependency) {
         errors.push(`${node.name}: dependency ${dependencyName} is not a known component`);

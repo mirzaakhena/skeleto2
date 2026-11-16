@@ -1,6 +1,6 @@
 # Best practices
 
-How to lay out an application built on Skeleto. Everything below is a recommendation for the applications you build, not a rule of the framework: Skeleto does not check these recommendations, and an application laid out differently starts just the same.
+How to lay out an application built on Skeleto. The recommendations here are for the applications you build, not rules of the framework: Skeleto does not check them, and an application laid out differently starts just the same.
 
 ## Two levels
 

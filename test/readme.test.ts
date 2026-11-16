@@ -205,6 +205,30 @@ test("BEST_PRACTICES.md holds both recommendations, says Skeleto does not check 
   for (const reason of [/already a plain object/, /leaves the old state intact/, /inputs and outputs alone/, /`import \* as Warehouse from /]) assert.match(bestPractices, reason);
 });
 
+test("BEST_PRACTICES.md opens with the two levels and maps every architectural concept to what expresses it and what Skeleto checks", () => {
+  const opening = bestPractices.slice(0, bestPractices.indexOf("## One use case per file"));
+  assert.match(opening, /^## Two levels$/m);
+  assert.match(opening, /\*\*The technical level\*\* is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper` and `@Action`/);
+  assert.match(opening, /\*\*The architectural level\*\*[^\n]*entities, use cases, gateways\. Skeleto does not know about any of them/);
+  assert.match(opening, /mechanism versus policy/);
+  const rows = new Map(
+    [...opening.matchAll(/^\| ([^|]+?) \| ([^|]+?) \| ([^|]+?) \|$/gm)].slice(2).map((match) => [match[1] ?? "", { expressed: match[2] ?? "", checked: match[3] ?? "" }]),
+  );
+  assert.deepEqual([...rows.keys()], ["Entity", "Use case", "Gateway", "Resource, such as a database or settings", "Cross-cutting concern, such as logging or transactions"]);
+  assert.match(rows.get("Entity")?.expressed ?? "", /no marker, not a component/);
+  assert.equal(rows.get("Entity")?.checked, "nothing");
+  for (const role of ["use case", "gateway"]) {
+    const row = rows.get(role[0]?.toUpperCase() + role.slice(1));
+    assert.equal(row?.expressed, "`@Action`");
+    assert.match(row?.checked ?? "", new RegExp(`the rules of an action; not that it is a ${role}`));
+  }
+  assert.equal(rows.get("Resource, such as a database or settings")?.expressed, "`@Config`");
+  assert.match(rows.get("Cross-cutting concern, such as logging or transactions")?.expressed ?? "", /^`@Wrapper`, chosen per action by additional markers/);
+  // The opening comes first: before the two recommendations.
+  assert.ok(bestPractices.indexOf("## Two levels") < bestPractices.indexOf("## One use case per file"));
+  assert.ok(bestPractices.indexOf("## One use case per file") < bestPractices.indexOf("## Entities hold the rules"));
+});
+
 test("the README leaves the recommendations to BEST_PRACTICES.md and links to it on one line", () => {
   assert.doesNotMatch(readme, /^## One use case per file$/m);
   assert.doesNotMatch(readme, /^## Entities hold the rules/m);

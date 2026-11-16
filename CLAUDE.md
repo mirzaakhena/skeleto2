@@ -17,7 +17,7 @@ Pemakai utamanya adalah proyek `~/Workspace/nukitu`. Convention proyek itu (`~/W
 - **Hanya binding.** Skeleto tidak tahu apa pun tentang HTTP, controller, request, response, validasi, OpenAPI, database, atau logging. Kalau sebuah fitur butuh pengetahuan tentang salah satu hal itu, fitur itu **bukan** milik Skeleto.
 - **Tidak membaca isi tipe.** Skeleto hanya membaca *nama* return type dan *nama* tipe parameter. Ia tidak pernah membuka definisi tipe, tidak membaca field, dan tidak membaca decorator di field.
 - **Satu dependency runtime saja: `ts-morph`.**
-- **Kode inti kecil.** Targetnya di bawah 400 baris di `src/` (di luar tes). Setiap tambahan harus bisa menjawab "kenapa ini harus ada di framework, bukan di aplikasi?".
+- **Kode inti kecil.** Patokannya sekitar 400 baris di `src/` (di luar tes). Angka ini panduan untuk menjaga inti tetap kecil, bukan batas yang menghentikan perubahan; ia hanya alasan untuk bertanya. Setiap tambahan harus bisa menjawab "kenapa ini harus ada di framework, bukan di aplikasi?".
 - **Gagal lebih awal dan sekaligus.** Semua kesalahan pemakaian dilaporkan saat startup, **sebelum** satu pun berkas aplikasi diimpor, dan dilaporkan sekaligus, tidak satu per satu.
 
 ## 3. Aturan menulis ulang
@@ -125,7 +125,7 @@ Data lain adalah kesalahan. Dengan begitu sisa `{"readTypeArguments": true}` dar
 - `Skeleto.start(directory = "src", options?)` mengembalikan `Promise<Skeleto>`.
 - Satu instance per direktori (dibandingkan setelah path di-resolve). Pemanggilan bersamaan untuk direktori yang sama mendapat instance yang sama.
 - Startup yang gagal tidak diingat: pemanggilan berikutnya memindai ulang.
-- Direktori tanpa berkas `.ts` adalah kesalahan.
+- Direktori tanpa berkas `.ts` adalah kesalahan. Direktori yang punya berkas `.ts` tetapi tidak satu pun komponen juga kesalahan, dilaporkan dengan cara yang sama.
 - Semua kesalahan di 4.1 sampai 4.6 dikumpulkan dan dilempar sebagai **satu** `Error`, sebelum berkas aplikasi mana pun diimpor. Setiap baris pesannya menyebut nama fungsi atau nama tipe yang bermasalah.
 - `getContainer()` mengembalikan `Map<string, FuncInstanceMetadata>`, berisi **semua** komponen (`@Config`, `@Wrapper`, `@Action`) dengan kunci nama komponen.
 
@@ -190,6 +190,8 @@ test/
   dependency.test.ts
   scanner.test.ts
   skeleto.test.ts
+  type.test.ts         tes tipe publik
+  readme.test.ts       menjalankan contoh di README
   fixture.ts           pembuat direktori fixture sementara
 ```
 

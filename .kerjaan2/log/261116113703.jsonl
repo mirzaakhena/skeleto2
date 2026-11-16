@@ -1,0 +1,4 @@
+{"t":"2026-11-16 11:37:33","event":"created","status":"backlog","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:39:50","event":"assumption","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"planner:ae7f3a0c0750eb800"}
+{"t":"2026-11-16 11:39:50","event":"assumption","key":"A2","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"planner:ae7f3a0c0750eb800"}
+{"t":"2026-11-16 11:42:18","event":"moved","to":"todo","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"planner:ae7f3a0c0750eb800"}

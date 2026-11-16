@@ -9,6 +9,38 @@ import { withFixture } from "./fixture.js";
 const repo = fileURLToPath(new URL("..", import.meta.url));
 const readme = readFileSync(`${repo}README.md`, "utf8");
 
+const bestPractices = readFileSync(`${repo}BEST_PRACTICES.md`, "utf8");
+
+type Blocks = {
+  /** Full example files, by the path each block names in its first line. */
+  files: Record<string, string>;
+  /** Pieces of example files, shown where the whole file would be too long; `// <path>.ts (excerpt)` is their first line. */
+  excerpts: { path: string; body: string }[];
+  commands: string[];
+  outputs: string[];
+};
+
+/** Sorts every fenced block of a document by kind; a block of a kind that no test would check is refused. */
+function readBlocks(document: string, text: string): Blocks {
+  const blocks: Blocks = { files: {}, excerpts: [], commands: [], outputs: [] };
+  for (const [, language, body] of text.matchAll(/^```(\w*)\n([\s\S]*?)^```$/gm)) {
+    const [, path, excerpt] = /^\/\/ (\S+\.ts)( \(excerpt\))?\n/.exec(body ?? "") ?? [];
+    if (language === "ts" && path && excerpt) blocks.excerpts.push({ path, body: (body ?? "").replace(/^.*\n/, "") });
+    else if (language === "ts" && path) {
+      assert.ok(!(path in blocks.files), `two ${document} blocks are named ${path}`);
+      blocks.files[path] = body ?? "";
+    } else if (language === "sh") blocks.commands.push((body ?? "").trim());
+    else if (language === "text") blocks.outputs.push(body ?? "");
+    else assert.fail(`${document} has a code block that no test runs:\n${body}`);
+  }
+  return blocks;
+}
+
+/** An excerpt runs only as part of the file it names, so it must be a verbatim piece of an example file. */
+function checkExcerpts(document: string, blocks: Blocks, files: Record<string, string>): void {
+  for (const { path, body } of blocks.excerpts) assert.ok(files[path]?.includes(body), `${document} excerpt of ${path} is not part of that README example file:\n${body}`);
+}
+
 type Example = {
   /** Example files, by the path each block names in its first line. */
   files: Record<string, string>;
@@ -18,27 +50,20 @@ type Example = {
   output: string;
 };
 
-/** Sorts every fenced block of the README into the example; a block of a kind that no test would run is refused. */
-function readExample(text: string): Example {
-  const files: Record<string, string> = {};
-  const excerpts: { path: string; body: string }[] = [];
-  const commands: string[] = [];
-  const outputs: string[] = [];
-  for (const [, language, body] of text.matchAll(/^```(\w*)\n([\s\S]*?)^```$/gm)) {
-    const [, path, excerpt] = /^\/\/ (\S+\.ts)( \(excerpt\))?\n/.exec(body ?? "") ?? [];
-    if (language === "ts" && path && excerpt) excerpts.push({ path, body: (body ?? "").replace(/^.*\n/, "") });
-    else if (language === "ts" && path) {
-      assert.ok(!(path in files), `two README blocks are named ${path}`);
-      files[path] = body ?? "";
-    } else if (language === "sh") commands.push((body ?? "").trim());
-    else if (language === "text") outputs.push(body ?? "");
-    else assert.fail(`README has a code block that no test runs:\n${body}`);
-  }
-  // An excerpt runs only as part of the file it names, so it must be a verbatim piece of that file.
-  for (const { path, body } of excerpts) assert.ok(files[path]?.includes(body), `README excerpt of ${path} is not part of that example file:\n${body}`);
+/** The README holds the one runnable example; every other code block of the README and of BEST_PRACTICES.md is an excerpt of it. */
+function readExample(readmeText: string, bestPracticesText: string): Example {
+  const blocks = readBlocks("README", readmeText);
+  const { files, commands, outputs } = blocks;
+  checkExcerpts("README", blocks, files);
   assert.equal(commands.length, 1, "the README shows exactly one command");
   assert.equal(outputs.length, 1, "the README shows exactly one output");
   assert.match(commands[0] ?? "", /^npx tsx \S+$/);
+
+  // BEST_PRACTICES.md runs nothing of its own: a full file, a command or an output there would be checked by no test.
+  const practices = readBlocks("BEST_PRACTICES.md", bestPracticesText);
+  assert.deepEqual(Object.keys(practices.files), [], "BEST_PRACTICES.md may show excerpts of the README example only, not whole files");
+  assert.deepEqual([...practices.commands, ...practices.outputs], [], "BEST_PRACTICES.md may show excerpts of the README example only, not commands or output");
+  checkExcerpts("BEST_PRACTICES.md", practices, files);
   return { files, command: (commands[0] ?? "").split(" ").slice(2), output: outputs[0] ?? "" };
 }
 
@@ -67,7 +92,7 @@ function run(tool: string, args: string[], cwd: string): Promise<Run> {
   });
 }
 
-const example = readExample(readme);
+const example = readExample(readme, bestPractices);
 
 test("the README covers the three kinds, the start and the container", () => {
   const sources = Object.values(example.files).join("\n");
@@ -170,12 +195,21 @@ test("the README example keeps business rules in plain entity functions, and no 
   });
 });
 
-test("the README recommends entities that hold the rules and use cases that only orchestrate, as a recommendation", () => {
-  const section = /^## Entities hold the rules, use cases orchestrate$[\s\S]*?(?=^## )/m.exec(readme)?.[0] ?? "";
-  assert.match(section, /Skeleto does not check it/);
-  assert.match(section, /```ts\n\/\/ src\/entity\/warehouse\.ts \(excerpt\)\nexport function transfer/);
-  assert.match(section, /```ts\n\/\/ src\/usecase\/stock\/stock_transfer\.ts \(excerpt\)\n/);
-  assert.match(section, /still lets an action depend on another action/);
+test("BEST_PRACTICES.md holds both recommendations, says Skeleto does not check them, and shows the rule and the use case", () => {
+  assert.match(bestPractices, /^## One use case per file$/m);
+  assert.match(bestPractices, /^## Entities hold the rules, use cases orchestrate$/m);
+  assert.match(bestPractices, /Skeleto does not check them/);
+  assert.match(bestPractices, /```ts\n\/\/ src\/entity\/warehouse\.ts \(excerpt\)\nexport function transfer/);
+  assert.match(bestPractices, /```ts\n\/\/ src\/usecase\/stock\/stock_transfer\.ts \(excerpt\)\n/);
+  assert.match(bestPractices, /still lets an action depend on another action/);
+  for (const reason of [/already a plain object/, /leaves the old state intact/, /inputs and outputs alone/, /`import \* as Warehouse from /]) assert.match(bestPractices, reason);
+});
+
+test("the README leaves the recommendations to BEST_PRACTICES.md and links to it on one line", () => {
+  assert.doesNotMatch(readme, /^## One use case per file$/m);
+  assert.doesNotMatch(readme, /^## Entities hold the rules/m);
+  assert.doesNotMatch(readme, /Skeleto does not check (it|them)/);
+  assert.equal(readme.split("\n").filter((line) => line.includes("(BEST_PRACTICES.md")).length, 1);
 });
 
 test("the README and CLAUDE.md name the exclude option, the constant and every default entry", () => {
@@ -184,8 +218,9 @@ test("the README and CLAUDE.md name the exclude option, the constant and every d
   }
 });
 
-test("the README stays clear of what Skeleto dropped", () => {
+test("the README and BEST_PRACTICES.md stay clear of what Skeleto dropped", () => {
   for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /\brequest\b/i, /\bresponse\b/i]) {
     assert.doesNotMatch(readme, banned);
+    assert.doesNotMatch(bestPractices, banned);
   }
 });

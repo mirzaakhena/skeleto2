@@ -3,6 +3,8 @@ import type { Decorator } from "./type.js";
 export type DecoratorReading = {
   /** Every marker of the block, in the order written. The caller tells main markers from additional ones. */
   decorators: Decorator[];
+  /** The names of the lowercase tags of the block, as written. They are not markers; the caller uses them to spot a marker written in the wrong case. */
+  tags: string[];
   /** One message per unreadable marker; each names the marker. */
   problems: string[];
 };
@@ -18,6 +20,7 @@ const TAG_LINE = /^@([A-Za-z][A-Za-z0-9_]*)(.*)$/;
 export function readDecorators(jsDoc: string): DecoratorReading {
   const decorators: Decorator[] = [];
   const problems: string[] = [];
+  const tags: string[] = [];
   let open: { name: string; lines: string[] } | undefined;
 
   function close(): void {
@@ -48,7 +51,8 @@ export function readDecorators(jsDoc: string): DecoratorReading {
     close();
     const name = tag[1] ?? "";
     if (name[0] === name[0]?.toUpperCase()) open = { name, lines: [tag[2] ?? ""] };
+    else tags.push(name);
   }
   close();
-  return { decorators, problems };
+  return { decorators, tags, problems };
 }

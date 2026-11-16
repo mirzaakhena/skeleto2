@@ -1,7 +1,7 @@
 import { readdirSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { Node, Project } from "ts-morph";
-import type { FunctionDeclaration } from "ts-morph";
+import type { FunctionDeclaration, JSDocableNode, ModuleDeclaration, SourceFile } from "ts-morph";
 import { readDecorators } from "./decorator.js";
 import { DEFAULT_EXCLUDE } from "./type.js";
 import type { Decorator, FuncMetadata } from "./type.js";
@@ -50,7 +50,9 @@ export function scanDirectory(directory: string, allowedDecorators?: string[], e
     let declarations: FunctionDeclaration[];
     try {
       // getFunctions() yields the top-level declarations only, so nested functions, arrow functions and methods never get here.
-      declarations = project.addSourceFileAtPath(filePath).getFunctions();
+      const sourceFile = project.addSourceFileAtPath(filePath);
+      declarations = sourceFile.getFunctions();
+      if (allowedDecorators) reportMisplaced(sourceFile, (name, message) => errors.push(`${name} (${path}): ${message}`));
     } catch (error) {
       // One unreadable file must not hide the mistakes of all the others.
       errors.push(`${path}: file cannot be read: ${error instanceof Error ? error.message : String(error)}`);
@@ -102,8 +104,18 @@ function readFunction(
   // Only the block right above the function counts; an earlier one (a file header, say) is not about this function.
   const jsDoc = declaration.getJsDocs().at(-1);
   if (!jsDoc) return undefined;
-  const { decorators, problems } = readDecorators(jsDoc.getText());
+  const { decorators, tags, problems } = readDecorators(jsDoc.getText());
   const [mainDecorator, ...otherMains] = decorators.filter((decorator) => MAIN_DECORATORS.includes(decorator.name));
+  // Without the list nobody has said which markers exist, so a function without a main marker is left alone in silence.
+  if (allowedDecorators) {
+    for (const tag of tags) {
+      const meant = [...MAIN_DECORATORS, ...allowedDecorators].find((name) => String(name).toLowerCase() === tag.toLowerCase());
+      if (meant) report(`has the tag @${tag}, which is read as a standard JSDoc tag and ignored; a marker starts with an uppercase letter, write @${meant}`);
+    }
+    if (!mainDecorator && decorators.length > 0) {
+      report(`has ${decorators.map((decorator) => `@${decorator.name}`).join(", ")} but no main marker; exactly one of ${MAIN_DECORATORS.map((name) => `@${name}`).join(", ")} is needed`);
+    }
+  }
   if (!mainDecorator) return undefined;
 
   problems.forEach(report);
@@ -140,6 +152,27 @@ function readFunction(
     else dependencies.push(type);
   }
   return { metadata: { name, dependencies, mainDecorator, additionalDecorators }, awaited: awaited && mainDecorator.name === "Config" };
+}
+
+/**
+ * Reports a main marker on something that can never be a component: an exported constant of the file, or a function inside a
+ * namespace. Such a block is otherwise skipped, and a wrapper written that way would be missing from every action without a word.
+ */
+function reportMisplaced(sourceFile: SourceFile, report: (name: string, message: string) => void): void {
+  function check(node: JSDocableNode, name: string, what: string): void {
+    const marker = readDecorators(node.getJsDocs().at(-1)?.getText() ?? "").decorators.find((decorator) => MAIN_DECORATORS.includes(decorator.name));
+    if (marker) report(name, `is marked @${marker.name} but is ${what}; only top-level function declarations can be components`);
+  }
+  function enter(namespace: ModuleDeclaration): void {
+    // A namespace declared without a body has no statements to ask for.
+    if (!namespace.hasBody()) return;
+    for (const declaration of namespace.getFunctions()) check(declaration, declaration.getName() ?? "(anonymous)", `a function inside the namespace ${namespace.getName()}`);
+    namespace.getModules().forEach(enter);
+  }
+  for (const statement of sourceFile.getVariableStatements()) {
+    if (statement.hasExportKeyword()) check(statement, statement.getDeclarations().map((declaration) => declaration.getName()).join(", "), "an exported constant");
+  }
+  sourceFile.getModules().forEach(enter);
 }
 
 function checkMainData(decorator: Decorator): string | undefined {

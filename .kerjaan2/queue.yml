@@ -1,6 +1,3 @@
 goal: Close the four gaps of the independent review: misspelt or misplaced markers, wrappers and actions that return no function, and wrong startup options each stop startup with a clear message, and README.md and CLAUDE.md say what the code does
 order:
-  - 261116113701   # Report misspelt and misplaced markers when the marker list is given
-  - 261116113702   # Check that wrappers and actions return a function
-  - 261116113703   # Validate startup options and report a missing dependency once
   - 261116113704   # Document marker placement, retries and the unwritten rules

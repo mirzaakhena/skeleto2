@@ -76,7 +76,7 @@ test("the README covers the three kinds, the start and the container", () => {
 test("the README example has an async config, and says that startup waits for it without a time limit of its own", () => {
   assert.match(example.files["src/config.ts"] ?? "", /@Config \*\/\nexport async function loadSettings\(\): Promise<Settings> \{\n[^}]*await /);
   // Its dependant asks for the plain name.
-  assert.match(example.files["src/greet.ts"] ?? "", /makeGreet\(settings: Settings\)/);
+  assert.match(example.files["src/usecase/greet/greet.ts"] ?? "", /makeGreet\(settings: Settings\)/);
   assert.match(readme, /^## Asynchronous configs$/m);
   assert.match(readme, /Startup sets no time limit/);
   assert.match(readme, /Give the config its own timeout/);

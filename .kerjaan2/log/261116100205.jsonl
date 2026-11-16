@@ -25,3 +25,6 @@
 {"t":"2026-11-16 10:36:37","event":"agent","role":"reviewer","agent":"a8759017bc652bcee","step":"review:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 10:38:11","event":"verdict","result":"pass","round":1,"commit":"b7eba9d","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:a8759017bc652bcee"}
 {"t":"2026-11-16 10:38:23","event":"landed","branch":"k2/261116100205-startup-instantiation-and-container","files":["src/skeleto.ts","test/skeleto.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:01:45","event":"assumption-confirmed","key":"A2","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:01:45","event":"assumption-confirmed","key":"A3","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:01:45","event":"assumption-confirmed","key":"A4","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

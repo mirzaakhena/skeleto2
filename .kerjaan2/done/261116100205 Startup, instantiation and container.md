@@ -44,15 +44,18 @@ Anything about HTTP, controllers, validation, logging or databases. Importing co
 - A1 [unseen] Only files that hold at least one component are imported, each by its absolute path as a file URL; a component function is called synchronously and its return value is stored as it is, never awaited
   Why: the reference imports only the files of scanned functions; the consumer convention (nukitu CLAUDE.md section 4) defines stage one of every component as a synchronous closure, and an async function would be named Promise<X>
   If wrong: await the result or import every scanned file in src/skeleto.ts
-- A2 [unseen] Options are used by the first start of a directory only; a later start of the same directory with other options returns the existing instance. A missing dependency is listed once, not once per check
+- A2 [confirmed] Options are used by the first start of a directory only; a later start of the same directory with other options returns the existing instance. A missing dependency is listed once, not once per check
   Why: CLAUDE.md 4.8: one instance per directory; the reference documents options as applied on the first start only
   If wrong: compare options on later starts and reject a mismatch
-- A3 [unseen] A directory that has .ts files but no component at all is rejected with the same error as a directory without .ts files (the message names the directory)
+  Confirmed by owner, 2026-11-16
+- A3 [confirmed] A directory that has .ts files but no component at all is rejected with the same error as a directory without .ts files (the message names the directory)
   Why: the scanner returns the same empty result for both, and a directory with nothing to bind is almost certainly a wrong path
   If wrong: have the scanner report how many files it read and reject only a count of zero, in src/skeleto.ts
-- A4 [unseen] A wrapper that throws while wrapping an action is reported like a creation failure: the error names the action, its function and the wrapper, with the original error as cause
+  Confirmed by owner, 2026-11-16
+- A4 [confirmed] A wrapper that throws while wrapping an action is reported like a creation failure: the error names the action, its function and the wrapper, with the original error as cause
   Why: Q2 covers failures while creating a component; wrapping is part of creating an action
   If wrong: change the message in the catch block of src/skeleto.ts
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - Lane standard: the core behaviour, fully covered by the Done-when tests; nothing unrecoverable

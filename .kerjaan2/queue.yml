@@ -1,2 +1,4 @@
-goal: Let the application say which files the scan leaves out, with DEFAULT_EXCLUDE as the default list
+goal: Let a @Config be asynchronous so a resource is initialised once at startup, and bring CLAUDE.md in line with what was built
 order:
+  - 261116110902   # Bring CLAUDE.md in line with what was built
+  - 261116110901   # Async @Config wait for it at startup

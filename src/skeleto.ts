@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import { inspect } from "node:util";
 import { sortDependencies } from "./dependency.js";
 import { scanDirectory } from "./scanner.js";
 import type { ScannedFunction } from "./scanner.js";
@@ -34,14 +35,29 @@ export class Skeleto {
   }
 }
 
+/**
+ * A caller without type checking can pass anything. A text would even half work, since a text can be searched like a list, and accept
+ * every marker whose name it contains. A bad option is reported and then treated as left out, so that the scan still finds the rest.
+ */
+function listOption(options: SkeletoOptions | undefined, name: "decorators" | "exclude", errors: string[]): string[] | undefined {
+  const value: unknown = options?.[name];
+  if (value === undefined) return undefined;
+  if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) return value;
+  errors.push(`options.${name}: must be a list of texts, received ${inspect(value, { depth: 1, breakLength: Infinity })}`);
+  return undefined;
+}
+
 async function build(root: string, options: SkeletoOptions | undefined): Promise<Container> {
-  const { functions, errors } = scanDirectory(root, options?.decorators, options?.exclude);
+  const optionErrors: string[] = [];
+  const scanned = scanDirectory(root, listOption(options, "decorators", optionErrors), listOption(options, "exclude", optionErrors));
+  const { functions } = scanned;
+  const errors = [...optionErrors, ...scanned.errors];
   const byName = new Map<string, ScannedFunction>();
   // The first of two components with the same name wins, as in the sorter; the scanner has reported the duplicate.
   for (const found of functions) if (!byName.has(found.metadata.name)) byName.set(found.metadata.name, found);
 
   // The scanner returns nothing for a directory without .ts files, and a directory without any component has nothing to bind either.
-  if (functions.length === 0 && errors.length === 0) errors.push(`${root}: no .ts file with a @Config, @Wrapper or @Action function was found`);
+  if (functions.length === 0 && scanned.errors.length === 0) errors.push(`${root}: no .ts file with a @Config, @Wrapper or @Action function was found`);
   for (const { metadata } of functions) {
     const kind = metadata.mainDecorator.name;
     for (const dependency of metadata.dependencies) {

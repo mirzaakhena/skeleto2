@@ -78,6 +78,7 @@ Inilah spesifikasi yang harus dipenuhi. Setiap butir di sini harus punya tes.
 - `@Wrapper` dan `@Action` selalu sinkron. Return type `Promise<...>` pada keduanya adalah kesalahan yang menyebut nama fungsinya, dilaporkan bersama kesalahan lain sebelum ada berkas yang diimpor. Komponen yang bergantung padanya tidak dilaporkan lagi sebagai dependency yang tidak ada.
 - **Dependency** adalah teks anotasi tipe setiap parameter, sesuai urutan parameter.
 - Dependency dicocokkan dengan nama komponen. Dependency yang tidak ada adalah kesalahan.
+- Dependency yang tidak ada dilaporkan **satu kali** untuk setiap pasangan komponen dan nama dependency, walaupun nama itu tertulis di dua parameter. Dua komponen yang kehilangan dependency yang sama masing-masing mendapat satu baris.
 
 ### 4.4 Data penanda utama
 
@@ -127,6 +128,7 @@ Data lain adalah kesalahan. Dengan begitu sisa `{"readTypeArguments": true}` dar
 - Satu instance per direktori (dibandingkan setelah path di-resolve). Pemanggilan bersamaan untuk direktori yang sama mendapat instance yang sama.
 - Startup yang gagal tidak diingat: pemanggilan berikutnya memindai ulang.
 - Direktori tanpa berkas `.ts` adalah kesalahan. Direktori yang punya berkas `.ts` tetapi tidak satu pun komponen juga kesalahan, dilaporkan dengan cara yang sama.
+- `SkeletoOptions.decorators` dan `SkeletoOptions.exclude`, kalau diberikan, harus berupa daftar teks. Nilai lain (teks, `null`, bilangan, daftar yang memuat sesuatu selain teks) adalah kesalahan yang menyebut nama opsinya dan nilai yang diterima, diperiksa sebelum pemindaian dan dilaporkan dalam `Error` yang sama dengan kesalahan lain. Opsi yang salah lalu dianggap tidak diberikan, supaya pemindaian tetap menemukan kesalahan lain. Opsi yang tidak diberikan atau `undefined` bukan kesalahan.
 - Semua kesalahan di 4.1 sampai 4.6 dikumpulkan dan dilempar sebagai **satu** `Error`, sebelum berkas aplikasi mana pun diimpor. Setiap baris pesannya menyebut nama fungsi atau nama tipe yang bermasalah.
 - `getContainer()` mengembalikan `Map<string, FuncInstanceMetadata>`, berisi **semua** komponen (`@Config`, `@Wrapper`, `@Action`) dengan kunci nama komponen.
 

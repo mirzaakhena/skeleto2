@@ -160,6 +160,10 @@ The output shows the layering: `LogWrapper` (ordinal 10) is outside `Transaction
 - A component must be an exported top-level `function` declaration with a return type annotation, and every parameter needs a type annotation. Arrow functions, methods and default exports are not picked up.
 - One component per type name. To offer two things of the same shape, give each its own type alias, as `LogWrapper` and `TransactionWrapper` do above.
 - A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Standard JSDoc tags (`@param`, `@returns`, ...) are ignored.
+- Pass `decorators` to catch markers that are misspelt or misplaced. Without it, a function with no main marker is not looked at, so a wrapper marked `@Wraper` is skipped and every action runs without it. With it, these stop startup, each naming the function or constant, its file and the marker:
+  - a top-level function whose JSDoc block has markers but no main marker (`@Wraper`, `@Actions`, or only `@Transaction`);
+  - a lowercase tag on any top-level function that equals a main marker or one of your markers when letter case is ignored (`@transaction`, `@action`, `@wrapper`);
+  - a main marker on an exported top-level constant or on a function inside a namespace: only top-level function declarations can be components.
 - `Skeleto.start(directory)` defaults to `"src"` and gives one instance per directory: a second call for the same directory returns the first instance, and its options are ignored. A failed start is not remembered.
 - The container holds every component, configs and wrappers included, under its type name.
 

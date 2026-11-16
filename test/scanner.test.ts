@@ -298,6 +298,7 @@ for (const [label, allowed] of [["without a list", undefined], ["with a list", [
 
 // ---- functions that are not components ----
 
+const REPORTED_WITH_LIST = ["a function with only an additional marker", "an arrow function", "a function inside a namespace"];
 const notComponents: Record<string, string> = {
   "a function without JSDoc": `export function plain(): Plain { return null as any; }\n`,
   "a function whose JSDoc has no marker at all": `/** Just a description, mail me@Action.example. */\nexport function described(x): Described { return null as any; }\n`,
@@ -313,8 +314,10 @@ const notComponents: Record<string, string> = {
 };
 for (const [label, source] of Object.entries(notComponents)) {
   test(`${label} is left alone without a mistake`, async () => {
-    const result = await scan({ "a.ts": source }, ["Logging"]);
-    assert.deepEqual(result, { functions: [], errors: [] });
+    assert.deepEqual(await scan({ "a.ts": source }), { functions: [], errors: [] });
+    // With the list given, three of them are reported as misspelt or misplaced markers; those are tested at the end of this file.
+    if (REPORTED_WITH_LIST.includes(label)) return;
+    assert.deepEqual(await scan({ "a.ts": source }, ["Logging"]), { functions: [], errors: [] });
   });
 }
 
@@ -637,4 +640,78 @@ test("the fixture directory is removed afterwards, also when the callback throws
   );
   assert.notEqual(seenOnThrow, "");
   assert.ok(!existsSync(seenOnThrow));
+});
+
+// ---- 4.2, 4.5: misspelt and misplaced markers, reported only when the list of allowed markers is given ----
+
+const LIST = ["Transaction", "Logging"];
+const body = `: Thing { return null as any; }\n`;
+
+/** Each case is one file that is a mistake with the list given: the name the message must mention, and what else it must say. */
+const MISTAKES: [string, string, string, RegExp[]][] = [
+  ["@Wraper on an exported function", `/** @Wraper */\nexport function makeAudit()${body}`, "makeAudit", [/@Wraper/, /no main marker/]],
+  ["@Actions on an exported function", `/** @Actions */\nexport function makeSave()${body}`, "makeSave", [/@Actions/, /no main marker/]],
+  ["only @Transaction on an exported function", `/** @Transaction */\nexport function makeSave()${body}`, "makeSave", [/@Transaction/, /no main marker/]],
+  ["a marker outside the list and no main marker, not exported", `/**\n * Text.\n * @Cache {"ttl": 1}\n */\nfunction helper()${body}`, "helper", [/@Cache/, /no main marker/]],
+  ["@transaction on an action", `/**\n * @Action\n * @transaction\n */\nexport function makeSave()${body}`, "makeSave", [/@transaction\b/, /write @Transaction/]],
+  ["@action alone", `/** @action */\nexport function makeSave()${body}`, "makeSave", [/@action\b/, /write @Action/]],
+  ["@wrapper alone", `/** @wrapper {"ordinal": 1} */\nexport function makeAudit()${body}`, "makeAudit", [/@wrapper\b/, /write @Wrapper/]],
+  ["@config alone, not exported", `/** @config */\nfunction makeSettings()${body}`, "makeSettings", [/@config\b/, /write @Config/]],
+  ["@lOGGING among ordinary tags", `/**\n * @param a x\n * @lOGGING\n * @returns y\n */\nexport function helper(a: string)${body}`, "helper", [/@lOGGING/, /write @Logging/]],
+  ["a main marker on an exported constant", `/** @Action */\nexport const makeSave = (): Thing => null as any;\n`, "makeSave", [/@Action/, /exported constant/, /only top-level function declarations can be components/]],
+  ["a main marker on an exported constant holding a function expression", `/** @Wrapper {"ordinal": 2} */\nexport const makeAudit = function ()${body}`, "makeAudit", [/@Wrapper/, /only top-level function declarations can be components/]],
+  ["a main marker on a function inside a namespace", `export namespace users {\n  /** @Action */\n  export function makeSave()${body}}\n`, "makeSave", [/@Action/, /namespace users/, /only top-level function declarations can be components/]],
+  ["a main marker on a function inside a nested namespace", `namespace a.b {\n  namespace c {\n    /** @Config */\n    function makeSettings()${body}  }\n}\n`, "makeSettings", [/@Config/, /namespace c/, /only top-level function declarations can be components/]],
+];
+
+for (const [title, source, name, patterns] of MISTAKES) {
+  test(`with the list given, ${title} is a mistake naming ${name}, its file and the marker`, async () => {
+    const result = await scan({ "sub/a.ts": source }, LIST);
+    assertOneError(result, new RegExp(`^${name} \\(sub/a\\.ts\\): `), ...patterns);
+  });
+
+  test(`without the list, ${title} is silent as before`, async () => {
+    const result = await scan({ "sub/a.ts": source });
+    assert.deepEqual(result.errors, []);
+    // The one case that is a component either way: the lowercase tag is dropped and the action has no additional marker.
+    assert.deepEqual(result.functions.map((found) => [found.metadata.mainDecorator.name, found.metadata.additionalDecorators]), title === "@transaction on an action" ? [["Action", []]] : []);
+  });
+}
+
+test("an empty list is a list: the mistakes are reported, and only main markers can be meant", async () => {
+  const result = await scan({ "a.ts": `/** @Wraper */\nexport function one()${body}/** @wrapper */\nexport function two()${body}/** @transaction */\nexport function three()${body}` }, []);
+  assert.equal(result.errors.length, 2, JSON.stringify(result.errors));
+  assert.match(result.errors[0] ?? "", /^one \(a\.ts\): .*@Wraper/);
+  assert.match(result.errors[1] ?? "", /^two \(a\.ts\): .*@wrapper/);
+});
+
+test("with the list given, functions without JSDoc or with ordinary tags only are still left alone", async () => {
+  const sources = [
+    `export function plain()${body}`,
+    `/** Just text, mail owner@Action.dev or see @Wrapper in the docs. */\nexport function described()${body}`,
+    `/**\n * @param a the thing\n * @returns it\n * @defaultValue 4\n * @deprecated\n * @internal\n */\nexport function tagged(a: string)${body}`,
+    // Only the block right above counts, and constants or namespace functions without a main marker are nobody's business.
+    `/** @Wraper */\n/** Text. */\nexport function twoBlocks()${body}`,
+    `/** @Transaction */\nexport const value = 1;\n/** @action */\nexport const other = () => 1;\n/** @Action */\nconst local = () => 1;\n`,
+    `namespace n {\n  /** @Transaction */\n  export function inner()${body}  /** @wrapper */\n  export function lower()${body}}\ndeclare module "bodyless";\n`,
+  ];
+  for (const source of sources) {
+    const result = await scan({ "a.ts": source }, LIST);
+    assert.deepEqual(result, { functions: [], errors: [] }, source);
+  }
+});
+
+test("with the list given, a correct component next to ordinary lowercase tags is read as before", async () => {
+  const result = await scan({ "a.ts": `/**\n * @Action\n * @Transaction\n * @param settings x\n * @returns y\n * @defaultValue z\n */\nexport function makeSave(settings: Settings): SaveUser { return null as any; }\n` }, LIST);
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.functions[0]?.metadata.additionalDecorators, [{ name: "Transaction", data: undefined }]);
+});
+
+test("a component with a lowercase near-marker is still a component, and all its mistakes are reported together", async () => {
+  const result = await scan({ "a.ts": `/**\n * @Action\n * @logging\n * @Cache\n * @action\n */\nfunction makeSave(): SaveUser { return null as any; }\n` }, LIST);
+  assert.equal(result.functions.length, 1);
+  assert.equal(result.errors.length, 4, JSON.stringify(result.errors));
+  for (const pattern of [/@logging\b.*write @Logging/, /@action\b.*write @Action/, /@Cache is not an allowed marker/, /not exported/]) {
+    assert.ok(result.errors.some((line) => line.startsWith("makeSave (a.ts): ") && pattern.test(line)), String(pattern));
+  }
 });

@@ -151,6 +151,36 @@ test("a marker outside options.decorators stops startup, and without the option 
   });
 });
 
+test("with options.decorators, misspelt and misplaced markers stop startup in one error with the other mistakes, before any import; without it the same files start", async () => {
+  const boom = `throw new Error("module was imported");\n`;
+  const flagged = `${S}.calls.push("imported");\n`;
+  const files = {
+    // The wrapper that would silently be missing from every action.
+    "a.ts": `/** @Wraper */\nexport function makeAudit(): Audit { return ((handler: any) => handler) as any; }\n`,
+    "b.ts": `/** @Action */\nexport const makeLost = (): Lost => null as any;\nexport namespace inner {\n  /** @Wrapper */\n  export function makeDeep(): Deep { return null as any; }\n}\n`,
+    "c.ts": flagged + component("Action", "SaveUser", [], undefined, "@Action\n * @transaction"),
+    "d.ts": `/** @wrapper */\nexport function makeTrace(): Trace { return null as any; }\n`,
+  };
+  const error = await failure({ ...files, "e.ts": boom + component("Action", "Other", ["Nowhere"]) }, { decorators: ["Transaction"] });
+  assert.doesNotMatch(error.message, /module was imported/);
+  assert.deepEqual(shared.skeletoTest.calls, []);
+  const lines = problems(error);
+  assert.equal(lines.length, 6, error.message);
+  assert.match(lines[0] ?? "", /makeAudit \(a\.ts\): .*@Wraper.*no main marker/);
+  assert.match(lines[1] ?? "", /makeLost \(b\.ts\): is marked @Action .*only top-level function declarations can be components/);
+  assert.match(lines[2] ?? "", /makeDeep \(b\.ts\): is marked @Wrapper .*namespace inner.*only top-level function declarations can be components/);
+  assert.match(lines[3] ?? "", /makeSaveUser \(c\.ts\): .*@transaction.*write @Transaction/);
+  assert.match(lines[4] ?? "", /makeTrace \(d\.ts\): .*@wrapper.*write @Wrapper/);
+  assert.match(lines[5] ?? "", /Other: dependency Nowhere is not a known component/);
+
+  reset();
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual([...container.keys()], ["SaveUser"]);
+    assert.deepEqual(container.get("SaveUser")?.getMetadata().additionalDecorators, []);
+  });
+});
+
 const notLists: [string, unknown, string][] = [
   ["a text", "Logging", "'Logging'"],
   ["null", null, "null"],

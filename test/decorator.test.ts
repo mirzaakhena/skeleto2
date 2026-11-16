@@ -8,7 +8,7 @@ function block(...lines: string[]): string {
 }
 
 test("a marker without data has undefined data", () => {
-  assert.deepEqual(readDecorators(block("@Action")), { decorators: [{ name: "Action", data: undefined }], problems: [] });
+  assert.deepEqual(readDecorators(block("@Action")), { decorators: [{ name: "Action", data: undefined }], tags: [], problems: [] });
   assert.deepEqual(readDecorators("/** @Config */").decorators, [{ name: "Config", data: undefined }]);
   assert.deepEqual(readDecorators(block("@Config   ", "", "  ")).decorators, [{ name: "Config", data: undefined }]);
 });
@@ -34,16 +34,16 @@ test("JSON data that starts on the following line is parsed", () => {
 
 test("JSON data spread over several lines is parsed", () => {
   const reading = readDecorators(block("@Cache {", '  "ttl": 60,', '  "tags": ["a", "b"],', '  "nested": { "on": true }', "}"));
-  assert.deepEqual(reading, { decorators: [{ name: "Cache", data: { ttl: 60, tags: ["a", "b"], nested: { on: true } } }], problems: [] });
+  assert.deepEqual(reading, { decorators: [{ name: "Cache", data: { ttl: 60, tags: ["a", "b"], nested: { on: true } } }], tags: [], problems: [] });
 });
 
 test("an @ in the middle of a sentence is not a marker", () => {
   const reading = readDecorators(block("Runs the @Action of the day, see @Config too.", "@Action"));
-  assert.deepEqual(reading, { decorators: [{ name: "Action", data: undefined }], problems: [] });
+  assert.deepEqual(reading, { decorators: [{ name: "Action", data: undefined }], tags: [], problems: [] });
 });
 
 test("an @ inside an e-mail address is not a marker", () => {
-  assert.deepEqual(readDecorators(block("Ask owner@Example.com or", "team@Action.dev about it.")), { decorators: [], problems: [] });
+  assert.deepEqual(readDecorators(block("Ask owner@Example.com or", "team@Action.dev about it.")), { decorators: [], tags: [], problems: [] });
   assert.deepEqual(readDecorators(block("@Logging mail owner@Example.com")).decorators, [{ name: "Logging", data: "mail owner@Example.com" }]);
 });
 
@@ -55,18 +55,24 @@ test("a marker line may be preceded by spaces and asterisks", () => {
 
 test("well-known lowercase tags are not markers", () => {
   for (const tag of ["param", "returns", "deprecated", "example", "see", "throws", "todo", "internal"]) {
-    assert.deepEqual(readDecorators(block(`@${tag} some text`)), { decorators: [], problems: [] }, tag);
+    assert.deepEqual(readDecorators(block(`@${tag} some text`)), { decorators: [], tags: [tag], problems: [] }, tag);
   }
 });
 
 test("a lowercase tag that is on no list is not a marker", () => {
-  assert.deepEqual(readDecorators(block("@defaultValue 42", "@transaction", '@somethingNew {"a": 1}')), { decorators: [], problems: [] });
+  assert.deepEqual(readDecorators(block("@defaultValue 42", "@transaction", '@somethingNew {"a": 1}')), { decorators: [], tags: ["defaultValue", "transaction", "somethingNew"], problems: [] });
+});
+
+test("lowercase tags are listed by name as written and in order, apart from the markers", () => {
+  const reading = readDecorators(block("@Action", "@transaction now", "Mail owner@action.dev", "@tRANSACTION", "@Logging", "@param name"));
+  assert.deepEqual(reading.decorators.map((decorator) => decorator.name), ["Action", "Logging"]);
+  assert.deepEqual(reading.tags, ["transaction", "tRANSACTION", "param"]);
 });
 
 test("a lowercase tag between two markers is skipped and its text does not leak into the marker before it", () => {
   for (const tag of ["param ctx the context", "returns the saved user", "defaultValue 42", "example", "deprecated"]) {
     const reading = readDecorators(block("@Action", `@${tag}`, "more text of the tag", "@Transaction"));
-    assert.deepEqual(reading, { decorators: [{ name: "Action", data: undefined }, { name: "Transaction", data: undefined }] , problems: [] }, tag);
+    assert.deepEqual(reading, { decorators: [{ name: "Action", data: undefined }, { name: "Transaction", data: undefined }], tags: [tag.split(/\W/)[0]], problems: [] }, tag);
   }
 });
 
@@ -74,6 +80,7 @@ test("a lowercase tag ends the text and JSON data of the marker before it", () =
   const reading = readDecorators(block("@Logging verbose", "@param name the name", "continued", '@Wrapper {"ordinal": 1}', "@defaultValue {broken", "@Cache", "{", '"ttl": 1', "}", "@returns {string} x"));
   assert.deepEqual(reading, {
     decorators: [{ name: "Logging", data: "verbose" }, { name: "Wrapper", data: { ordinal: 1 } }, { name: "Cache", data: { ttl: 1 } }],
+    tags: ["param", "defaultValue", "returns"],
     problems: [],
   });
 });
@@ -112,9 +119,9 @@ test("several markers come back in the order written", () => {
 });
 
 test("a block without markers and an empty text give nothing", () => {
-  assert.deepEqual(readDecorators(block("Just a description.")), { decorators: [], problems: [] });
-  assert.deepEqual(readDecorators(""), { decorators: [], problems: [] });
-  assert.deepEqual(readDecorators("/** */"), { decorators: [], problems: [] });
+  assert.deepEqual(readDecorators(block("Just a description.")), { decorators: [], tags: [], problems: [] });
+  assert.deepEqual(readDecorators(""), { decorators: [], tags: [], problems: [] });
+  assert.deepEqual(readDecorators("/** */"), { decorators: [], tags: [], problems: [] });
 });
 
 test("Windows line endings are read like any other", () => {

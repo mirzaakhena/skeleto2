@@ -69,6 +69,7 @@ Inilah spesifikasi yang harus dipenuhi. Setiap butir di sini harus punya tes.
   - parameter tanpa anotasi tipe;
   - dua fungsi yang mengembalikan nama tipe yang sama;
   - butir `exclude` yang tidak bisa dinyatakan aturan di atas: memuat pemisah path (`generated/models`), memuat `*` selain di karakter pertama (`foo*`, `*.test.*`, `**/x`), hanya `*`, atau string kosong. Pesannya menyebut butir itu.
+- Fungsi tingkat atas tanpa penanda utama, dan penanda utama di tempat lain (konstanta, fungsi di dalam namespace, method), dibiarkan tanpa pesan **kecuali** kalau `SkeletoOptions.decorators` diberikan. Dengan daftar itu, kesalahan penanda yang salah tulis atau salah tempat dilaporkan (4.5).
 
 ### 4.3 Nama dan dependency
 
@@ -95,7 +96,12 @@ Data lain adalah kesalahan. Dengan begitu sisa `{"readTypeArguments": true}` dar
 - Penanda selain penanda utama dan tag standar adalah **penanda tambahan** (`@Logging`, `@Transaction`). Nama dan datanya disimpan di `additionalDecorators`, sesuai urutan tulisannya.
 - `SkeletoOptions.decorators` adalah daftar nama penanda tambahan yang sah, misalnya `["Logging", "Transaction"]`.
 - Kalau daftar itu diberikan, penanda tambahan yang tidak ada di dalamnya adalah kesalahan, misalnya `@Transction`.
-- Kalau daftar itu tidak diberikan, semua penanda tambahan diterima.
+- Kalau daftar itu diberikan, tiga hal berikut juga kesalahan, dilaporkan bersama kesalahan lain sebelum berkas aplikasi diimpor. Setiap pesannya menyebut nama fungsi atau konstanta, berkasnya, dan penandanya:
+  - blok JSDoc fungsi tingkat atas yang memuat penanda (diawali huruf besar) tetapi tanpa penanda utama. Ini mencakup penanda utama yang salah tulis (`@Wraper`, `@Actions`) dan penanda tambahan tanpa penanda utama;
+  - tag berhuruf kecil di fungsi tingkat atas mana pun, komponen atau bukan, yang sama dengan penanda utama atau penanda yang sah kalau huruf besar dan kecil tidak dibedakan (`@transaction`, `@action`, `@wrapper`), juga kalau bloknya tidak memuat penanda sama sekali. Tag berhuruf kecil lain (`@param`, `@returns`, `@defaultValue`) tetap diabaikan;
+  - penanda utama di blok JSDoc konstanta tingkat atas yang di-`export` atau fungsi di dalam namespace. Pesannya menyatakan bahwa hanya deklarasi fungsi tingkat atas yang bisa menjadi komponen.
+- Kalau daftar itu tidak diberikan, semua penanda tambahan diterima, dan ketiga hal di atas dibiarkan tanpa pesan: wrapper bertanda `@Wraper` dilewati dan startup tetap berhasil.
+- Yang tidak diperiksa, dengan atau tanpa daftar: penanda di komentar biasa (`//`, `/* */`) dan penanda di overload signature.
 
 ### 4.6 Aturan jenis dependency
 

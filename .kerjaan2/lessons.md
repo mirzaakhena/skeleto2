@@ -14,3 +14,5 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - ScannedFunction (src/scanner.ts) has a fourth field, awaited; a test that deepEquals scan results must include it, and only a config declared exactly Promise<X> has it true
 - src/ is 414 lines against the CLAUDE.md target of under 400 (it was 403 before 261116113702); a later ticket adding to src/ should look for lines to remove
 - Option mistakes are collected in build() in src/skeleto.ts (listOption) and come before the scanner's lines in the startup error; src/ is at 420 lines, above the 400 target of CLAUDE.md section 2
+- readDecorators (src/decorator.ts) returns { decorators, tags, problems }; a test that deepEquals a whole reading must include tags (lowercase tag names, in order)
+- With options.decorators the scanner reports markers lacking a main marker, lowercase near-markers, and main markers on exported constants or namespace functions; scan a 'left alone' fixture without the list

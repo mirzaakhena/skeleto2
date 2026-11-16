@@ -23,7 +23,17 @@ type Blocks = {
 /** Sorts every fenced block of a document by kind; a block of a kind that no test would check is refused. */
 function readBlocks(document: string, text: string): Blocks {
   const blocks: Blocks = { files: {}, excerpts: [], commands: [], outputs: [] };
-  for (const [, language, body] of text.matchAll(/^```(\w*)\n([\s\S]*?)^```$/gm)) {
+  const fence = /^```(\w*)\n([\s\S]*?)^```$/gm;
+  // Markdown renders code in more forms than the one sorted below; outside the sorted blocks, any other form is refused rather than silently skipped:
+  // a fence of backticks or tildes with an info string or indented (as inside a list), an indented code block, or raw HTML code.
+  text
+    .replace(fence, "")
+    .split("\n")
+    .forEach((line, index) => {
+      const other = /^\s*(`{3,}|~{3,})/.test(line) || /^( {4}|\t)/.test(line) || /<(pre|code)[\s>]/i.test(line);
+      assert.ok(!other, `${document} has code that no test checks, written in a form the test does not read (line ${index + 1} outside the checked blocks):\n${line}`);
+    });
+  for (const [, language, body] of text.matchAll(fence)) {
     const [, path, excerpt] = /^\/\/ (\S+\.ts)( \(excerpt\))?\n/.exec(body ?? "") ?? [];
     if (language === "ts" && path && excerpt) blocks.excerpts.push({ path, body: (body ?? "").replace(/^.*\n/, "") });
     else if (language === "ts" && path) {

@@ -17,3 +17,5 @@
 {"t":"2026-11-16 11:46:13","event":"verdict","result":"pass","round":1,"commit":"c1a847b","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:af061689d7ad602ce"}
 {"t":"2026-11-16 11:46:29","event":"test","by":"land","exit":0,"seconds":4,"fingerprint":"335221992f7e08b015937e6f4c5be46675127360","command":"npm run typecheck && npm test && npm run build","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 11:46:29","event":"landed","branch":"k2/261116113703-validate-startup-options-and","files":["CLAUDE.md","src/dependency.ts","src/skeleto.ts","test/dependency.test.ts","test/skeleto.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:51:56","event":"assumption-confirmed","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:51:56","event":"assumption-confirmed","key":"A2","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

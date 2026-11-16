@@ -15,3 +15,4 @@
 {"t":"2026-11-16 11:44:37","event":"agent","role":"reviewer","agent":"a728692bdcb88f5e3","step":"review:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 11:45:42","event":"verdict","result":"pass","round":1,"commit":"35443c0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:a728692bdcb88f5e3"}
 {"t":"2026-11-16 11:45:53","event":"landed","branch":"k2/261116113702-check-that-wrappers-and","files":["CLAUDE.md","src/skeleto.ts","test/skeleto.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:51:56","event":"assumption-confirmed","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

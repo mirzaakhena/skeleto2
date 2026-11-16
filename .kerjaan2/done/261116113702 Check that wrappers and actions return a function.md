@@ -46,9 +46,10 @@ Checking what a config returns. Checking the number or types of a handler's para
 <!-- k2:record — written by k2 only; do not edit by hand -->
 
 ## Assumptions
-- A1 [unseen] A promise counts as not a function too, and is reported as 'a promise'
+- A1 [confirmed] A promise counts as not a function too, and is reported as 'a promise'
   Why: An async wrapper layer or an action that returns a promise would be stored as a promise and fail on the first request, the same fault the ticket is about
   If wrong: Nothing to change in behaviour; drop the Promise branch of describe() in src/skeleto.ts to report it as 'object'
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - Lane standard: a startup check on what components return; no data kept, a failure is a loud startup error covered by tests

@@ -28,3 +28,6 @@
 {"t":"2026-11-16 11:48:13","event":"agent","role":"reviewer","agent":"a845814bca1e5dfac","step":"review:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 11:49:49","event":"verdict","result":"pass","round":1,"commit":"10f41e9","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:a845814bca1e5dfac"}
 {"t":"2026-11-16 11:49:57","event":"landed","branch":"k2/261116113701-report-misspelt-and-misplaced","files":["CLAUDE.md","README.md","src/decorator.ts","src/scanner.ts","test/decorator.test.ts","test/scanner.test.ts","test/skeleto.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:51:56","event":"assumption-confirmed","key":"A1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:51:56","event":"assumption-confirmed","key":"A2","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 11:51:56","event":"assumption-confirmed","key":"A3","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

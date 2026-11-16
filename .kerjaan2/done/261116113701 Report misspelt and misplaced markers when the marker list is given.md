@@ -50,15 +50,18 @@ Markers inside plain `//` or `/* */` comments. Markers on overload signatures. A
   → Ya, laporkan (Recommended) — (a): a lowercase tag equal to a main or allowed marker is reported on any top-level function, also when the block has no uppercase marker (owner, 2026-11-16)
 
 ## Assumptions
-- A1 [unseen] The 'markers but no main marker' mistake applies to every top-level function, exported or not, and to any tag starting with an uppercase letter
+- A1 [confirmed] The 'markers but no main marker' mistake applies to every top-level function, exported or not, and to any tag starting with an uppercase letter
   Why: The Request says 'a top-level function'; a misspelt main marker is often on a function that also lacks export
   If wrong: In readFunction (src/scanner.ts) add an export check to that report
-- A2 [unseen] A main marker on any exported top-level constant is reported, whether or not it holds a function; a constant that is not exported stays silent
+  Confirmed by owner, 2026-11-16
+- A2 [confirmed] A main marker on any exported top-level constant is reported, whether or not it holds a function; a constant that is not exported stays silent
   Why: The Request says 'top-level exported constant'; reading the initialiser adds code for no gain
   If wrong: In reportMisplaced (src/scanner.ts) change the hasExportKeyword condition
-- A3 [unseen] If the allowed list holds a name that is also a standard JSDoc tag in lowercase (Deprecated, Internal), that lowercase tag is reported as a miswritten marker
+  Confirmed by owner, 2026-11-16
+- A3 [confirmed] If the allowed list holds a name that is also a standard JSDoc tag in lowercase (Deprecated, Internal), that lowercase tag is reported as a miswritten marker
   Why: It is the rule as written: equal to an allowed marker when case is ignored
   If wrong: Skip a fixed list of standard tag names in the lowercase check of readFunction
+  Confirmed by owner, 2026-11-16
 
 ## Decisions
 - Lane standard: new checks in the text scan only, nothing is run or stored; a wrong check stops a startup loudly and is caught by tests

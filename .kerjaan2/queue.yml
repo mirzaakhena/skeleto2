@@ -1,2 +1,3 @@
-goal: Build the skeleto lite rewrite end to end as CLAUDE.md specifies: project and public types, marker reader, dependency sorter, scanner, startup and container, README
+goal: Let the application say which files the scan leaves out, with DEFAULT_EXCLUDE as the default list
 order:
+  - 261116103601   # Excluded files in the scan, with a default list

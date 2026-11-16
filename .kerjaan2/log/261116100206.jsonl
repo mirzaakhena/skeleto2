@@ -13,3 +13,4 @@
 {"t":"2026-11-16 10:41:31","event":"agent","role":"reviewer","agent":"aab1301cd13a77185","step":"review:1:0:0","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
 {"t":"2026-11-16 10:43:12","event":"verdict","result":"pass","round":1,"commit":"d13c57d","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076","by":"reviewer:aab1301cd13a77185"}
 {"t":"2026-11-16 10:43:23","event":"landed","branch":"k2/261116100206-readme","files":["README.md","test/readme.test.ts"],"session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}
+{"t":"2026-11-16 10:53:44","event":"manual-ok","key":"M1","session":"a5f94a22-f2e2-40b1-b136-d1d17d270076"}

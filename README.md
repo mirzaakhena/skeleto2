@@ -24,7 +24,7 @@ Any other dependency, and any circular one, stops startup. Configs are created f
 
 ## Example
 
-The example moves stock from one warehouse to another. How to lay out an application on Skeleto (one use case per file, business rules in entities, use cases that only orchestrate) is recommended in [BEST_PRACTICES.md](BEST_PRACTICES.md), and the example follows it. Every component function is named `impl` followed by its component's name: the type it returns is the contract, and the function implements it.
+The example moves stock from one warehouse to another. How to lay out an application on Skeleto (one use case per file, business rules in entities, use cases that only orchestrate) is recommended in [BEST_PRACTICES.md](BEST_PRACTICES.md), how to use Skeleto's mechanism well (names, markers, wrappers, transactions, tests) in [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md), and the example follows both. Every component function is named `impl` followed by its component's name: the type it returns is the contract, and the function implements it.
 
 The entity. Plain types and pure functions, with no marker: Skeleto reads these files like any other, finds no marked function, and makes no component of them. Every failure the business knows of is a `BusinessError`, whose `kind` says which rule was broken.
 
@@ -283,7 +283,7 @@ The transaction wrapper keeps the open transaction at `ctx.data.transaction`, an
 import type { FuncMetadata, WrapperHandler } from "skeleto";
 import type { Connection, Logger } from "./config.js";
 
-export type LogWrapper = WrapperHandler;
+export type AuditWrapper = WrapperHandler;
 export type TransactionWrapper = WrapperHandler;
 
 function marked(metadata: FuncMetadata, marker: string): boolean {
@@ -291,10 +291,10 @@ function marked(metadata: FuncMetadata, marker: string): boolean {
 }
 
 /** @Wrapper {"ordinal": 10} */
-export function implLogWrapper(logger: Logger): LogWrapper {
+export function implAuditWrapper(logger: Logger): AuditWrapper {
   return (handler, metadata) => {
-    // Use cases only: the gateways they call are details of theirs.
-    if (!marked(metadata, "UseCase")) return handler;
+    // Only what is marked @Audit: the gateways a use case calls are details of it.
+    if (!marked(metadata, "Audit")) return handler;
     return async (ctx, input) => {
       logger(`enter ${metadata.name}`);
       try {
@@ -388,7 +388,7 @@ refused: warehouse south holds 3 units, not 50
 Connection: @Config {"dependencies":[],"additionalDecorators":[]}
 Database: @Config {"dependencies":[],"additionalDecorators":[]}
 Logger: @Config {"dependencies":[],"additionalDecorators":[]}
-LogWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
+AuditWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
 TransactionWrapper: @Wrapper {"dependencies":["Connection","Logger"],"additionalDecorators":[]}
 NotifyWarehouses: @Action {"dependencies":["Logger"],"additionalDecorators":[{"name":"Gateway"}]}
 LockWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[{"name":"Gateway"}]}
@@ -396,12 +396,12 @@ SaveWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[{"n
 StockTransfer: @Action {"dependencies":["LockWarehouses","SaveWarehouses","NotifyWarehouses"],"additionalDecorators":[{"name":"UseCase"},{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
 ```
 
-The output shows the layering: `LogWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), and it wraps the use case only, so the gateways do not appear in it. The report of the changed stock comes after the commit, and the failed transfer rolls back without one. The entity's functions are not in the container.
+The output shows the layering: `AuditWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), and it wraps only the use case marked `@Audit`, so the gateways do not appear in it. The report of the changed stock comes after the commit, and the failed transfer rolls back without one. The entity's functions are not in the container.
 
 ## Rules worth knowing
 
 - A component must be an exported top-level `function` declaration with a return type annotation, and every parameter needs a type annotation. Arrow functions and methods are not picked up. A marked function that is a default export is a mistake, not something skipped: only a named `export` counts, and startup says so.
-- One component per type name. To offer two things of the same shape, give each its own type alias, as `LogWrapper` and `TransactionWrapper` do above.
+- One component per type name. To offer two things of the same shape, give each its own type alias, as `AuditWrapper` and `TransactionWrapper` do above.
 - A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Any tag that starts with a lowercase letter (`@param`, `@returns`, `@example`, ...) is a standard JSDoc tag and is ignored.
 - **Where markers go.** Write the description first, then the markers, one per line, with nothing after a marker but its data. Data runs on to the next marker, so a sentence written after a marker becomes that marker's data: after `@Action` that stops startup (it takes no data), and after an additional marker such as `@Audit` it silently becomes the data of that marker. For the same reason a line inside an `@example` body that starts with a main marker is read as a real marker and turns that function into a component; do not begin an example line with `@Config`, `@Wrapper` or `@Action`.
 - Pass `decorators` to catch markers that are misspelt or misplaced. Without it, a function with no main marker is not looked at, so a wrapper marked `@Wraper` is skipped and every action runs without it. With it, these stop startup, each naming the function or constant, its file and the marker:

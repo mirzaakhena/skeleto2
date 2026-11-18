@@ -11,6 +11,7 @@ const readme = readFileSync(`${repo}README.md`, "utf8");
 
 const bestPractices = readFileSync(`${repo}BEST_PRACTICES.md`, "utf8");
 const technicalPractices = readFileSync(`${repo}TECHNICAL_PRACTICES.md`, "utf8");
+const checklist = readFileSync(`${repo}REVIEW_CHECKLIST.md`, "utf8");
 
 type Blocks = {
   /** Full example files, by the path each block names in its first line. */
@@ -61,10 +62,12 @@ type Example = {
   output: string;
   /** Files another document adds to the example at paths of their own, such as its tests; they are type-checked with it, and run when they are `*.test.ts`. */
   additions: Record<string, string>;
+  /** Files REVIEW_CHECKLIST.md shows for applications to copy: the architecture test and the startup guard. */
+  checklist: Record<string, string>;
 };
 
 /** The README holds the one runnable example; every other code block of the README and of BEST_PRACTICES.md is an excerpt of it. */
-function readExample(readmeText: string, bestPracticesText: string, technicalText: string): Example {
+function readExample(readmeText: string, bestPracticesText: string, technicalText: string, checklistText: string): Example {
   const blocks = readBlocks("README", readmeText);
   const { files, commands, outputs } = blocks;
   checkExcerpts("README", blocks, files);
@@ -83,7 +86,13 @@ function readExample(readmeText: string, bestPracticesText: string, technicalTex
   assert.deepEqual([...technical.commands, ...technical.outputs], [], "TECHNICAL_PRACTICES.md may show code only, not commands or output");
   checkExcerpts("TECHNICAL_PRACTICES.md", technical, files);
   for (const path of Object.keys(technical.files)) assert.ok(!(path in files), `TECHNICAL_PRACTICES.md shows ${path} in full, which is a README example file; show an excerpt of it instead`);
-  return { files, command: (commands[0] ?? "").split(" ").slice(2), output: outputs[0] ?? "", additions: technical.files };
+
+  // REVIEW_CHECKLIST.md shows whole files to copy, at paths of their own; a path already taken would be a second, unchecked version of that file.
+  const review = readBlocks("REVIEW_CHECKLIST.md", checklistText);
+  assert.deepEqual([...review.commands, ...review.outputs], [], "REVIEW_CHECKLIST.md may show code only, not commands or output");
+  checkExcerpts("REVIEW_CHECKLIST.md", review, files);
+  for (const path of Object.keys(review.files)) assert.ok(!(path in files) && !(path in technical.files), `REVIEW_CHECKLIST.md shows ${path}, which another document already shows`);
+  return { files, command: (commands[0] ?? "").split(" ").slice(2), output: outputs[0] ?? "", additions: technical.files, checklist: review.files };
 }
 
 /** What a consumer has installed: the package, here served straight from `src/`, and a compiler configuration. */
@@ -113,7 +122,7 @@ function run(tool: string, args: string[], cwd: string): Promise<Run> {
   });
 }
 
-const example = readExample(readme, bestPractices, technicalPractices);
+const example = readExample(readme, bestPractices, technicalPractices, checklist);
 
 test("the README covers the three kinds, the start and the container", () => {
   const sources = Object.values(example.files).join("\n");
@@ -360,6 +369,7 @@ test("the README and the practice files stay clear of what Skeleto dropped", () 
     assert.doesNotMatch(readme, banned);
     assert.doesNotMatch(bestPractices, banned);
     assert.doesNotMatch(technicalPractices, banned);
+    assert.doesNotMatch(checklist, banned);
   }
 });
 
@@ -534,4 +544,143 @@ test("the tests TECHNICAL_PRACTICES.md adds catch a broken use case and an appli
     assert.match(tested.stdout, /fail 2\b/);
     assert.match(tested.stdout, /@Audit is not an allowed marker/);
   });
+});
+
+/** The numbered rules of a practice file, by number, with their text and level. */
+function numberedRules(text: string): Map<string, { text: string; level: string }> {
+  return new Map([...text.matchAll(/^### ([BT]\d+)\. (.*) \((Mandatory|Optional)\)$/gm)].map((match) => [match[1] ?? "", { text: match[2] ?? "", level: match[3] ?? "" }]));
+}
+
+test("REVIEW_CHECKLIST.md lists every rule of both practice files exactly once, with its text, its level and who checks it", () => {
+  const rules = new Map([...numberedRules(bestPractices), ...numberedRules(technicalPractices)]);
+  assert.ok(rules.size >= 50, "the practice files have fewer rules than expected");
+  const rows = [...checklist.matchAll(/^\| ([BT]\d+) \| (.*) \| (Mandatory|Optional) \| (Machine|Reviewer)\b[^|]* \|$/gm)].map((match) => ({
+    number: match[1] ?? "",
+    text: match[2] ?? "",
+    level: match[3] ?? "",
+    checker: match[4] ?? "",
+  }));
+  // Every table row of a rule is one of the rows read above, so no row escapes the check by a different form.
+  assert.equal(rows.length, [...checklist.matchAll(/^\| [BT]\d+ \|/gm)].length, "a rule row of REVIEW_CHECKLIST.md is not '| <number> | <text> | <level> | Machine|Reviewer |'");
+  assert.deepEqual(
+    rows.map(({ number }) => number),
+    [...rules.keys()],
+    "REVIEW_CHECKLIST.md does not list every rule exactly once, in order",
+  );
+  for (const { number, text, level } of rows) assert.deepEqual({ text, level }, rules.get(number), `REVIEW_CHECKLIST.md states ${number} differently from its practice file`);
+  // A machine checks only what the architecture test checks; everything else is left to the reviewer.
+  assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B1", "B4"]);
+});
+
+test("the README links to REVIEW_CHECKLIST.md on the line that links to the two practice files", () => {
+  const lines = readme.split("\n").filter((line) => line.includes("(REVIEW_CHECKLIST.md)"));
+  assert.equal(lines.length, 1);
+  assert.ok(lines[0]?.includes("(BEST_PRACTICES.md)") && lines[0]?.includes("(TECHNICAL_PRACTICES.md)"));
+});
+
+test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a real rule at the real line", () => {
+  assert.match(checklist, /^> `<rule> <file>:<line>: <what breaks the rule>\. Fix: <the change asked for>\.`$/m);
+  const [, rule, path, line] = /^> ([BT]\d+) (\S+\.ts):(\d+): .*\. Fix: \S.*\.$/m.exec(checklist) ?? [];
+  assert.ok(rule && path && line, "REVIEW_CHECKLIST.md gives no example finding in the form it asks for");
+  assert.ok(new Map([...numberedRules(bestPractices), ...numberedRules(technicalPractices)]).has(rule), `the example finding cites ${rule}, which does not exist`);
+  assert.match(example.files[path]?.split("\n")[Number(line) - 1] ?? "", /^export function implStockTransfer\(/, `${path}:${line} is not the line the example finding is about`);
+});
+
+test("REVIEW_CHECKLIST.md marks the startup guard Optional and states the ordering it relies on", () => {
+  assert.deepEqual(Object.keys(example.checklist).sort(), ["architecture.test.ts", "src/use_case_wrapper.ts"]);
+  const section = checklist.slice(checklist.indexOf("## Optional: the startup guard"));
+  assert.ok(checklist.includes("## Optional: the startup guard"));
+  assert.match(section, /It is \*\*Optional\*\*/);
+  assert.match(section, /an action's dependencies are created before the action, and every action is offered to every wrapper as soon as it is created/);
+  assert.match(example.checklist["src/use_case_wrapper.ts"] ?? "", /^ \* Optional\./m);
+});
+
+/** The README example with every file the other documents add, and the checklist's architecture test and guard, as an application would hold them. */
+function application(changes: Record<string, string> = {}, guard = true): Record<string, string> {
+  const { "src/use_case_wrapper.ts": guardFile, ...copied } = example.checklist;
+  return { ...installation(), ...example.files, ...example.additions, ...copied, ...(guard ? { "src/use_case_wrapper.ts": guardFile ?? "" } : {}), ...changes };
+}
+
+// A second use case, for the copies that break the rules.
+const stockCount = `import type { ActionHandler } from "skeleto";
+
+export type StockCount = ActionHandler<string, number>;
+
+/**
+ * Counts the units a warehouse holds.
+ *
+ * @Action
+ * @UseCase
+ */
+export function implStockCount(): StockCount {
+  return async () => 0;
+}
+`;
+
+/** A copy of the example's use case that asks for a use case among its dependencies. */
+function useCaseOnUseCase(): Record<string, string> {
+  const path = "src/usecase/stock/stock_transfer.ts";
+  const source = (example.files[path] ?? "")
+    .replace('import type { ActionHandler } from "skeleto";\n', 'import type { ActionHandler } from "skeleto";\nimport type { StockCount } from "./stock_count.js";\n')
+    .replace("notifyWarehouses: NotifyWarehouses): StockTransfer", "notifyWarehouses: NotifyWarehouses, stockCount: StockCount): StockTransfer");
+  assert.notEqual(source, example.files[path]);
+  return { "src/usecase/stock/stock_count.ts": stockCount, [path]: source };
+}
+
+test("the checklist's architecture test and guard type-check with the example, pass on it, and leave its behaviour alone", async () => {
+  await withFixture(application(), async (directory) => {
+    const checked = await run("tsc", ["-p", "."], directory);
+    assert.equal(checked.code, 0, checked.stdout + checked.stderr);
+    const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
+    assert.equal(tested.code, 0, tested.stdout + tested.stderr);
+    assert.match(tested.stdout, /pass 3\b/);
+    assert.match(tested.stdout, /fail 0\b/);
+    // The guard prints nothing and wraps nothing: the example prints what the README shows, with the guard listed in the container as one more wrapper.
+    const started = await run("tsx", example.command, directory);
+    assert.equal(started.code, 0, started.stderr);
+    const lines = started.stdout.split("\n");
+    assert.ok(lines.includes('UseCaseWrapper: @Wrapper {"dependencies":[],"additionalDecorators":[]}'));
+    assert.deepEqual(lines.filter((line) => !line.startsWith("UseCaseWrapper: ")), example.output.split("\n"));
+  });
+});
+
+test("both the architecture test and the startup guard catch a use case that depends on another use case", async () => {
+  // Without the guard the application starts, and the architecture test names the dependency.
+  await withFixture(application(useCaseOnUseCase(), false), async (directory) => {
+    const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
+    assert.notEqual(tested.code, 0);
+    assert.match(tested.stdout, /fail 1\b/);
+    assert.match(tested.stdout, /not ok \d+ - B4: no use case depends on another use case/);
+    assert.match(tested.stdout, /StockTransfer -> StockCount/);
+  });
+  // With the guard the application does not start at all.
+  await withFixture(application(useCaseOnUseCase()), async (directory) => {
+    const started = await run("tsx", example.command, directory);
+    assert.notEqual(started.code, 0);
+    assert.equal(started.stdout, "");
+    assert.match(started.stderr, /implStockTransfer .* failed while wrapping it with UseCaseWrapper: use case StockTransfer depends on use case StockCount, which B4 forbids/);
+  });
+});
+
+test("the architecture test fails when an action carries neither marker, and when a gateway depends on a use case", async () => {
+  const gatewayFile = "src/gateway/memory/warehouse.ts";
+  const unmarked = (example.files[gatewayFile] ?? "").replace(" * @Gateway\n */\nexport function implSaveWarehouses", " */\nexport function implSaveWarehouses");
+  const logFile = "src/gateway/log/warehouse.ts";
+  const onUseCase = (example.files[logFile] ?? "")
+    .replace('import type { NotifyWarehouses } from "../warehouse.js";\n', 'import type { NotifyWarehouses } from "../warehouse.js";\nimport type { StockCount } from "../../usecase/stock/stock_count.js";\n')
+    .replace("implNotifyWarehouses(logger: Logger)", "implNotifyWarehouses(logger: Logger, stockCount: StockCount)");
+  const cases: [string, Record<string, string>, RegExp, RegExp][] = [
+    ["an action with neither marker", { [gatewayFile]: unmarked }, /B1: every action is marked exactly one of @UseCase and @Gateway/, /SaveWarehouses: neither/],
+    ["a gateway on a use case", { [logFile]: onUseCase, "src/usecase/stock/stock_count.ts": stockCount }, /B4: no gateway depends on a use case/, /NotifyWarehouses -> StockCount/],
+  ];
+  for (const [name, changes, failing, offender] of cases) {
+    for (const [path, source] of Object.entries(changes)) assert.notEqual(source, example.files[path], `${name}: ${path} is unchanged`);
+    await withFixture(application(changes, false), async (directory) => {
+      const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
+      assert.notEqual(tested.code, 0, `${name}: the architecture test passed`);
+      assert.match(tested.stdout, /fail 1\b/, name);
+      assert.match(tested.stdout, new RegExp(`not ok \\d+ - ${failing.source}`), name);
+      assert.match(tested.stdout, offender, name);
+    });
+  }
 });

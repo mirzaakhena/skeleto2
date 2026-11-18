@@ -1,2 +1,6 @@
-goal: Close the four gaps of the independent review: misspelt or misplaced markers, wrappers and actions that return no function, and wrong startup options each stop startup with a clear message, and README.md and CLAUDE.md say what the code does
+goal: Rework the README example to the agreed practices, write the two numbered practice files from it, then the reviewer checklist and copyable architecture test
 order:
+  - 261118104601   # Rework the README example to the agreed practices
+  - 261118104602   # Write TECHNICAL_PRACTICES.md with numbered rules
+  - 261118104603   # Rewrite BEST_PRACTICES.md as the conceptual practices with numbered rules
+  - 261118104604   # Reviewer checklist and copyable architecture test

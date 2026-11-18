@@ -5,7 +5,7 @@ lane: standard
 labels: [docs, best-practices]
 blocked_by: [261118104601]
 related: [261118104602, 261118104604]
-touches: []
+touches: [BEST_PRACTICES.md, test/readme.test.ts]
 created: 2026-11-18 10:46
 ---
 
@@ -45,10 +45,28 @@ Rewrite BEST_PRACTICES.md around the topics above as numbered rules, each marked
 - [ ] The concurrency rule explains, with a step-by-step timeline, why a transaction alone lets two requests break a rule, for both check-then-insert and read-change-save.
 - [ ] The concurrency and outbox rules name no particular database product, and give at least one example for a store that is not a database.
 - [ ] No rule refers to a particular application, database product or web framework.
-- [ ] Every code block in the file runs or is checked by the README test.
+- [ ] Every code block in the file runs or is checked by the README test; it shows excerpts of the README example only, and the timelines are tables or numbered lists.
+- [ ] Every rule is a heading `### B<n>. <rule> (Mandatory|Optional)` followed by a `Why:` paragraph, and the README test checks each has both.
 - [ ] Technical rules are not repeated here; the file points to TECHNICAL_PRACTICES.md for them.
 
 ## Out of scope
 
 - Technical rules (ticket 261118104602).
 - The combined reviewer checklist and the architecture test (ticket 261118104604).
+
+<!-- k2:record — written by k2 only; do not edit by hand -->
+
+## Questions
+- Q1 [answered] Rule number and level format, shared with 602 and parsed by 604. Recommended: heading '### B<n>. <rule in one line> (Mandatory|Optional)' followed by a 'Why:' paragraph; B1, B2, ... here, T1, ... in TECHNICAL_PRACTICES.md; the README test checks every rule heading has a level and a Why. Must match the answer to 602's same question.
+  → Heading '### B<n>. <rule> (Mandatory|Optional)' then a 'Why:' paragraph, same format as 602 (T<n>); checked by the README test. (owner, 2026-11-18)
+- Q2 [answered] Rules with no counterpart in the README example (determinism gateways for time and ids, a query use case without @Transaction, check-then-insert, the outbox, the context table): shown how? Options: (a) prose, tables and excerpts of the example only, and the two concurrency timelines as Markdown tables or numbered lists (the README test refuses unchecked code blocks); (b) full checked files through 602's mechanism, which 603 cannot rely on while running beside 602. Recommended (a): keeps 602 and 603 independent, and the topics are conceptual.
+  → (a) prose, tables and excerpts only; the concurrency timelines as Markdown tables or numbered lists. (owner, 2026-11-18)
+
+## Assumptions
+- A1 [unseen] The README test assertions that pin the old BEST_PRACTICES.md structure (section headings, reasons list, opening table) are rewritten to pin the new structure; the opening on two levels and its table stay asserted.
+  Why: Topic 1 keeps the two-level opening; CLAUDE.md section 9 requires the tests to pass
+  If wrong: Restore the old assertions
+
+## Decisions
+- Lane standard: rewrites a document and the README test assertions that pin it
+- Waits for 261118104601: its code blocks are excerpts of the reworked README example. Runs side by side with 261118104602

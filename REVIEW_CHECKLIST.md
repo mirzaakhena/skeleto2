@@ -41,7 +41,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | B13 | Entities import nothing outside entities | Mandatory | Reviewer |
 | B14 | A use case knows gateways only by their contract types | Mandatory | Reviewer |
 | B15 | Keep a gateway's contract apart from its implementation | Mandatory | Reviewer |
-| B16 | Give the gateways that save, find one and find many their standard shapes | Optional | Reviewer |
+| B16 | Give the gateways that insert, save, find one and find many their standard shapes | Optional | Reviewer |
 | B17 | Everything outside the process is reached through a gateway, not only stores | Mandatory | Reviewer |
 | B18 | Every unpredictable value comes from a gateway of its own and is asked for once, at the start of the use case | Mandatory | Reviewer |
 | B19 | A use case passes the context on and never reads it | Mandatory | Reviewer |

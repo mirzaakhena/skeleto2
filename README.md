@@ -170,7 +170,10 @@ import type { Warehouse } from "../entity/warehouse.js";
  */
 export type LockWarehouses = ActionHandler<string[], Warehouse[]>;
 
-/** Stores the warehouses as part of the open transaction. */
+/**
+ * Writes back, as part of the open transaction, warehouses that the store already holds.
+ * It never creates one: a warehouse the store does not hold is a `not_found` error.
+ */
 export type SaveWarehouses = ActionHandler<Warehouse[], void>;
 
 /** Tells whoever follows the stock that these warehouses changed, once the transaction has committed. */
@@ -216,6 +219,9 @@ export function implLockWarehouses(database: Database): LockWarehouses {
 export function implSaveWarehouses(database: Database): SaveWarehouses {
   return async (ctx, warehouses) => {
     const transaction = database(ctx);
+    // Save writes back what the store holds and never creates: a new warehouse would go through an insert, which the store can refuse.
+    const missing = warehouses.find((warehouse) => !transaction.read(warehouse.id));
+    if (missing) throw new BusinessError("not_found", `no warehouse ${missing.id}`);
     for (const warehouse of warehouses) transaction.write({ id: warehouse.id, units: warehouse.units });
   };
 }

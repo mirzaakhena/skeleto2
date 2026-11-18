@@ -273,10 +273,11 @@ test("BEST_PRACTICES.md explains with two timelines why a transaction alone does
   const section = bestPractices.slice(bestPractices.indexOf("## Concurrency"), bestPractices.indexOf("## Technical rules"));
   assert.match(section, /A transaction alone does not give this protection/);
   for (const shape of ["Check-then-insert", "Read-change-save"]) {
-    const timeline = section.slice(section.indexOf(`**${shape}.**`));
     assert.ok(section.includes(`**${shape}.**`), `no ${shape} timeline`);
-    // A step-by-step table: the steps of two requests side by side, before any later heading.
-    assert.match(timeline.slice(0, timeline.indexOf("###")), /^\| Step \| [^|]+ \| [^|]+ \|$(\n^\| .*\|$){7,}/m, `the ${shape} timeline is not a table of steps`);
+    // Its own part only: up to the next bold paragraph or heading, so that one shape's table cannot stand in for the other's.
+    const timeline = section.slice(section.indexOf(`**${shape}.**`) + 1).split(/^\*\*|^###/m)[0] ?? "";
+    // A step-by-step table: the steps of two requests side by side.
+    assert.match(timeline, /^\| Step \| [^|]+ \| [^|]+ \|$(\n^\| .*\|$){7,}/m, `the ${shape} timeline is not a table of steps`);
   }
   // The outbox is told as numbered steps, and stores other than a database are named.
   assert.match(section, /^1\. .*same store, in the same transaction[\s\S]*^4\. /m);

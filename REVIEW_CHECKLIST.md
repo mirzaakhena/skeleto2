@@ -51,7 +51,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | B23 | A caller makes the context and calls use cases only, never a gateway | Mandatory | Reviewer |
 | B24 | A use case that reads, decides and then writes is protected by its gateways against a concurrent change | Mandatory | Reviewer |
 | B25 | The mechanism of the protection belongs to the gateway and its technology, and shows in the gateway's contract | Mandatory | Reviewer |
-| B26 | Entities that are locked together are fetched by one gateway, which takes the locks in a fixed order | Mandatory | Reviewer |
+| B26 | The entities a use case changes are locked once, by one gateway, which takes the locks in a fixed order | Mandatory | Reviewer |
 | B27 | Uniqueness is guarded by the store, not by checking first | Mandatory | Reviewer |
 | B28 | An atomic update that moves a business rule into the store is allowed only with a written reason | Optional | Reviewer |
 | B29 | No effect outside the transaction's store happens before the commit | Mandatory | Reviewer |

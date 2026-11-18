@@ -113,6 +113,7 @@ export async function implConnection(): Promise<Connection> {
       const releases: (() => void)[] = [];
       const end = () => releases.splice(0).forEach((release) => release());
       return {
+        // Not re-entrant: a transaction that locks a warehouse it already holds waits for itself, and never ends.
         async lock(id) {
           const previous = locks.get(id) ?? Promise.resolve();
           let release = () => {};

@@ -20,3 +20,5 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - BEST_PRACTICES.md code blocks must be '// path.ts (excerpt)' blocks that appear verbatim in a README example file; test/readme.test.ts refuses anything else there
 - A guarantee that a document holds no unchecked code block must recognise every CommonMark fence form (info strings after the language, ~~~ fences, indented fences in lists), not only ^```lang$
 - README example output is asserted line by line in test/readme.test.ts (slices 0-6 and 6-11); any change to what main.ts prints needs those assertions updated
+- A tsx --test started from inside a node:test run inherits NODE_TEST_CONTEXT, prints nothing and exits 0; drop that variable from the child's env
+- BEST_PRACTICES.md rules are '### B<n>. ... (Mandatory|Optional)' then a 'Why:' paragraph; test/readme.test.ts checks them and bans database product and framework names

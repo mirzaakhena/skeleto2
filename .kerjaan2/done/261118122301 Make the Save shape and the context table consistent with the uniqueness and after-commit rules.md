@@ -28,11 +28,11 @@ Make the rules agree. Creating a new entity goes through an Insert shape that fa
 
 ## Done when
 
-- [ ] The standard shapes of B16 gain a fourth shape, Insert (`InsertWarehouses = ActionHandler<Warehouse[], void>`), which refuses the call with a `conflict` error when the store already holds one of the ids; the B16 heading names insert, and its REVIEW_CHECKLIST.md row and the topic pattern in test/readme.test.ts follow.
-- [ ] Save only writes back entities that exist and never creates one: an entity the store does not hold is a `not_found` error, stated in B16 and in the `SaveWarehouses` contract comment, and checked by `implSaveWarehouses` in the README example, whose output does not change.
-- [ ] The uniqueness rule and the standard shapes say the same thing.
-- [ ] The context table lists queueing an after-commit effect as something a gateway may do, and says nothing B30 contradicts.
-- [ ] REVIEW_CHECKLIST.md still lists every rule with the right level, and the README test passes.
+- [x] The standard shapes of B16 gain a fourth shape, Insert (`InsertWarehouses = ActionHandler<Warehouse[], void>`), which refuses the call with a `conflict` error when the store already holds one of the ids; the B16 heading names insert, and its REVIEW_CHECKLIST.md row and the topic pattern in test/readme.test.ts follow.
+- [x] Save only writes back entities that exist and never creates one: an entity the store does not hold is a `not_found` error, stated in B16 and in the `SaveWarehouses` contract comment, and checked by `implSaveWarehouses` in the README example, whose output does not change.
+- [x] The uniqueness rule and the standard shapes say the same thing.
+- [x] The context table lists queueing an after-commit effect as something a gateway may do, and says nothing B30 contradicts.
+- [x] REVIEW_CHECKLIST.md still lists every rule with the right level, and the README test passes.
 
 <!-- k2:record — written by k2 only; do not edit by hand -->
 
@@ -53,3 +53,16 @@ Make the rules agree. Creating a new entity goes through an Insert shape that fa
 ## Decisions
 - Lane standard: docs plus a possible small change to the README example code and its test; cheap to undo but the example is run and excerpted
 - Not solo, no blocked_by: shares BEST_PRACTICES.md, REVIEW_CHECKLIST.md and test/readme.test.ts with 261118122302 but in different rules (B16, B19, B27 vs B26) and different tests; the merge queue settles it, provided 261118122302 does not renumber rules (its Q1)
+- implSaveWarehouses checks all ids before writing any, so a call with one unknown warehouse writes nothing; no InsertWarehouses was added to the README example, since the ticket only asks for the shape in B16 and the example never creates a warehouse
+
+## Handoff
+B16 now has four standard shapes: Insert (new entities, conflict on an existing id, relying on the store's uniqueness of B27) and Save (writes back existing entities only, not_found otherwise), plus Find one and Find many; its heading, the REVIEW_CHECKLIST row and the readme.test.ts topic pattern all say 'insert, save, find one and find many'. B27 points at the Insert of B16. The B19 table lets a gateway queue an after-commit effect (B30). implSaveWarehouses in the README checks every id exists before writing; TECHNICAL_PRACTICES T1 excerpts that whole function verbatim, so edit both together. The README example output is unchanged.
+
+## Review
+- 2026-11-18 standard, round 1, at 99b3726: passed.
+  1: diff: B16 heading names insert, Insert row with InsertWarehouses = ActionHandler<Warehouse[], void> and conflict for the whole call; checklist row and readme.test.ts pattern follow; topic and checklist tests pass (k2 test, 33/33 on a copy)
+  2: B16 Save row and SaveWarehouses comment state not_found; probe on the README example: save east -> not_found, north+east -> not_found with nothing written, north -> ok; output block unchanged and the exact-output test passes
+  3: by reading: B27 names the Insert of B16 as the gateway that inserts and says Save never inserts; B16 sends new entities through Insert citing B24; 'inserting or replacing' is gone (grep)
+  4: by reading: B19 Gateway row allows queueing an after-commit effect (B30), matching the B30 excerpt ctx.data.afterCommit.push; no row contradicts B30
+  5: REVIEW_CHECKLIST tests (every rule once, text, level, checker) and all of readme.test.ts pass under k2 test
+  note: the stand-in saveWarehouses in TECHNICAL_PRACTICES.md (near line 292) does not check not_found; fine for a test stand-in

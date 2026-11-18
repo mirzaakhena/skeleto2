@@ -212,15 +212,18 @@ import type { LockWarehouses, NotifyWarehouses, SaveWarehouses } from "../../gat
 
 Why: the contract is what the use case depends on (B14) and what a reviewer reads to know what the gateway promises: what it reads or writes, what it guards against (B25), which errors it gives. Kept in a file of its own (`src/gateway/warehouse.ts`), it outlives any implementation (`src/gateway/memory/warehouse.ts`), and two implementations of one contract can live side by side.
 
-### B16. Give the gateways that save, find one and find many their standard shapes (Optional)
+### B16. Give the gateways that insert, save, find one and find many their standard shapes (Optional)
 
-Why: the same three operations appear for nearly every entity. When they always look alike, a reader knows them at a glance and a use case knows what a missing entity looks like without reading the gateway.
+Why: the same four operations appear for nearly every entity. When they always look alike, a reader knows them at a glance and a use case knows what a missing entity looks like without reading the gateway.
 
 | Operation | Contract | Behaviour |
 | --- | --- | --- |
-| Save | `SaveWarehouses = ActionHandler<Warehouse[], void>` | writes as part of the open transaction, inserting or replacing; returns nothing |
+| Insert | `InsertWarehouses = ActionHandler<Warehouse[], void>` | adds new entities as part of the open transaction; a `conflict` error for the whole call when the store already holds one of the ids, the store's uniqueness constraint refusing it (B27); returns nothing |
+| Save | `SaveWarehouses = ActionHandler<Warehouse[], void>` | writes back, as part of the open transaction, entities that the store already holds; never creates one: an entity the store does not hold is a `not_found` error; returns nothing |
 | Find one | `FindWarehouse = ActionHandler<string, Warehouse \| undefined>` | `undefined` when there is none; the use case decides whether that is a `not_found` error |
 | Find many | `FindWarehouses = ActionHandler<WarehouseQuery, Warehouse[]>`, the query holding a filter and a limit | an empty list when there are none; always bounded by the limit |
+
+A new entity, made by `new<Entity>` (B8), goes through Insert and never through Save: a Save that also created would silently replace an entity of the same id that another request stored first, the check-then-insert of B24.
 
 A gateway that guards against a concurrent change, such as `LockWarehouses` in the example, departs from these shapes on purpose and says so in its name and contract (B25).
 
@@ -255,7 +258,7 @@ Who may use the context, and how:
 | --- | --- |
 | Caller | make it, with `newContext()`, and set what identifies the call, such as its trace id |
 | Wrapper | add and remove what it manages, such as the open transaction |
-| Gateway | read what a wrapper put there for it, such as the transaction to work in |
+| Gateway | read what a wrapper put there for it, such as the transaction to work in, and queue an effect for the wrapper to run after the commit (B30) |
 | Use case | pass it on to every gateway it calls, unread |
 | Entity | nothing: it never receives the context |
 
@@ -364,7 +367,7 @@ Why: two transfers between the same two warehouses, one each way, that lock one 
 
 ### B27. Uniqueness is guarded by the store, not by checking first (Mandatory)
 
-Why: a check before the insert is the check-then-insert of B24, and is true only for the moment it was made. Only the store sees every insert, so only a uniqueness constraint in the store holds. The gateway that inserts turns the store's refusal into a `conflict` business error, and its contract says it does. A check first is still allowed, for a friendlier message, as long as the constraint is what is relied on.
+Why: a check before the insert is the check-then-insert of B24, and is true only for the moment it was made. Only the store sees every insert, so only a uniqueness constraint in the store holds. The gateway that inserts, the Insert of B16, turns the store's refusal into a `conflict` business error, and its contract says it does; Save never inserts, so it cannot overwrite a duplicate. A check first is still allowed, for a friendlier message, as long as the constraint is what is relied on.
 
 ### B28. An atomic update that moves a business rule into the store is allowed only with a written reason (Optional)
 

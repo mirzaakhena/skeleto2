@@ -20,6 +20,9 @@ A marked function works in two steps. Skeleto calls it once at startup with its 
 export function implSaveWarehouses(database: Database): SaveWarehouses {
   return async (ctx, warehouses) => {
     const transaction = database(ctx);
+    // Save writes back what the store holds and never creates: a new warehouse would go through an insert, which the store can refuse.
+    const missing = warehouses.find((warehouse) => !transaction.read(warehouse.id));
+    if (missing) throw new BusinessError("not_found", `no warehouse ${missing.id}`);
     for (const warehouse of warehouses) transaction.write({ id: warehouse.id, units: warehouse.units });
   };
 }

@@ -23,3 +23,4 @@
 {"t":"2026-11-18 12:39:03","event":"verdict","result":"pass","round":1,"commit":"3f8eb3b","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"reviewer:aa53eb29525b5b8be"}
 {"t":"2026-11-18 12:39:47","event":"test","by":"land","exit":0,"seconds":28,"fingerprint":"db59531f29057743888866effdeb59aa7d3538ea","command":"npm run typecheck && npm test && npm run build","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
 {"t":"2026-11-18 12:39:47","event":"landed","branch":"k2/261118122302-warn-that-locks-are","files":["BEST_PRACTICES.md","README.md","REVIEW_CHECKLIST.md","test/readme.test.ts"],"session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 13:19:33","event":"assumption-confirmed","key":"A1","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}

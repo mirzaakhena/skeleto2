@@ -43,12 +43,14 @@ Make the rules agree. Creating a new entity goes through an Insert shape that fa
   → (a) a fourth standard shape named Insert (InsertWarehouses), refusing with a conflict error when an id exists; Save only writes back existing entities; heading, checklist row and test pattern follow. (owner, 2026-11-18)
 
 ## Assumptions
-- A1 [unseen] B27 is reworded only to name the Insert shape of B16 as the gateway that inserts (its heading and level stay); the check-then-insert timeline of B24 stays as it is
+- A1 [confirmed] B27 is reworded only to name the Insert shape of B16 as the gateway that inserts (its heading and level stay); the check-then-insert timeline of B24 stays as it is
   Why: the ticket asks the two rules to say the same thing, and B27 already says the right thing; the smallest change is a cross-reference
   If wrong: reword B27 further or change its heading together with its REVIEW_CHECKLIST.md row
-- A2 [unseen] The Gateway row of the B19 table becomes: read what a wrapper put there for it, such as the transaction to work in, and queue an effect for the wrapper to run after the commit (B30); the other rows stay
+  Confirmed by owner, 2026-11-18
+- A2 [confirmed] The Gateway row of the B19 table becomes: read what a wrapper put there for it, such as the transaction to work in, and queue an effect for the wrapper to run after the commit (B30); the other rows stay
   Why: B19's own Why already says the context carries effects waiting for the commit, and B30 and the README transaction wrapper show the gateway pushing to ctx.data.afterCommit, which the wrapper made
   If wrong: edit that one table row
+  Confirmed by owner, 2026-11-18
 
 ## Decisions
 - Lane standard: docs plus a possible small change to the README example code and its test; cheap to undo but the example is run and excerpted

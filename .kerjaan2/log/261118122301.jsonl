@@ -19,3 +19,5 @@
 {"t":"2026-11-18 12:34:22","event":"agent","role":"reviewer","agent":"ade840c95abbc178e","step":"review:1:0:0","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
 {"t":"2026-11-18 12:36:02","event":"verdict","result":"pass","round":1,"commit":"99b3726","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"reviewer:ade840c95abbc178e"}
 {"t":"2026-11-18 12:36:24","event":"landed","branch":"k2/261118122301-make-the-save-shape","files":["BEST_PRACTICES.md","README.md","REVIEW_CHECKLIST.md","TECHNICAL_PRACTICES.md","test/readme.test.ts"],"session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 13:19:33","event":"assumption-confirmed","key":"A1","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 13:19:33","event":"assumption-confirmed","key":"A2","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}

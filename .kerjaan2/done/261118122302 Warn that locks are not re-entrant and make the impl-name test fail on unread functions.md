@@ -41,9 +41,10 @@ Warn against relocking in the concurrency rules, and make the naming check fail 
   → (a) run the real scanner on a fixture of the example. (owner, 2026-11-18)
 
 ## Assumptions
-- A1 [unseen] The proving test uses forms the old pattern really skipped (blank line or line comment between JSDoc and function, a type parameter), and keeps the multi-line parameters form as an extra case
+- A1 [confirmed] The proving test uses forms the old pattern really skipped (blank line or line comment between JSDoc and function, a type parameter), and keeps the multi-line parameters form as an extra case
   Why: The old pattern's [^)]* matched across lines, so multi-line parameters alone would not have shown the old gap
   If wrong: Drop the extra forms from the test's table in test/readme.test.ts
+  Confirmed by owner, 2026-11-18
 
 ## Decisions
 - Lane standard: a rule text plus a rewrite of a README test check and a new test proving it fails

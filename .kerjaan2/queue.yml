@@ -1,2 +1,4 @@
-goal: Rework the README example to the agreed practices, write the two numbered practice files from it, then the reviewer checklist and copyable architecture test
+goal: Make BEST_PRACTICES.md consistent on inserting, saving and the context, warn against relocking, and make the README naming check read what Skeleto reads
 order:
+  - 261118122301   # Make the Save shape and the context table consistent with the uniqueness and after-commit rules
+  - 261118122302   # Warn that locks are not re-entrant and make the impl-name test fail on unread functions

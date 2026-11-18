@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DEFAULT_EXCLUDE } from "../src/index.js";
+import { scanDirectory } from "../src/scanner.js";
 import { withFixture } from "./fixture.js";
 
 const repo = fileURLToPath(new URL("..", import.meta.url));
@@ -279,13 +280,18 @@ test("BEST_PRACTICES.md has a rule for every agreed topic", () => {
     ["a query never writes", /query never writes.*without `@Transaction`/],
     ["concurrency", /reads, decides and then writes is protected.*\(Mandatory\)/],
     ["the mechanism belongs to the gateway", /mechanism.*belongs to the gateway.*contract/],
-    ["locks in a fixed order", /locked together are fetched by one gateway.*fixed order/],
+    ["locked once, by one gateway, in a fixed order", /locked once, by one gateway.*fixed order/],
     ["uniqueness guarded by the store", /Uniqueness is guarded by the store, not by checking first/],
     ["atomic updates need a reason", /atomic update.*written reason \(Optional\)/],
     ["no effect before commit", /No effect outside the transaction's store happens before the commit \(Mandatory\)/],
     ["after commit or outbox, per effect", /after commit.*outbox/],
   ];
   for (const [topic, pattern] of topics) assert.ok(headings.some((heading) => pattern.test(heading)), `no rule of BEST_PRACTICES.md covers: ${topic}`);
+  // Relocking is forbidden for every store, with the reason for a lock that is re-entrant and for one that is not.
+  const lockedOnce = practiceRules(bestPractices).find(({ heading }) => /locked once, by one gateway/.test(heading))?.body ?? "";
+  assert.match(lockedOnce, /Locking again what the same transaction already holds is not allowed, whatever the store/);
+  assert.match(lockedOnce, /not re-entrant.*waits for itself/);
+  assert.match(lockedOnce, /re-entrant.*hides a second fetch/);
   assert.match(bestPractices, /\| Who \| Uses the context to \|/, "BEST_PRACTICES.md has no table of who may use the context");
 });
 
@@ -373,17 +379,48 @@ test("the README and the practice files stay clear of what Skeleto dropped", () 
   }
 });
 
-test("every component function of the README example is named impl followed by its component's name", () => {
-  const kinds = new Set<string>();
-  for (const [path, source] of Object.entries(example.files)) {
-    for (const [, comment, name, returned] of source.matchAll(/\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\nexport (?:async )?function (\w+)\([^)]*\): ([\w.<>]+)/g)) {
-      const kind = /^\s*\*?\s*@(Config|Wrapper|Action)\b/m.exec(comment ?? "")?.[1];
-      if (!kind) continue;
-      kinds.add(kind);
-      assert.equal(name, `impl${(returned ?? "").replace(/^Promise<(.*)>$/, "$1")}`, `${path}: ${name} is not impl + its component's name`);
-    }
+/**
+ * Fails unless every component of the files is a function named `impl` followed by its component's name. It reads the files with the
+ * scanner Skeleto itself uses, so a marked function written in any form Skeleto accepts is checked, and a scanner error fails it too.
+ */
+async function checkImplNames(files: Record<string, string>): Promise<void> {
+  await withFixture(files, (directory) => {
+    const { functions, errors } = scanDirectory(directory, MARKERS);
+    assert.deepEqual(errors, [], `the scanner refuses the files:\n${errors.join("\n")}`);
+    const wrong = functions.filter(({ functionName, metadata }) => functionName !== `impl${metadata.name}`);
+    assert.deepEqual(wrong.map(({ functionName, metadata }) => `${functionName} is not impl + ${metadata.name}`), [], "component functions not named impl + their component's name");
+    assert.deepEqual([...new Set(functions.map(({ metadata }) => metadata.mainDecorator.name))].sort(), ["Action", "Config", "Wrapper"]);
+  });
+}
+
+// The markers of the example's own src/markers.ts, so that the scanner checks them as the example's startup does.
+const MARKERS = JSON.parse(/^export const MARKERS = (\[.*\]);$/m.exec(example.files["src/markers.ts"] ?? "")?.[1] ?? "null") as string[];
+
+test("every component function of the README example is named impl followed by its component's name", async () => {
+  await checkImplNames(example.files);
+});
+
+test("the naming check fails, naming the function, for a wrong name in a form a text pattern would skip, and on any scanner error", async (t) => {
+  const path = "src/gateway/memory/warehouse.ts";
+  const original = "export function implSaveWarehouses(database: Database): SaveWarehouses {";
+  assert.ok(example.files[path]?.includes(original), `${path} no longer declares implSaveWarehouses as this test expects`);
+  const forms: Record<string, string> = {
+    "a blank line between the JSDoc block and the function": "\nexport function storeWarehouses(database: Database): SaveWarehouses {",
+    "a line comment between the JSDoc block and the function": "// Writes through the transaction.\nexport function storeWarehouses(database: Database): SaveWarehouses {",
+    // The old text pattern read this form; it stays because it is the form the ticket for this check named.
+    "parameters over several lines": "export function storeWarehouses(\n  database: Database,\n): SaveWarehouses {",
+    "a type parameter": "export function storeWarehouses<T>(database: Database): SaveWarehouses {",
+  };
+  for (const [form, written] of Object.entries(forms)) {
+    await t.test(form, async () => {
+      const files = { ...example.files, [path]: (example.files[path] ?? "").replace(original, written) };
+      await assert.rejects(checkImplNames(files), (error: Error) => /storeWarehouses is not impl \+ SaveWarehouses/.test(error.message));
+    });
   }
-  assert.deepEqual([...kinds].sort(), ["Action", "Config", "Wrapper"]);
+  await t.test("a scanner error", async () => {
+    const files = { ...example.files, [path]: (example.files[path] ?? "").replace(original, original.replace("export ", "")) };
+    await assert.rejects(checkImplNames(files), (error: Error) => /implSaveWarehouses/.test(error.message) && /the scanner refuses the files/.test(error.message));
+  });
 });
 
 test("the README example creates entities only through newWarehouse, and keeps its markers in one exported constant", () => {

@@ -358,9 +358,11 @@ export type LockWarehouses = ActionHandler<string[], Warehouse[]>;
 
 A version checked when saving turns the lost change of B24 into a `conflict` error for the later save, which its caller may retry from the start.
 
-### B26. Entities that are locked together are fetched by one gateway, which takes the locks in a fixed order (Mandatory)
+### B26. The entities a use case changes are locked once, by one gateway, which takes the locks in a fixed order (Mandatory)
 
 Why: two transfers between the same two warehouses, one each way, that lock one warehouse each and then wait for the other wait on each other for ever. One gateway call for all of them, locking in an order that does not depend on the request (sorted by id, for example), makes every transaction take the locks the same way, so one always gets both first.
+
+Locking again what the same transaction already holds is not allowed, whatever the store. A lock that is not re-entrant, like the one of the README example, waits for itself, and the transaction hangs. One that is re-entrant lets the second lock through, but hides a second fetch of the same entity: the entities are then no longer locked once, by one gateway, and the second lock is taken outside the fixed order.
 
 ### B27. Uniqueness is guarded by the store, not by checking first (Mandatory)
 

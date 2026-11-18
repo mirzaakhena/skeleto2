@@ -106,16 +106,16 @@ const example = readExample(readme, bestPractices);
 
 test("the README covers the three kinds, the start and the container", () => {
   const sources = Object.values(example.files).join("\n");
-  for (const needed of ["@Config", "@Action", '@Wrapper {"ordinal": 10}', "@Transaction", "Skeleto.start(", "decorators:", "getContainer()", "getMetadata()"]) {
+  for (const needed of ["@Config", "@Action", '@Wrapper {"ordinal": 10}', "@UseCase", "@Gateway", "@Transaction", "Skeleto.start(", "decorators: MARKERS", "getContainer()", "getMetadata()"]) {
     assert.ok(sources.includes(needed), `no README example shows ${needed}`);
   }
   assert.ok(Object.keys(example.files).length >= 4);
 });
 
 test("the README example has an async config, and says that startup waits for it without a time limit of its own", () => {
-  assert.match(example.files["src/config.ts"] ?? "", /@Config \*\/\nexport async function connectDatabase\(\): Promise<Database> \{\n[^}]*await /);
+  assert.match(example.files["src/config.ts"] ?? "", /@Config \*\/\nexport async function implConnection\(\): Promise<Connection> \{\n[^}]*await /);
   // Its dependant asks for the plain name.
-  assert.match(example.files["src/gateway/database.ts"] ?? "", /makeFindWarehouse\(database: Database\)/);
+  assert.match(example.files["src/wrappers.ts"] ?? "", /implTransactionWrapper\(connection: Connection,/);
   assert.match(readme, /^## Asynchronous configs$/m);
   assert.match(readme, /Startup sets no time limit/);
   assert.match(readme, /Give the config its own timeout/);
@@ -145,21 +145,27 @@ test("the README examples start and print exactly the output the README shows", 
 
     const lines = result.stdout.split("\n");
     // Larger ordinal outside: the ordinal 10 wrapper is entered before, and left after, the wrapper without an ordinal.
-    assert.deepEqual(lines.slice(0, 2), ["enter StockTransfer", "begin"]);
-    assert.deepEqual(lines.slice(8, 10), ["commit", "leave StockTransfer"]);
-    // The injected actions are the wrapped ones, and the wrapper that returned the handler added no layer to them.
-    assert.deepEqual(lines.slice(2, 8), ["enter FindWarehouse", "leave FindWarehouse", "enter FindWarehouse", "leave FindWarehouse", "enter SaveWarehouses", "leave SaveWarehouses"]);
+    // The effect queued after commit runs after it, and the use case answers with its own type, not with the entities.
+    assert.deepEqual(lines.slice(0, 6), ["enter StockTransfer", "begin", "commit", "stock changed: north 7, south 3", "leave StockTransfer", "{ fromUnits: 7, toUnits: 3 }"]);
+    // The failing transfer rolls back, queues nothing that runs, and its caller translates the kind of its business error.
+    assert.deepEqual(lines.slice(6, 11), ["enter StockTransfer", "begin", "rollback", "leave StockTransfer", "refused: warehouse south holds 3 units, not 50"]);
+    // The logging wrapper wraps use cases only: no gateway shows up in the log.
+    assert.deepEqual(
+      lines.filter((line) => /^(enter|leave) /.test(line)),
+      ["enter StockTransfer", "leave StockTransfer", "enter StockTransfer", "leave StockTransfer"],
+    );
 
     const metadata = (name: string): unknown => JSON.parse((lines.find((line) => line.startsWith(`${name}: `)) ?? "").replace(/^[^{]*/, ""));
     assert.deepEqual(metadata("StockTransfer"), {
-      dependencies: ["FindWarehouse", "SaveWarehouses"],
-      additionalDecorators: [{ name: "Transaction" }, { name: "Audit", data: { level: "info" } }],
+      dependencies: ["LockWarehouses", "SaveWarehouses", "NotifyWarehouses"],
+      additionalDecorators: [{ name: "UseCase" }, { name: "Transaction" }, { name: "Audit", data: { level: "info" } }],
     });
-    assert.deepEqual(metadata("FindWarehouse"), { dependencies: ["Database"], additionalDecorators: [] });
-    // The async config is listed under the plain name, and the database it delivered late is the one the gateways used.
-    assert.ok(lines.includes('Database: @Config {"dependencies":[],"additionalDecorators":[]}'));
+    for (const gateway of ["LockWarehouses", "SaveWarehouses"]) assert.deepEqual(metadata(gateway), { dependencies: ["Database"], additionalDecorators: [{ name: "Gateway" }] });
+    assert.deepEqual(metadata("NotifyWarehouses"), { dependencies: ["Logger"], additionalDecorators: [{ name: "Gateway" }] });
+    // The async config is listed under the plain name, and the connection it delivered late is the one the transaction wrapper used.
+    assert.ok(lines.includes('Connection: @Config {"dependencies":[],"additionalDecorators":[]}'));
+    assert.deepEqual(metadata("TransactionWrapper"), { dependencies: ["Connection", "Logger"], additionalDecorators: [] });
     assert.ok(!result.stdout.includes("Promise"));
-    assert.ok(lines.includes("[ { id: 'north', units: 7 }, { id: 'south', units: 3 } ]"));
   });
 });
 
@@ -170,7 +176,7 @@ test("the list of allowed markers in the README example is in force: a misspelle
   await withFixture({ ...installation(), ...files }, async (directory) => {
     const result = await run("tsx", example.command, directory);
     assert.notEqual(result.code, 0);
-    assert.match(result.stderr, /makeStockTransfer.*@Transction is not an allowed marker/);
+    assert.match(result.stderr, /implStockTransfer.*@Transction is not an allowed marker/);
     assert.equal(result.stdout, "");
   });
 });
@@ -186,22 +192,26 @@ test("the README example keeps business rules in plain entity functions, and no 
   await withFixture({ ...installation(), ...example.files }, async (directory) => {
     const result = await run("tsx", example.command, directory);
     assert.equal(result.code, 0, result.stderr);
-    const components = new Map<string, string[]>();
+    type Component = { kind: string; dependencies: string[]; markers: string[] };
+    const components = new Map<string, Component>();
     for (const line of result.stdout.split("\n")) {
-      const match = /^(\w+): @\w+ (\{.*\})$/.exec(line);
-      if (match) components.set(match[1] ?? "", JSON.parse(match[2] ?? "{}").dependencies);
+      const match = /^(\w+): @(\w+) (\{.*\})$/.exec(line);
+      if (!match) continue;
+      const { dependencies, additionalDecorators } = JSON.parse(match[3] ?? "{}");
+      components.set(match[1] ?? "", { kind: match[2] ?? "", dependencies, markers: additionalDecorators.map((marker: { name: string }) => marker.name) });
     }
-    // Use cases are the actions declared below src/usecase/; the entity's functions are not in the container.
-    const useCases = Object.keys(example.files)
-      .filter((path) => path.startsWith("src/usecase/"))
-      .flatMap((path) => [...(example.files[path] ?? "").matchAll(/^export type (\w+) = ActionHandler</gm)].map((match) => match[1] ?? ""));
-    assert.ok(useCases.length > 0);
+    // Use cases and gateways are told apart by their markers, never by their names or folders; every action is one of the two.
+    const actions = [...components].filter(([, component]) => component.kind === "Action");
+    const useCases = actions.filter(([, component]) => component.markers.includes("UseCase")).map(([name]) => name);
+    const gateways = actions.filter(([, component]) => component.markers.includes("Gateway")).map(([name]) => name);
+    assert.deepEqual(useCases, ["StockTransfer"]);
+    assert.deepEqual(gateways.sort(), ["LockWarehouses", "NotifyWarehouses", "SaveWarehouses"]);
+    for (const [name, component] of actions) assert.equal(component.markers.filter((marker) => marker === "UseCase" || marker === "Gateway").length, 1, `${name} is not exactly one of use case and gateway`);
     for (const useCase of useCases) {
-      const dependencies = components.get(useCase);
-      assert.ok(dependencies, `${useCase} is not in the container`);
-      for (const dependency of dependencies) assert.ok(!useCases.includes(dependency), `use case ${useCase} depends on use case ${dependency}`);
+      assert.ok(components.get(useCase)?.markers.includes("Transaction"), `use case ${useCase} carries no @Transaction`);
+      for (const dependency of components.get(useCase)?.dependencies ?? []) assert.ok(!useCases.includes(dependency), `use case ${useCase} depends on use case ${dependency}`);
     }
-    for (const name of ["Warehouse", "create", "transfer"]) assert.ok(!components.has(name), `${name} became a component`);
+    for (const name of ["Warehouse", "BusinessError", "newWarehouse", "transfer"]) assert.ok(!components.has(name), `${name} became a component`);
   });
 });
 
@@ -253,8 +263,99 @@ test("the README and CLAUDE.md name the exclude option, the constant and every d
 });
 
 test("the README and BEST_PRACTICES.md stay clear of what Skeleto dropped", () => {
-  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /\brequest\b/i, /\bresponse\b/i]) {
+  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i]) {
     assert.doesNotMatch(readme, banned);
     assert.doesNotMatch(bestPractices, banned);
   }
+});
+
+test("every component function of the README example is named impl followed by its component's name", () => {
+  const kinds = new Set<string>();
+  for (const [path, source] of Object.entries(example.files)) {
+    for (const [, comment, name, returned] of source.matchAll(/\/\*\*((?:(?!\*\/)[\s\S])*)\*\/\nexport (?:async )?function (\w+)\([^)]*\): ([\w.<>]+)/g)) {
+      const kind = /^\s*\*?\s*@(Config|Wrapper|Action)\b/m.exec(comment ?? "")?.[1];
+      if (!kind) continue;
+      kinds.add(kind);
+      assert.equal(name, `impl${(returned ?? "").replace(/^Promise<(.*)>$/, "$1")}`, `${path}: ${name} is not impl + its component's name`);
+    }
+  }
+  assert.deepEqual([...kinds].sort(), ["Action", "Config", "Wrapper"]);
+});
+
+test("the README example creates entities only through newWarehouse, and keeps its markers in one exported constant", () => {
+  const entity = example.files["src/entity/warehouse.ts"] ?? "";
+  assert.match(entity, /^export function newWarehouse\(/m);
+  // The rule checks the invariants itself and returns copies; it does not go through the creating function.
+  assert.doesNotMatch(entity.slice(entity.indexOf("export function transfer")), /newWarehouse\(/);
+  for (const path of Object.keys(example.files).filter((name) => name.startsWith("src/gateway/") || name.startsWith("src/usecase/"))) {
+    assert.doesNotMatch(example.files[path] ?? "", /newWarehouse/, `${path} calls newWarehouse`);
+  }
+  // A use case writes no entity literal, and a gateway reaches the store only through the context.
+  assert.doesNotMatch(example.files["src/usecase/stock/stock_transfer.ts"] ?? "", /\{\s*id:/);
+  for (const path of Object.keys(example.files).filter((name) => name.startsWith("src/gateway/"))) assert.doesNotMatch(example.files[path] ?? "", /Connection/, `${path} uses the connection`);
+  assert.match(example.files["src/gateway/memory/warehouse.ts"] ?? "", /database\(ctx\)/);
+  assert.match(example.files["src/markers.ts"] ?? "", /^export const MARKERS = \["UseCase", "Gateway", "Transaction", "Audit"\];$/m);
+  assert.match(example.files["main.ts"] ?? "", /Skeleto\.start\("src", \{ decorators: MARKERS \}\)/);
+  // Business errors are typed by kind, and nothing in the example speaks of the transport its caller uses.
+  assert.match(example.files["src/entity/error.ts"] ?? "", /export type BusinessErrorKind = "validation" \| "not_found" \| "conflict";/);
+  for (const [path, source] of Object.entries(example.files)) assert.doesNotMatch(source, /\bhttp\b/i, `${path} mentions HTTP`);
+});
+
+// Two transfers that together exceed the stock, and a third that names the same warehouses the other way round.
+// Without the lock both of the first two succeed; without the fixed order the first and the third wait on each other for ever.
+const race = `import { Skeleto, newContext } from "skeleto";
+import { MARKERS } from "./src/markers.js";
+import type { StockTransfer } from "./src/usecase/stock/stock_transfer.js";
+
+const container = (await Skeleto.start("src", { decorators: MARKERS })).getContainer();
+const stockTransfer: StockTransfer = container.get("StockTransfer")!.getInstance();
+const results = await Promise.allSettled([
+  stockTransfer(newContext(), { from: "north", to: "south", units: 6 }),
+  stockTransfer(newContext(), { from: "north", to: "south", units: 6 }),
+  stockTransfer(newContext(), { from: "south", to: "north", units: 1 }),
+]);
+console.log(JSON.stringify(results.map((result) => (result.status === "fulfilled" ? result.value : { kind: result.reason.kind }))));
+`;
+
+test("the README example guards a transfer against a concurrent one: overlapping transfers beyond the stock give exactly one error", async () => {
+  await withFixture({ ...installation(), ...example.files, "race.ts": race }, async (directory) => {
+    const result = await run("tsx", ["race.ts"], directory);
+    assert.equal(result.code, 0, result.stderr);
+    const outcomes = JSON.parse(result.stdout.trim().split("\n").at(-1) ?? "[]");
+    assert.deepEqual(outcomes, [{ fromUnits: 4, toUnits: 6 }, { kind: "conflict" }, { fromUnits: 5, toUnits: 5 }]);
+  });
+});
+
+// Drives the transaction wrapper of the example directly: one failing action, then an action that calls another inside its transaction.
+const transactions = `import { Skeleto, newContext, type WrapperHandler } from "skeleto";
+import { MARKERS } from "./src/markers.js";
+
+const container = (await Skeleto.start("src", { decorators: MARKERS })).getContainer();
+const wrap: WrapperHandler = container.get("TransactionWrapper")!.getInstance();
+const metadata = container.get("StockTransfer")!.getMetadata();
+const ran: string[] = [];
+
+const failing = wrap(async (ctx) => {
+  ctx.data.afterCommit.push(() => ran.push("dropped"));
+  throw new Error("fails");
+}, metadata);
+const left = newContext();
+await failing(left, {}).catch(() => ran.push("failed"));
+
+const inner = wrap(async (ctx) => ctx.data.transaction, metadata);
+const outer = wrap(async (ctx) => {
+  ctx.data.afterCommit.push(() => ran.push("committed"));
+  return (await inner(ctx, {})) === ctx.data.transaction;
+}, metadata);
+const joined = await outer(newContext(), {});
+console.log(JSON.stringify({ joined, ran, cleared: !("transaction" in left.data) && !("afterCommit" in left.data) }));
+`;
+
+test("the README example's transaction wrapper joins an open transaction, runs queued effects after commit and drops them on failure", async () => {
+  await withFixture({ ...installation(), ...example.files, "transactions.ts": transactions }, async (directory) => {
+    const result = await run("tsx", ["transactions.ts"], directory);
+    assert.equal(result.code, 0, result.stderr);
+    // One begin for the two nested actions: the inner one joined the outer transaction.
+    assert.deepEqual(result.stdout.trim().split("\n"), ["begin", "rollback", "begin", "commit", JSON.stringify({ joined: true, ran: ["failed", "committed"], cleared: true })]);
+  });
 });

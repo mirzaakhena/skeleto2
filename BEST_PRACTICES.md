@@ -40,7 +40,7 @@ The scan ignores file names and folders, so nothing breaks if you lay your files
 
 ## Entities hold the rules, use cases orchestrate
 
-An **entity** is a plain type plus pure functions, in a file of its own. The functions hold the rules of the business: which values are valid, which changes of state are allowed, and the rules that involve several entities, such as moving stock from one warehouse to another. A function that changes an entity returns a new copy and never changes the one it was given. An entity is made only through its creating function, which validates it. An entity file carries no markers, so it adds nothing to the container.
+An **entity** is a plain type plus pure functions, in a file of its own. The functions hold the rules of the business: which values are valid, which changes of state are allowed, and the rules that involve several entities, such as moving stock from one warehouse to another. A function that changes an entity returns a new copy and never changes the one it was given. A new entity is made only through its creating function (`newWarehouse`), which validates it. An entity file carries no markers, so it adds nothing to the container.
 
 A **use case** only orchestrates: it fetches entities through gateways, calls entity functions, and saves the results through gateways. It holds no business rule of its own, and it does not call another use case. When two use cases share a step, the shared rule belongs in an entity function and the shared access in a gateway.
 
@@ -48,24 +48,24 @@ The example in the [README](README.md#example) is laid out this way. The rule ov
 
 ```ts
 // src/entity/warehouse.ts (excerpt)
-export function transfer(from: Warehouse, to: Warehouse, units: number): Warehouse[] {
-  if (from.id === to.id) throw new Error(`warehouse ${from.id} cannot send stock to itself`);
-  if (!Number.isInteger(units) || units <= 0) throw new Error(`cannot move ${units} units`);
-  if (from.units < units) throw new Error(`warehouse ${from.id} holds ${from.units} units, not ${units}`);
-  return [create(from.id, from.units - units), create(to.id, to.units + units)];
+export function transfer(from: Warehouse, to: Warehouse, units: number): [Warehouse, Warehouse] {
+  if (from.id === to.id) throw new BusinessError("validation", `warehouse ${from.id} cannot send stock to itself`);
+  if (!Number.isInteger(units) || units <= 0) throw new BusinessError("validation", `cannot move ${units} units`);
+  if (from.units < units) throw new BusinessError("conflict", `warehouse ${from.id} holds ${from.units} units, not ${units}`);
+  return [{ ...from, units: from.units - units }, { ...to, units: to.units + units }];
 }
 ```
 
-and the use case fetches both warehouses, calls it, and saves what it returns:
+and the use case locks both warehouses, calls it, and saves what it returns:
 
 ```ts
 // src/usecase/stock/stock_transfer.ts (excerpt)
   return async (ctx, { from, to, units }) => {
-    const source = await findWarehouse(ctx, from);
-    const target = await findWarehouse(ctx, to);
+    const [source, target] = await lockWarehouses(ctx, [from, to]);
     const moved = Warehouse.transfer(source, target, units);
     await saveWarehouses(ctx, moved);
-    return moved;
+    await notifyWarehouses(ctx, moved);
+    return { fromUnits: moved[0].units, toUnits: moved[1].units };
   };
 ```
 

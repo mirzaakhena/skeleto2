@@ -23,3 +23,6 @@
 {"t":"2026-11-18 11:46:23","event":"agent","role":"reviewer","agent":"af5aefb328b213aa2","step":"review:1:0:0","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
 {"t":"2026-11-18 11:48:06","event":"verdict","result":"pass","round":1,"commit":"f69fec5","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"reviewer:af5aefb328b213aa2"}
 {"t":"2026-11-18 11:48:13","event":"landed","branch":"k2/261118104602-write-technical-practices-md","files":["README.md","TECHNICAL_PRACTICES.md","test/readme.test.ts"],"session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 12:22:59","event":"assumption-confirmed","key":"A1","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 12:22:59","event":"assumption-confirmed","key":"A2","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 12:22:59","event":"assumption-confirmed","key":"A3","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}

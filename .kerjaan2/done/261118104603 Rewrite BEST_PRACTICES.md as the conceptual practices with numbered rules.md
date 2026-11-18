@@ -63,18 +63,22 @@ Rewrite BEST_PRACTICES.md around the topics above as numbered rules, each marked
   → (a) prose, tables and excerpts only; the concurrency timelines as Markdown tables or numbered lists. (owner, 2026-11-18)
 
 ## Assumptions
-- A1 [unseen] The README test assertions that pin the old BEST_PRACTICES.md structure (section headings, reasons list, opening table) are rewritten to pin the new structure; the opening on two levels and its table stay asserted.
+- A1 [confirmed] The README test assertions that pin the old BEST_PRACTICES.md structure (section headings, reasons list, opening table) are rewritten to pin the new structure; the opening on two levels and its table stay asserted.
   Why: Topic 1 keeps the two-level opening; CLAUDE.md section 9 requires the tests to pass
   If wrong: Restore the old assertions
-- A2 [unseen] The Why paragraph comes directly after the rule heading, and any explanation or excerpt follows it
+  Confirmed by owner, 2026-11-18
+- A2 [confirmed] The Why paragraph comes directly after the rule heading, and any explanation or excerpt follows it
   Why: The owner's format is heading then a Why paragraph; putting it first makes it parseable for 604 without guessing
   If wrong: Relax the README test to accept a Why paragraph anywhere in the rule's section, and move the Why paragraphs
-- A3 [unseen] Standard shapes for save, find one and find many are an Optional rule (B16), separate from the Mandatory rule that keeps contracts apart (B15); find one returns undefined, find many takes a query with a limit
+  Confirmed by owner, 2026-11-18
+- A3 [confirmed] Standard shapes for save, find one and find many are an Optional rule (B16), separate from the Mandatory rule that keeps contracts apart (B15); find one returns undefined, find many takes a query with a limit
   Why: The owner gave no level for the shapes; they are a convention, not a correctness matter
   If wrong: Change B16 to Mandatory or adjust the shapes in its table
-- A4 [unseen] The link to TECHNICAL_PRACTICES.md is written now although that file arrives with ticket 261118104602
+  Confirmed by owner, 2026-11-18
+- A4 [confirmed] The link to TECHNICAL_PRACTICES.md is written now although that file arrives with ticket 261118104602
   Why: The two tickets run side by side; the pointer is required by Done when 8
   If wrong: Remove the links if 602 is cancelled
+  Confirmed by owner, 2026-11-18
 
 ## Decisions
 - Lane standard: rewrites a document and the README test assertions that pin it
@@ -99,4 +103,5 @@ BEST_PRACTICES.md is rewritten as 31 conceptual rules (B1-B31), each '### B<n>. 
   note: no checks beyond the README test were needed; the full suite had already passed on 77eb64cfdd per the brief and was not re-run
 
 ## Follow-ups
-- F1 [open] BEST_PRACTICES.md B16 gives the standard Save gateway the behaviour 'inserting or replacing', while B27 requires the gateway that inserts to let the store refuse a duplicate and turn that into a conflict error. A new entity saved through an upserting Save silently replaces an existing one with the same id, which is the check-then-insert of B24. Make B16 say that creating a new entity goes through an insert that fails on a duplicate (or exclude creation from the Save shape), and keep B27 consistent with it.
+- F1 [ticketed] BEST_PRACTICES.md B16 gives the standard Save gateway the behaviour 'inserting or replacing', while B27 requires the gateway that inserts to let the store refuse a duplicate and turn that into a conflict error. A new entity saved through an upserting Save silently replaces an existing one with the same id, which is the check-then-insert of B24. Make B16 say that creating a new entity goes through an insert that fails on a duplicate (or exclude creation from the Save shape), and keep B27 consistent with it.
+  → 261118122301

@@ -47,12 +47,14 @@ Give agents one place that lists every rule, and give applications an architectu
   → As recommended: architecture.test.ts at the project root; the guard is a running wrapper file at a new path that prints nothing; proof by a mutated copy where StockTransfer depends on another use case, expecting both to fail. (owner, 2026-11-18)
 
 ## Assumptions
-- A1 [unseen] The guard lives at src/use_case_wrapper.ts and is named UseCaseWrapper; the checklist says that in an application it goes into src/wrappers.ts (T8)
+- A1 [confirmed] The guard lives at src/use_case_wrapper.ts and is named UseCaseWrapper; the checklist says that in an application it goes into src/wrappers.ts (T8)
   Why: T8 puts every wrapper in src/wrappers.ts, a README file that cannot be shown in full elsewhere, and the owner asked for a new path; T7 names a wrapper after the marker it reads
   If wrong: Rename the file and type in REVIEW_CHECKLIST.md and the two paths in test/readme.test.ts
-- A2 [unseen] The check that no gateway depends on a use case is filed under B4, with a sentence saying why; no new rule was added to BEST_PRACTICES.md
+  Confirmed by owner, 2026-11-18
+- A2 [confirmed] The check that no gateway depends on a use case is filed under B4, with a sentence saying why; no new rule was added to BEST_PRACTICES.md
   Why: A gateway runs inside a use case, so a use case behind it is one use case calling another; adding a rule would change the practice file beyond this ticket
   If wrong: Add a rule to BEST_PRACTICES.md, a row in the checklist, and point the third architecture test at it
+  Confirmed by owner, 2026-11-18
 
 ## Decisions
 - Lane standard: a document plus a copyable test and guard that the README test must run and prove

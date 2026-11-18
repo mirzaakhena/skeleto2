@@ -72,12 +72,14 @@ Rework the README example so that every part of it follows the decisions above a
   → Yes: export const MARKERS in src/markers.ts, passed as decorators: MARKERS. (owner, 2026-11-18)
 
 ## Assumptions
-- A1 [unseen] This ticket updates the excerpts and assertions of the current BEST_PRACTICES.md only as far as needed for the README test to pass with the new example; 261118104603 rewrites the file.
+- A1 [confirmed] This ticket updates the excerpts and assertions of the current BEST_PRACTICES.md only as far as needed for the README test to pass with the new example; 261118104603 rewrites the file.
   Why: CLAUDE.md section 9 requires the tests to pass, and test/readme.test.ts requires every BEST_PRACTICES.md excerpt to be verbatim from the README example
   If wrong: Revert the BEST_PRACTICES.md edits; 603 rewrites the file anyway
-- A2 [unseen] Use cases and gateways are found in tests by their @UseCase / @Gateway markers in the container metadata, no longer by the src/usecase/ path; the README test assertions are updated accordingly.
+  Confirmed by owner, 2026-11-18
+- A2 [confirmed] Use cases and gateways are found in tests by their @UseCase / @Gateway markers in the container metadata, no longer by the src/usecase/ path; the README test assertions are updated accordingly.
   Why: Decision 2 says they are told apart by markers, never by names
   If wrong: Restore the path-based lookup in test/readme.test.ts
+  Confirmed by owner, 2026-11-18
 
 ## Decisions
 - Lane standard: rewrites the runnable README example and the README test that checks it; docs only, no Skeleto code

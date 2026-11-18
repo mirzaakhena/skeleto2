@@ -64,15 +64,18 @@ Write TECHNICAL_PRACTICES.md covering the topics above as numbered rules, each m
   → Yes (a): use-case tests next to the use case as <file>.test.ts; one main.test.ts at the project root for the integration test. (owner, 2026-11-18)
 
 ## Assumptions
-- A1 [unseen] The naming rules state exactly the scheme answered in 261118104601 Q2 (impl prefix) and Q8 (names and file layout), with no additional word left to choose.
+- A1 [confirmed] The naming rules state exactly the scheme answered in 261118104601 Q2 (impl prefix) and Q8 (names and file layout), with no additional word left to choose.
   Why: The ticket requires the code here to follow the reworked README example, which follows those answers
   If wrong: Rewrite the naming rules section
-- A2 [unseen] The README example's LogWrapper becomes AuditWrapper and reads the @Audit marker instead of @UseCase, so that every wrapper is named <Marker>Wrapper after the one marker it reads; the printed output changes only in the container line of that wrapper
+  Confirmed by owner, 2026-11-18
+- A2 [confirmed] The README example's LogWrapper becomes AuditWrapper and reads the @Audit marker instead of @UseCase, so that every wrapper is named <Marker>Wrapper after the one marker it reads; the printed output changes only in the container line of that wrapper
   Why: The naming rules must leave no word to choose and topic 6 asks for one wrapper per marker; LogWrapper read @UseCase, so no rule could derive its name, while @Audit had no wrapper at all
   If wrong: Rename AuditWrapper back to LogWrapper reading @UseCase in README.md and give the wrapper naming rule in TECHNICAL_PRACTICES.md a stated exception
-- A3 [unseen] The parameter naming rule covers dependency parameters (camelCase of the type), the handler's ctx and the wrapper's (handler, metadata); the name of a handler's input is left to the author
+  Confirmed by owner, 2026-11-18
+- A3 [confirmed] The parameter naming rule covers dependency parameters (camelCase of the type), the handler's ctx and the wrapper's (handler, metadata); the name of a handler's input is left to the author
   Why: Background topic 2 speaks of dependency parameters; the README gateways name their input ids and warehouses, which no rule over the type alone derives
   If wrong: Add a rule for the input parameter and rename the gateway inputs in the README example
+  Confirmed by owner, 2026-11-18
 
 ## Decisions
 - Lane standard: a new document whose code blocks must be checked by the README test, so the test changes too

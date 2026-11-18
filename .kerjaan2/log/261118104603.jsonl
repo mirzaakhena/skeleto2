@@ -24,3 +24,7 @@
 {"t":"2026-11-18 11:51:31","event":"verdict","result":"pass","round":1,"commit":"b937b83","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"reviewer:a9ab1f8b768c8f79a"}
 {"t":"2026-11-18 11:51:59","event":"test","by":"land","exit":0,"seconds":11,"fingerprint":"cbbc71d40c4ccd4dd8215936f4967ab72026481b","command":"npm run typecheck && npm test && npm run build","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
 {"t":"2026-11-18 11:51:59","event":"landed","branch":"k2/261118104603-rewrite-best-practices-md","files":["BEST_PRACTICES.md","test/readme.test.ts"],"session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 12:22:59","event":"assumption-confirmed","key":"A1","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 12:22:59","event":"assumption-confirmed","key":"A2","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 12:22:59","event":"assumption-confirmed","key":"A3","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 12:22:59","event":"assumption-confirmed","key":"A4","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}

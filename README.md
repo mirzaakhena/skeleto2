@@ -24,162 +24,344 @@ Any other dependency, and any circular one, stops startup. Configs are created f
 
 ## Example
 
-The example moves stock from one warehouse to another. How to lay out an application on Skeleto (one use case per file, business rules in entities, use cases that only orchestrate) is recommended in [BEST_PRACTICES.md](BEST_PRACTICES.md), and the example follows it.
+The example moves stock from one warehouse to another. How to lay out an application on Skeleto (one use case per file, business rules in entities, use cases that only orchestrate) is recommended in [BEST_PRACTICES.md](BEST_PRACTICES.md), and the example follows it. Every component function is named `impl` followed by its component's name: the type it returns is the contract, and the function implements it.
 
-The entity. A plain type and pure functions, with no marker: Skeleto reads the file like any other, finds no marked function, and makes no component of it.
+The entity. Plain types and pure functions, with no marker: Skeleto reads these files like any other, finds no marked function, and makes no component of them. Every failure the business knows of is a `BusinessError`, whose `kind` says which rule was broken.
 
 ```ts
-// src/entity/warehouse.ts
-export type Warehouse = { readonly id: string; readonly units: number };
+// src/entity/error.ts
+/** Which kind of business rule an operation broke. The caller decides what each kind means to its own users. */
+export type BusinessErrorKind = "validation" | "not_found" | "conflict";
 
-/** The only way to make a warehouse: it refuses values the business does not allow. */
-export function create(id: string, units: number): Warehouse {
-  if (id === "") throw new Error("a warehouse needs an id");
-  if (!Number.isInteger(units) || units < 0) throw new Error(`warehouse ${id} cannot hold ${units} units`);
-  return { id, units };
-}
+/** The one error the business throws: entities, use cases and gateways name its kind and nothing about who called them. */
+export class BusinessError extends Error {
+  readonly kind: BusinessErrorKind;
 
-/** A rule over two entities. It returns new copies of both and leaves the warehouses it was given as they were. */
-export function transfer(from: Warehouse, to: Warehouse, units: number): Warehouse[] {
-  if (from.id === to.id) throw new Error(`warehouse ${from.id} cannot send stock to itself`);
-  if (!Number.isInteger(units) || units <= 0) throw new Error(`cannot move ${units} units`);
-  if (from.units < units) throw new Error(`warehouse ${from.id} holds ${from.units} units, not ${units}`);
-  return [create(from.id, from.units - units), create(to.id, to.units + units)];
+  constructor(kind: BusinessErrorKind, message: string) {
+    super(message);
+    this.name = "BusinessError";
+    this.kind = kind;
+  }
 }
 ```
 
-Configs. Each is called once, and its result is passed to whoever asks for its type. `connectDatabase` is asynchronous: it is declared `Promise<Database>`, so its component is `Database`, startup waits for it, and the gateways below receive the finished database, not a promise.
+A new warehouse comes into being only through `newWarehouse`. An existing one changes only through functions such as `transfer`, which check what the change must not break and return new copies.
+
+```ts
+// src/entity/warehouse.ts
+import { BusinessError } from "./error.js";
+
+export type Warehouse = { readonly id: string; readonly units: number };
+
+/** The only way to bring a new warehouse into being: it needs an id, and it starts empty. */
+export function newWarehouse(id: string): Warehouse {
+  if (id === "") throw new BusinessError("validation", "a warehouse needs an id");
+  return { id, units: 0 };
+}
+
+/** A rule over two warehouses. It checks what the move must not break and returns changed copies of both, leaving the ones it was given as they were. */
+export function transfer(from: Warehouse, to: Warehouse, units: number): [Warehouse, Warehouse] {
+  if (from.id === to.id) throw new BusinessError("validation", `warehouse ${from.id} cannot send stock to itself`);
+  if (!Number.isInteger(units) || units <= 0) throw new BusinessError("validation", `cannot move ${units} units`);
+  if (from.units < units) throw new BusinessError("conflict", `warehouse ${from.id} holds ${from.units} units, not ${units}`);
+  return [{ ...from, units: from.units - units }, { ...to, units: to.units + units }];
+}
+```
+
+Configs. Each is called once, and its result is passed to whoever asks for its type. `implConnection` is asynchronous: it is declared `Promise<Connection>`, so its component is `Connection`, startup waits for it, and whoever needs it receives the finished connection, not a promise. The store is kept in memory and its records are written as plain data, standing for what a real store already holds.
+
+Gateways do not receive the connection. They receive `Database`, a function of the context that hands them the transaction the context carries, so that no gateway can read or write beside the transaction its use case runs in.
 
 ```ts
 // src/config.ts
-import * as Warehouse from "./entity/warehouse.js";
+import type { Context } from "skeleto";
 
-export type Database = Map<string, Warehouse.Warehouse>;
+/** A warehouse as the store keeps it: plain data, valid when it was written. */
+export type WarehouseRecord = { id: string; units: number };
+
+/** One transaction on the store: it sees its own writes, and nobody else sees them before `commit`. */
+export type Transaction = {
+  lock(id: string): Promise<void>;
+  read(id: string): WarehouseRecord | undefined;
+  write(record: WarehouseRecord): void;
+  commit(): void;
+  rollback(): void;
+};
+
+/** The open connection to the store. Only the transaction wrapper begins transactions on it. */
+export type Connection = { begin(): Transaction };
+
+/** What gateways receive: the store as seen by the transaction in the context, so that no gateway can work beside it. */
+export type Database = (ctx: Context) => Transaction;
+
 export type Logger = (line: string) => void;
 
 /** @Config */
-export async function connectDatabase(): Promise<Database> {
+export async function implConnection(): Promise<Connection> {
   // Stands in for something slow: a connection that has to be opened first.
   await new Promise((resolve) => setTimeout(resolve, 10));
-  return new Map([
-    ["north", Warehouse.create("north", 10)],
-    ["south", Warehouse.create("south", 0)],
+  // What the store already holds, as plain records.
+  const records = new Map<string, WarehouseRecord>([
+    ["north", { id: "north", units: 10 }],
+    ["south", { id: "south", units: 0 }],
   ]);
+  // The last holder of each lock, as a promise that settles when its transaction ends.
+  const locks = new Map<string, Promise<void>>();
+  return {
+    begin() {
+      const writes = new Map<string, WarehouseRecord>();
+      const releases: (() => void)[] = [];
+      const end = () => releases.splice(0).forEach((release) => release());
+      return {
+        async lock(id) {
+          const previous = locks.get(id) ?? Promise.resolve();
+          let release = () => {};
+          const mine = new Promise<void>((resolve) => (release = resolve));
+          // The next transaction to lock this warehouse waits for this one to end.
+          locks.set(id, previous.then(() => mine));
+          releases.push(release);
+          await previous;
+        },
+        read: (id) => writes.get(id) ?? records.get(id),
+        write: (record) => writes.set(record.id, record),
+        commit() {
+          writes.forEach((record, id) => records.set(id, record));
+          end();
+        },
+        rollback: end,
+      };
+    },
+  };
 }
 
 /** @Config */
-export function makeLogger(): Logger {
+export function implDatabase(): Database {
+  return (ctx) => {
+    if (!ctx.data.transaction) throw new Error("no transaction is open: the use case needs @Transaction");
+    return ctx.data.transaction;
+  };
+}
+
+/** @Config */
+export function implLogger(): Logger {
   return (line) => console.log(line);
 }
 ```
 
-Gateways. They are actions that reach the database, and the gateways of one technology may share a file.
+The additional markers the application allows, kept in one place:
 
 ```ts
-// src/gateway/database.ts
+// src/markers.ts
+/** The additional markers this application allows. Startup refuses any other, so a misspelt marker cannot pass unnoticed. */
+export const MARKERS = ["UseCase", "Gateway", "Transaction", "Audit"];
+```
+
+Gateways. Their contracts are types of their own, apart from the code that fulfils them, so that a use case depends on what a gateway promises and not on the technology behind it.
+
+```ts
+// src/gateway/warehouse.ts
 import type { ActionHandler } from "skeleto";
-import type { Database } from "../config.js";
 import type { Warehouse } from "../entity/warehouse.js";
 
-export type FindWarehouse = ActionHandler<string, Warehouse>;
+/**
+ * Fetches the warehouses with the given ids, in that order, and keeps every other transaction from changing them until this one commits or rolls back.
+ * It takes the locks sorted by id, so that two transactions locking the same warehouses never wait on each other for ever.
+ * An id the store does not hold is a `not_found` error.
+ */
+export type LockWarehouses = ActionHandler<string[], Warehouse[]>;
+
+/** Stores the warehouses as part of the open transaction. */
 export type SaveWarehouses = ActionHandler<Warehouse[], void>;
 
-/** @Action */
-export function makeFindWarehouse(database: Database): FindWarehouse {
-  return async (ctx, id) => {
-    const found = database.get(id);
-    if (!found) throw new Error(`no warehouse ${id}`);
-    return found;
+/** Tells whoever follows the stock that these warehouses changed, once the transaction has committed. */
+export type NotifyWarehouses = ActionHandler<Warehouse[], void>;
+```
+
+The implementations, one file per technology. A gateway carries `@Action` and `@Gateway`. It maps stored data to the type and applies no business rule; in particular it never calls `newWarehouse`, since what it reads already exists.
+
+`LockWarehouses` is what protects the transfer against a concurrent one: the second transfer of the same warehouses waits until the first has committed or rolled back, and then reads what the first left. In a real database it stands for reading the rows with a lock held until the end of the transaction (in SQL, `SELECT ... FOR UPDATE`), taken in the same order by every transaction.
+
+```ts
+// src/gateway/memory/warehouse.ts
+import type { Database } from "../../config.js";
+import { BusinessError } from "../../entity/error.js";
+import type { LockWarehouses, SaveWarehouses } from "../warehouse.js";
+
+/**
+ * Locks and reads warehouses in the store.
+ *
+ * @Action
+ * @Gateway
+ */
+export function implLockWarehouses(database: Database): LockWarehouses {
+  return async (ctx, ids) => {
+    const transaction = database(ctx);
+    // Each warehouse once, and always in the same order.
+    for (const id of [...new Set(ids)].sort()) await transaction.lock(id);
+    return ids.map((id) => {
+      const record = transaction.read(id);
+      if (!record) throw new BusinessError("not_found", `no warehouse ${id}`);
+      // Stored data is mapped to the type and nothing more: it was checked when it was written.
+      return { id: record.id, units: record.units };
+    });
   };
 }
 
-/** @Action */
-export function makeSaveWarehouses(database: Database): SaveWarehouses {
+/**
+ * Writes warehouses to the store.
+ *
+ * @Action
+ * @Gateway
+ */
+export function implSaveWarehouses(database: Database): SaveWarehouses {
   return async (ctx, warehouses) => {
-    for (const warehouse of warehouses) database.set(warehouse.id, warehouse);
+    const transaction = database(ctx);
+    for (const warehouse of warehouses) transaction.write({ id: warehouse.id, units: warehouse.units });
   };
 }
 ```
 
-The use case. It has its own file, in the folder of its business area, and asks for the gateways simply by naming their types. It fetches, calls the entity's rule and saves; the rule itself is not in it.
+```ts
+// src/gateway/log/warehouse.ts
+import type { Logger } from "../../config.js";
+import type { NotifyWarehouses } from "../warehouse.js";
 
-It also carries two **additional markers**, `@Transaction` and `@Audit`: Skeleto gives them no meaning, it only records them, with their data, for wrappers and for your own code to read.
+/**
+ * Reports changed warehouses on the log.
+ *
+ * @Action
+ * @Gateway
+ */
+export function implNotifyWarehouses(logger: Logger): NotifyWarehouses {
+  return async (ctx, warehouses) => {
+    const line = `stock changed: ${warehouses.map((warehouse) => `${warehouse.id} ${warehouse.units}`).join(", ")}`;
+    // A change that may still be rolled back must not be announced: the line waits for the commit.
+    ctx.data.afterCommit.push(() => logger(line));
+  };
+}
+```
+
+The use case. It has its own file, in the folder of its business area, its own input and output types, and asks for the gateways simply by naming their types. It locks both warehouses, calls the entity's rule, saves and reports what the rule returned, and answers with its own type rather than with the entities; the rule itself is not in it.
+
+It carries `@Action` and three **additional markers**: `@UseCase`, `@Transaction` and `@Audit`. Skeleto gives them no meaning, it only records them, with their data, for wrappers and for your own code to read. `@UseCase` and `@Gateway` are how the application tells its use cases from its gateways; their names play no part.
 
 ```ts
 // src/usecase/stock/stock_transfer.ts
 import type { ActionHandler } from "skeleto";
 import * as Warehouse from "../../entity/warehouse.js";
-import type { FindWarehouse, SaveWarehouses } from "../../gateway/database.js";
+import type { LockWarehouses, NotifyWarehouses, SaveWarehouses } from "../../gateway/warehouse.js";
 
-export type StockTransfer = ActionHandler<{ from: string; to: string; units: number }, Warehouse.Warehouse[]>;
+export type StockTransferRequest = { from: string; to: string; units: number };
+export type StockTransferResponse = { fromUnits: number; toUnits: number };
+export type StockTransfer = ActionHandler<StockTransferRequest, StockTransferResponse>;
 
 /**
  * Moves units of stock from one warehouse to another.
  *
  * @Action
+ * @UseCase
  * @Transaction
  * @Audit {"level": "info"}
  */
-export function makeStockTransfer(findWarehouse: FindWarehouse, saveWarehouses: SaveWarehouses): StockTransfer {
+export function implStockTransfer(lockWarehouses: LockWarehouses, saveWarehouses: SaveWarehouses, notifyWarehouses: NotifyWarehouses): StockTransfer {
   return async (ctx, { from, to, units }) => {
-    const source = await findWarehouse(ctx, from);
-    const target = await findWarehouse(ctx, to);
+    const [source, target] = await lockWarehouses(ctx, [from, to]);
     const moved = Warehouse.transfer(source, target, units);
     await saveWarehouses(ctx, moved);
-    return moved;
+    await notifyWarehouses(ctx, moved);
+    return { fromUnits: moved[0].units, toUnits: moved[1].units };
   };
 }
 ```
 
 Wrappers. **Every** wrapper is offered **every** action, together with the action's metadata. A wrapper that returns the handler it was given leaves that action alone. The wrapper with the larger `ordinal` ends up further outside; without one the `ordinal` is `0`, and wrappers with equal ordinals are layered by name, the later name outside.
 
+The transaction wrapper keeps the open transaction at `ctx.data.transaction`, and an action called inside it joins that transaction instead of opening a second one. Effects queued at `ctx.data.afterCommit` run only after a successful commit; when the transaction fails they are dropped.
+
 ```ts
 // src/wrappers.ts
-import type { WrapperHandler } from "skeleto";
-import type { Logger } from "./config.js";
+import type { FuncMetadata, WrapperHandler } from "skeleto";
+import type { Connection, Logger } from "./config.js";
 
 export type LogWrapper = WrapperHandler;
 export type TransactionWrapper = WrapperHandler;
 
+function marked(metadata: FuncMetadata, marker: string): boolean {
+  return metadata.additionalDecorators.some((decorator) => decorator.name === marker);
+}
+
 /** @Wrapper {"ordinal": 10} */
-export function makeLogWrapper(log: Logger): LogWrapper {
-  return (handler, metadata) => async (ctx, input) => {
-    log(`enter ${metadata.name}`);
-    try {
-      return await handler(ctx, input);
-    } finally {
-      log(`leave ${metadata.name}`);
-    }
+export function implLogWrapper(logger: Logger): LogWrapper {
+  return (handler, metadata) => {
+    // Use cases only: the gateways they call are details of theirs.
+    if (!marked(metadata, "UseCase")) return handler;
+    return async (ctx, input) => {
+      logger(`enter ${metadata.name}`);
+      try {
+        return await handler(ctx, input);
+      } finally {
+        logger(`leave ${metadata.name}`);
+      }
+    };
   };
 }
 
 /** @Wrapper */
-export function makeTransactionWrapper(log: Logger): TransactionWrapper {
+export function implTransactionWrapper(connection: Connection, logger: Logger): TransactionWrapper {
   return (handler, metadata) => {
-    // Only actions marked @Transaction get this layer.
-    if (!metadata.additionalDecorators.some((marker) => marker.name === "Transaction")) return handler;
+    if (!marked(metadata, "Transaction")) return handler;
     return async (ctx, input) => {
-      log("begin");
-      const result = await handler(ctx, input);
-      log("commit");
+      // Already inside a transaction: join it rather than open a second one.
+      if (ctx.data.transaction) return handler(ctx, input);
+      const transaction = connection.begin();
+      const afterCommit: (() => void | Promise<void>)[] = [];
+      ctx.data.transaction = transaction;
+      ctx.data.afterCommit = afterCommit;
+      logger("begin");
+      let result;
+      try {
+        result = await handler(ctx, input);
+        transaction.commit();
+        logger("commit");
+      } catch (error) {
+        transaction.rollback();
+        logger("rollback");
+        throw error;
+      } finally {
+        delete ctx.data.transaction;
+        delete ctx.data.afterCommit;
+      }
+      // Effects run only once the change is stored; on a rollback they are dropped with the rest of the context.
+      for (const effect of afterCommit) await effect();
       return result;
     };
   };
 }
 ```
 
-Starting it and reading the container. `decorators` lists the additional markers you allow, so that a typo such as `@Transction` stops startup instead of silently doing nothing; leave it out and every additional marker is accepted.
+Starting it and reading the container. `decorators` lists the additional markers you allow, so that a typo such as `@Transction` stops startup instead of silently doing nothing; leave it out and every additional marker is accepted. The second transfer fails, and the caller translates the kind of its error into an answer of its own.
 
 ```ts
 // main.ts
 import { Skeleto, newContext } from "skeleto";
+import { BusinessError, type BusinessErrorKind } from "./src/entity/error.js";
+import { MARKERS } from "./src/markers.js";
 import type { StockTransfer } from "./src/usecase/stock/stock_transfer.js";
 
-const skeleto = await Skeleto.start("src", { decorators: ["Transaction", "Audit"] });
+const skeleto = await Skeleto.start("src", { decorators: MARKERS });
 const container = skeleto.getContainer();
 
 const stockTransfer: StockTransfer = container.get("StockTransfer")!.getInstance();
 console.log(await stockTransfer(newContext(), { from: "north", to: "south", units: 3 }));
+
+// The caller translates the kind of a business error into what its own users understand.
+const answers = { validation: "rejected", not_found: "unknown", conflict: "refused" } satisfies Record<BusinessErrorKind, string>;
+try {
+  await stockTransfer(newContext(), { from: "south", to: "north", units: 50 });
+} catch (error) {
+  if (!(error instanceof BusinessError)) throw error;
+  console.log(`${answers[error.kind]}: ${error.message}`);
+}
 
 for (const [name, component] of container) {
   const { mainDecorator, dependencies, additionalDecorators } = component.getMetadata();
@@ -194,25 +376,27 @@ npx tsx main.ts
 ```text
 enter StockTransfer
 begin
-enter FindWarehouse
-leave FindWarehouse
-enter FindWarehouse
-leave FindWarehouse
-enter SaveWarehouses
-leave SaveWarehouses
 commit
+stock changed: north 7, south 3
 leave StockTransfer
-[ { id: 'north', units: 7 }, { id: 'south', units: 3 } ]
+{ fromUnits: 7, toUnits: 3 }
+enter StockTransfer
+begin
+rollback
+leave StockTransfer
+refused: warehouse south holds 3 units, not 50
+Connection: @Config {"dependencies":[],"additionalDecorators":[]}
 Database: @Config {"dependencies":[],"additionalDecorators":[]}
 Logger: @Config {"dependencies":[],"additionalDecorators":[]}
 LogWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
-TransactionWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
-FindWarehouse: @Action {"dependencies":["Database"],"additionalDecorators":[]}
-SaveWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[]}
-StockTransfer: @Action {"dependencies":["FindWarehouse","SaveWarehouses"],"additionalDecorators":[{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
+TransactionWrapper: @Wrapper {"dependencies":["Connection","Logger"],"additionalDecorators":[]}
+NotifyWarehouses: @Action {"dependencies":["Logger"],"additionalDecorators":[{"name":"Gateway"}]}
+LockWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[{"name":"Gateway"}]}
+SaveWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[{"name":"Gateway"}]}
+StockTransfer: @Action {"dependencies":["LockWarehouses","SaveWarehouses","NotifyWarehouses"],"additionalDecorators":[{"name":"UseCase"},{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
 ```
 
-The output shows the layering: `LogWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), the gateways were left alone by the transaction wrapper, and the gateways that `StockTransfer` received are the wrapped ones. The entity's functions are not in the container.
+The output shows the layering: `LogWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), and it wraps the use case only, so the gateways do not appear in it. The report of the changed stock comes after the commit, and the failed transfer rolls back without one. The entity's functions are not in the container.
 
 ## Rules worth knowing
 
@@ -231,7 +415,7 @@ The output shows the layering: `LogWrapper` (ordinal 10) is outside `Transaction
 
 ## Asynchronous configs
 
-Some things are usable only after an asynchronous start: a database connection, a cache client, a secret kept elsewhere. Write such a config with the return type `Promise<X>`, as `connectDatabase` does above:
+Some things are usable only after an asynchronous start: a database connection, a cache client, a secret kept elsewhere. Write such a config with the return type `Promise<X>`, as `implConnection` does above:
 
 - Its component is `X`. Whoever needs it names the plain type `X` and receives the finished value; nobody gets a promise. The container lists it under `X` as well, with the finished value as its instance.
 - Startup waits for it before it creates anything that depends on it. It is still called once only, however many components need it, and they all receive the same instance. Configs are waited for one after another, not side by side.

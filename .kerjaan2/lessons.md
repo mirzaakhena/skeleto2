@@ -19,3 +19,4 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - README code blocks may be '// path.ts (excerpt)': test/readme.test.ts requires the body to be a verbatim part of the example file of that path; editing the full block can break an excerpt elsewhere
 - BEST_PRACTICES.md code blocks must be '// path.ts (excerpt)' blocks that appear verbatim in a README example file; test/readme.test.ts refuses anything else there
 - A guarantee that a document holds no unchecked code block must recognise every CommonMark fence form (info strings after the language, ~~~ fences, indented fences in lists), not only ^```lang$
+- README example output is asserted line by line in test/readme.test.ts (slices 0-6 and 6-11); any change to what main.ts prints needs those assertions updated

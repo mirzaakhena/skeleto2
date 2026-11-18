@@ -33,14 +33,14 @@ Rework the README example so that every part of it follows the decisions above a
 
 ## Done when
 
-- [ ] Every action, wrapper and config function in the example is prefixed `impl`.
-- [ ] The use case carries `@Action`, `@UseCase` and `@Transaction`; every gateway carries `@Action` and `@Gateway`; startup passes the allowed markers (`UseCase`, `Gateway`, `Transaction`, `Audit`) as `decorators` from one exported constant `MARKERS` in `src/markers.ts`.
-- [ ] The use case takes a Request and returns its own Response type, not the warehouse entities.
-- [ ] The warehouse entity is brought into being by `newWarehouse`; the transfer rule checks the invariants without calling it; no gateway calls it.
-- [ ] Gateways reach the store only through a function of the context, and the transaction wrapper keeps the open transaction at `ctx.data.transaction` and joins one already there. The transaction wrapper runs the effects queued in the context (`ctx.data.afterCommit`) after a successful commit and drops them when the transaction fails.
-- [ ] The gateway that fetches the two warehouses for the transfer guards them against a concurrent transfer and fetches them in a fixed order, and the README says in one or two sentences what that guard stands for in a real store. The guard is a real lock (`LockWarehouses` sorts the ids and holds a per-warehouse lock until commit or rollback), and a README test runs two overlapping transfers that together exceed the stock in a separate fixture and expects exactly one error.
-- [ ] Failures in the example are a `BusinessError` with kind `"validation" | "not_found" | "conflict"`, `main.ts` shows one failing transfer and how the caller translates its kind, and the logging wrapper wraps use cases only, so the printed output no longer lists the gateways.
-- [ ] The printed output shown in the README matches what the example prints, and the README test passes, with only the words `request` and `response` removed from its ban list.
+- [x] Every action, wrapper and config function in the example is prefixed `impl`.
+- [x] The use case carries `@Action`, `@UseCase` and `@Transaction`; every gateway carries `@Action` and `@Gateway`; startup passes the allowed markers (`UseCase`, `Gateway`, `Transaction`, `Audit`) as `decorators` from one exported constant `MARKERS` in `src/markers.ts`.
+- [x] The use case takes a Request and returns its own Response type, not the warehouse entities.
+- [x] The warehouse entity is brought into being by `newWarehouse`; the transfer rule checks the invariants without calling it; no gateway calls it.
+- [x] Gateways reach the store only through a function of the context, and the transaction wrapper keeps the open transaction at `ctx.data.transaction` and joins one already there. The transaction wrapper runs the effects queued in the context (`ctx.data.afterCommit`) after a successful commit and drops them when the transaction fails.
+- [x] The gateway that fetches the two warehouses for the transfer guards them against a concurrent transfer and fetches them in a fixed order, and the README says in one or two sentences what that guard stands for in a real store. The guard is a real lock (`LockWarehouses` sorts the ids and holds a per-warehouse lock until commit or rollback), and a README test runs two overlapping transfers that together exceed the stock in a separate fixture and expects exactly one error.
+- [x] Failures in the example are a `BusinessError` with kind `"validation" | "not_found" | "conflict"`, `main.ts` shows one failing transfer and how the caller translates its kind, and the logging wrapper wraps use cases only, so the printed output no longer lists the gateways.
+- [x] The printed output shown in the README matches what the example prints, and the README test passes, with only the words `request` and `response` removed from its ban list.
 
 ## Out of scope
 
@@ -82,3 +82,21 @@ Rework the README example so that every part of it follows the decisions above a
 ## Decisions
 - Lane standard: rewrites the runnable README example and the README test that checks it; docs only, no Skeleto code
 - Not solo but first: 602 and 603 quote the README example verbatim (excerpt rule of test/readme.test.ts), so they wait for it via blocked_by; nothing else is in flight
+- Two configs, Connection (async, begins transactions, used only by the transaction wrapper) and Database (ctx => the transaction in ctx, used by gateways), because decision 6 wants gateways to get a function of the context while the wrapper still needs something to begin with
+- FindWarehouse was dropped; the transfer reads through LockWarehouses only. A third gateway NotifyWarehouses (log technology) exists to show ctx.data.afterCommit in the printed output
+
+## Handoff
+The README example now follows the 2026-11-18 decisions: impl+component names, @UseCase/@Gateway markers from MARKERS (src/markers.ts), BusinessError kinds, newWarehouse, contracts in src/gateway/warehouse.ts and implementations in src/gateway/memory and src/gateway/log, Database as a function of the context, a per-warehouse lock in implConnection, and a transaction wrapper that joins ctx.data.transaction and runs ctx.data.afterCommit after commit. test/readme.test.ts asserts these names and the exact output lines, and runs race.ts and transactions.ts fixtures. 602 and 603 must quote these blocks verbatim; editing any README block can break BEST_PRACTICES.md excerpts and the line-by-line output assertions.
+
+## Review
+- 2026-11-18 standard, round 1, at ab70129: passed.
+  1: impl-name README test passes in a copy; by reading, all 9 marked functions match the 9 container entries in the asserted output
+  2: output test asserts UseCase/Transaction/Audit on StockTransfer and Gateway on the 3 gateways; newWarehouse/MARKERS test asserts src/markers.ts and decorators: MARKERS; @Transction typo test still stops startup
+  3: StockTransfer is ActionHandler<StockTransferRequest, StockTransferResponse>; output test asserts '{ fromUnits: 7, toUnits: 3 }'
+  4: newWarehouse test: transfer does not call it, no gateway/usecase file mentions it, use case has no entity literal
+  5: transactions.ts fixture test: one begin for nested actions (joined), effect after commit, dropped on rollback, context cleared; by reading, gateways only call database(ctx)
+  6: race test passes; mutation in a copy: without the lock line it fails (both transfers succeed), without .sort() it fails (deadlock); README names SELECT ... FOR UPDATE
+  7: error.ts kind union asserted; output test asserts the 'refused: ...' line and only StockTransfer enter/leave lines
+  8: stdout equals README block (asserted); ban list diff removes only request/response; README test 16/16 in a copy; no old names left in docs (grep)
+  note: impl-name test checks only that the 3 kinds were seen, not that every marked function matched its regex; criterion 1 confirmed by counting
+  note: the per-warehouse lock is not re-entrant: a joined inner action that locks a warehouse its outer transaction holds would wait forever; the example never does this

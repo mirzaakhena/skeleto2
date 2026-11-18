@@ -215,18 +215,94 @@ test("the README example keeps business rules in plain entity functions, and no 
   });
 });
 
-test("BEST_PRACTICES.md holds both recommendations, says Skeleto does not check them, and shows the rule and the use case", () => {
-  assert.match(bestPractices, /^## One use case per file$/m);
-  assert.match(bestPractices, /^## Entities hold the rules, use cases orchestrate$/m);
-  assert.match(bestPractices, /Skeleto does not check them/);
+/** The rules of BEST_PRACTICES.md: every `### ` heading, with the text up to the next heading. */
+function practiceRules(text: string): { heading: string; body: string }[] {
+  return [...text.matchAll(/^### (.*)\n([\s\S]*?)(?=^##+ |(?![\s\S]))/gm)].map((match) => ({ heading: match[1] ?? "", body: match[2] ?? "" }));
+}
+
+test("every rule of BEST_PRACTICES.md is numbered in order, has a level, and gives its reason first", () => {
+  const rules = practiceRules(bestPractices);
+  assert.ok(rules.length >= 16, "BEST_PRACTICES.md has too few rules");
+  rules.forEach(({ heading, body }, index) => {
+    assert.match(heading, new RegExp(`^B${index + 1}\\. \\S.* \\((Mandatory|Optional)\\)$`), `rule heading ${index + 1} is not '### B${index + 1}. <rule> (Mandatory|Optional)':\n${heading}`);
+    assert.match(body, /^\nWhy: \S/, `${heading} is not followed by a 'Why:' paragraph`);
+  });
+  // A rule is cited by its number; after a renumbering, a citation of a number that no longer exists is caught here.
+  for (const [, cited] of bestPractices.matchAll(/\bB(\d+)\b/g)) assert.ok(Number(cited) >= 1 && Number(cited) <= rules.length, `BEST_PRACTICES.md cites B${cited}, which does not exist`);
+});
+
+test("BEST_PRACTICES.md has a rule for every agreed topic", () => {
+  const headings = practiceRules(bestPractices).map(({ heading }) => heading);
+  const topics: [string, RegExp][] = [
+    ["use cases and gateways told apart by markers", /`@UseCase`.*`@Gateway`/],
+    ["one use case per file", /one use case|use case in a file of its own/i],
+    ["entities are plain types and pure functions", /plain type with pure functions that return new copies/],
+    ["an entity comes into being only by new<Entity>", /brought into being only by `new<Entity>`.*\(Mandatory\)/],
+    ["an entity changes only through entity functions", /changed only by entity functions.*invariants.*\(Mandatory\)/],
+    ["a use case writes no entity literal", /never writes an entity literal \(Mandatory\)/],
+    ["validate on write, not on read", /validate on write, not on read \(Mandatory\)/],
+    ["storage constraints are optional", /store enforce.*invariants.*\(Optional\)/],
+    ["a use case only orchestrates", /only orchestrates/],
+    ["no use case depends on another", /never depends on another use case/],
+    ["entities import nothing outside entities", /Entities import nothing outside entities/],
+    ["use cases know only gateway contracts", /knows gateways only by their contract types/],
+    ["contracts apart from implementations", /contract apart from its implementation/],
+    ["standard shapes", /save, find one and find many/],
+    ["gateways are not only stores", /outside the process.*gateway/],
+    ["determinism", /unpredictable value comes from a gateway.*once, at the start/],
+    ["the context is passed on, never read", /passes the context on and never reads it/],
+    ["two levels of validation", /shape of the input in the caller and the business rules in the entities/],
+    ["typed business errors", /typed by kind: validation, not found, conflict/],
+    ["the caller translates; no transport", /caller translates.*never mention a transport/],
+    ["own Request and Response", /own Request and Response/],
+    ["the boundary with callers", /caller makes the context and calls use cases only, never a gateway/],
+    ["a query never writes", /query never writes.*without `@Transaction`/],
+    ["concurrency", /reads, decides and then writes is protected.*\(Mandatory\)/],
+    ["the mechanism belongs to the gateway", /mechanism.*belongs to the gateway.*contract/],
+    ["locks in a fixed order", /locked together are fetched by one gateway.*fixed order/],
+    ["uniqueness guarded by the store", /Uniqueness is guarded by the store, not by checking first/],
+    ["atomic updates need a reason", /atomic update.*written reason \(Optional\)/],
+    ["no effect before commit", /No effect outside the transaction's store happens before the commit \(Mandatory\)/],
+    ["after commit or outbox, per effect", /after commit.*outbox/],
+  ];
+  for (const [topic, pattern] of topics) assert.ok(headings.some((heading) => pattern.test(heading)), `no rule of BEST_PRACTICES.md covers: ${topic}`);
+  assert.match(bestPractices, /\| Who \| Uses the context to \|/, "BEST_PRACTICES.md has no table of who may use the context");
+});
+
+test("BEST_PRACTICES.md explains with two timelines why a transaction alone does not protect a decision, and stays generic", () => {
+  const section = bestPractices.slice(bestPractices.indexOf("## Concurrency"), bestPractices.indexOf("## Technical rules"));
+  assert.match(section, /A transaction alone does not give this protection/);
+  for (const shape of ["Check-then-insert", "Read-change-save"]) {
+    const timeline = section.slice(section.indexOf(`**${shape}.**`));
+    assert.ok(section.includes(`**${shape}.**`), `no ${shape} timeline`);
+    // A step-by-step table: the steps of two requests side by side, before any later heading.
+    assert.match(timeline.slice(0, timeline.indexOf("###")), /^\| Step \| [^|]+ \| [^|]+ \|$(\n^\| .*\|$){7,}/m, `the ${shape} timeline is not a table of steps`);
+  }
+  // The outbox is told as numbered steps, and stores other than a database are named.
+  assert.match(section, /^1\. .*same store, in the same transaction[\s\S]*^4\. /m);
+  for (const store of ["A third-party service", "A cache", "A queue"]) assert.match(section, new RegExp(`^\\| ${store} \\|`, "m"));
+  // Conceptual and portable: no database product, query language or web framework is named.
+  for (const product of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /oracle/i, /mongo/i, /redis/i, /kafka/i, /rabbit/i, /dynamo/i, /\bExpress\b/, /express\.?js/i, /fastify/i, /nestjs/i, /\bkoa\b/i, /\bhono\b/i, /nukitu/i, /FOR UPDATE/]) {
+    assert.doesNotMatch(bestPractices, product);
+  }
+});
+
+test("BEST_PRACTICES.md resolves how an entity comes into being apart from how stored data is read", () => {
+  assert.doesNotMatch(bestPractices, /made only through its creating function/);
+  assert.match(bestPractices, /Reading a warehouse that is already stored does not bring it into being, and does not go through `newWarehouse`/);
   assert.match(bestPractices, /```ts\n\/\/ src\/entity\/warehouse\.ts \(excerpt\)\nexport function transfer/);
-  assert.match(bestPractices, /```ts\n\/\/ src\/usecase\/stock\/stock_transfer\.ts \(excerpt\)\n/);
+  assert.match(bestPractices, /```ts\n\/\/ src\/gateway\/memory\/warehouse\.ts \(excerpt\)\n(?:(?!\n```\n)[\s\S])*Stored data is mapped to the type and nothing more/);
+});
+
+test("BEST_PRACTICES.md says Skeleto does not check it and leaves the technical rules to TECHNICAL_PRACTICES.md", () => {
+  assert.match(bestPractices, /Skeleto does not check them/);
   assert.match(bestPractices, /still lets an action depend on another action/);
+  assert.ok(bestPractices.split("](TECHNICAL_PRACTICES.md)").length > 2, "BEST_PRACTICES.md does not point to TECHNICAL_PRACTICES.md");
   for (const reason of [/already a plain object/, /leaves the old state intact/, /inputs and outputs alone/, /`import \* as Warehouse from /]) assert.match(bestPractices, reason);
 });
 
 test("BEST_PRACTICES.md opens with the two levels and maps every architectural concept to what expresses it and what Skeleto checks", () => {
-  const opening = bestPractices.slice(0, bestPractices.indexOf("## One use case per file"));
+  const opening = bestPractices.slice(0, bestPractices.indexOf("### B1."));
   assert.match(opening, /^## Two levels$/m);
   assert.match(opening, /\*\*The technical level\*\* is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper` and `@Action`/);
   assert.match(opening, /\*\*The architectural level\*\*[^\n]*entities, use cases, gateways\. Skeleto does not know about any of them/);
@@ -244,9 +320,8 @@ test("BEST_PRACTICES.md opens with the two levels and maps every architectural c
   }
   assert.equal(rows.get("Resource, such as a database or settings")?.expressed, "`@Config`");
   assert.match(rows.get("Cross-cutting concern, such as logging or transactions")?.expressed ?? "", /^`@Wrapper`, chosen per action by additional markers/);
-  // The opening comes first: before the two recommendations.
-  assert.ok(bestPractices.indexOf("## Two levels") < bestPractices.indexOf("## One use case per file"));
-  assert.ok(bestPractices.indexOf("## One use case per file") < bestPractices.indexOf("## Entities hold the rules"));
+  // The opening comes first, before any rule.
+  assert.ok(bestPractices.indexOf("## Two levels") >= 0 && bestPractices.indexOf("## Two levels") < bestPractices.indexOf("### B1."));
 });
 
 test("the README leaves the recommendations to BEST_PRACTICES.md and links to it on one line", () => {

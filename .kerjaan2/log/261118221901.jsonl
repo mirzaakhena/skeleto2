@@ -1,3 +1,10 @@
 {"t":"2026-11-18 22:19:30","event":"created","status":"todo","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
 {"t":"2026-11-18 22:19:44","event":"started","branch":"k2/261118221901-remove-every-reference-to","base":"6c1cf17","contract":"d438b0f08657","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
 {"t":"2026-11-18 22:19:54","event":"agent","role":"worker","agent":"a53807267dfaf299d","step":"first:1:0:0","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 22:20:34","event":"check","n":1,"evidence":"grep over tracked files outside .kerjaan2 finds no nukitu, review-skeleto or Workspace path","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"worker:a53807267dfaf299d"}
+{"t":"2026-11-18 22:20:34","event":"check","n":2,"evidence":"CLAUDE.md section 5 says API names change only by owner decision because renaming or removing breaks every consumer","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"worker:a53807267dfaf299d"}
+{"t":"2026-11-18 22:20:34","event":"check","n":3,"evidence":"CLAUDE.md section 3 now 'Fitur yang dibuang' lists the table and forbids return, no source named","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"worker:a53807267dfaf299d"}
+{"t":"2026-11-18 22:20:46","event":"test","by":"worker:a53807267dfaf299d","exit":0,"seconds":11,"fingerprint":"07a372d96325f9fe07a0019fd8dde48e5e6a1644","command":"npm run typecheck && npm test && npm run build","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-18 22:20:51","event":"check","n":4,"evidence":"submit's run of typecheck, test (incl. README test) and build passed","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"worker:a53807267dfaf299d"}
+{"t":"2026-11-18 22:20:51","event":"submitted","commit":"529e038","lane":"light","to":"review","passed":true,"files":2,"fingerprint":"07a372d96325f9fe07a0019fd8dde48e5e6a1644","session":"0fca9853-b93c-465b-a1ae-5970ee22be25","by":"worker:a53807267dfaf299d"}
+{"t":"2026-11-18 22:21:01","event":"landed","branch":"k2/261118221901-remove-every-reference-to","files":["CLAUDE.md","test/readme.test.ts"],"session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}

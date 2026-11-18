@@ -10,8 +10,6 @@ Skeleto adalah framework TypeScript yang **hanya** mengerjakan satu hal: **bindi
 
 Skeleto memindai berkas TypeScript, membaca penanda dan tipe parameter setiap fungsi, mengurutkan dependency, memanggil setiap fungsi dengan dependency-nya, memasang wrapper ke setiap action, lalu menyimpan hasilnya di sebuah container.
 
-Pemakai utamanya adalah proyek `~/Workspace/nukitu`. Convention proyek itu (`~/Workspace/nukitu/CLAUDE.md`) menjelaskan cara aplikasi memakai Skeleto. Bacalah bagian 3 dan 10 di sana untuk memahami konteksnya.
-
 ## 2. Prinsip "lite"
 
 - **Hanya binding.** Skeleto tidak tahu apa pun tentang HTTP, controller, request, response, validasi, OpenAPI, database, atau logging. Kalau sebuah fitur butuh pengetahuan tentang salah satu hal itu, fitur itu **bukan** milik Skeleto.
@@ -20,16 +18,9 @@ Pemakai utamanya adalah proyek `~/Workspace/nukitu`. Convention proyek itu (`~/W
 - **Kode inti kecil.** Patokannya sekitar 400 baris di `src/` (di luar tes). Angka ini panduan untuk menjaga inti tetap kecil, bukan batas yang menghentikan perubahan; ia hanya alasan untuk bertanya. Setiap tambahan harus bisa menjawab "kenapa ini harus ada di framework, bukan di aplikasi?".
 - **Gagal lebih awal dan sekaligus.** Semua kesalahan pemakaian dilaporkan saat startup, **sebelum** satu pun berkas aplikasi diimpor, dan dilaporkan sekaligus, tidak satu per satu.
 
-## 3. Aturan menulis ulang
+## 3. Fitur yang dibuang
 
-Repo ini adalah **tulis ulang**, bukan perbaikan, dari `~/Workspace/review-skeleto`.
-
-- `review-skeleto` hanya **rujukan perilaku**. Bacalah untuk memahami apa yang dilakukan, lalu tulis ulang dari nol mengikuti dokumen ini.
-- **Jangan menyalin** kode, struktur berkas, nama fungsi internal, atau tes dari sana.
-- **Jangan mengubah** apa pun di `review-skeleto`.
-- Kalau perilaku di `review-skeleto` berbeda dari dokumen ini, **dokumen ini yang benar**.
-
-Yang sengaja **dibuang** dari `review-skeleto` dan tidak boleh muncul lagi:
+Fitur berikut sengaja dibuang dan tidak boleh muncul lagi:
 
 | Dibuang | Alasan |
 | --- | --- |
@@ -143,7 +134,7 @@ Data lain adalah kesalahan. Dengan begitu sisa `{"readTypeArguments": true}` dar
 
 ## 5. API publik
 
-Inilah seluruh yang diekspor dari `src/index.ts`. Nama-nama ini dipakai oleh `~/Workspace/nukitu/CLAUDE.md`, jadi jangan diganti tanpa keputusan pemilik.
+Inilah seluruh yang diekspor dari `src/index.ts`. Nama-nama ini adalah kontrak bagi setiap pemakai paket, jadi mengubah, mengganti nama, atau menghapusnya merusak kode mereka; jangan diubah tanpa keputusan pemilik.
 
 ```typescript
 export type Context = {
@@ -185,7 +176,7 @@ export class Skeleto {
 export function newContext(): Context; // { data: {}, traceId: "", date: new Date() }
 ```
 
-Yang dipakai `nukitu` saat ini: `Skeleto.start`, `getContainer()`, `FuncInstanceMetadata.getInstance()`, `FuncMetadata.name`, `FuncMetadata.additionalDecorators`, `SkeletoOptions`, `ActionHandler`, `Context`, `WrapperHandler`, dan `newContext`. `exclude` dan `DEFAULT_EXCLUDE` ada supaya berkas tes, berkas `.d.ts`, dan `node_modules` tidak ikut terpindai. `getMetadata()` tidak dipakai `nukitu`, tetapi dipertahankan karena murah dan berguna untuk menelusuri isi container.
+`exclude` dan `DEFAULT_EXCLUDE` ada supaya berkas tes, berkas `.d.ts`, dan `node_modules` tidak ikut terpindai. `getMetadata()` dipertahankan karena murah dan berguna untuk menelusuri isi container.
 
 ## 6. Struktur repo
 

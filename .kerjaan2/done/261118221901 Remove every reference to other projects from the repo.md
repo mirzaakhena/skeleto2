@@ -27,7 +27,12 @@ Make the repo stand alone. Keep what still guards the code: the public API stays
 
 ## Done when
 
-- [ ] No file tracked in the repo outside the board names another project or a path into one.
-- [ ] The project instructions still say that the public API names change only by the owner's decision, with a reason that does not depend on another project.
-- [ ] The project instructions still list the discarded features and forbid their return, without saying where they came from.
-- [ ] The README test passes, and `npm run typecheck`, `npm test` and `npm run build` pass.
+- [x] No file tracked in the repo outside the board names another project or a path into one.
+- [x] The project instructions still say that the public API names change only by the owner's decision, with a reason that does not depend on another project.
+- [x] The project instructions still list the discarded features and forbid their return, without saying where they came from.
+- [x] The README test passes, and `npm run typecheck`, `npm test` and `npm run build` pass.
+
+<!-- k2:record — written by k2 only; do not edit by hand -->
+
+## Handoff
+Removed all references to other projects from CLAUDE.md (main-user paragraph, rewrite rules, API usage list) and the nukitu entry from the banned-names list in test/readme.test.ts. Section 3 is now 'Fitur yang dibuang' with the same table. Section 5 keeps the rule that public API names change only by owner decision, justified by consumer breakage. Nothing in src/ changed.

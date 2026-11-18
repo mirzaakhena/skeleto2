@@ -1,5 +1,3 @@
 goal: Rework the README example to the agreed practices, write the two numbered practice files from it, then the reviewer checklist and copyable architecture test
 order:
-  - 261118104602   # Write TECHNICAL_PRACTICES.md with numbered rules
-  - 261118104603   # Rewrite BEST_PRACTICES.md as the conceptual practices with numbered rules
   - 261118104604   # Reviewer checklist and copyable architecture test

@@ -10,6 +10,7 @@ const repo = fileURLToPath(new URL("..", import.meta.url));
 const readme = readFileSync(`${repo}README.md`, "utf8");
 
 const bestPractices = readFileSync(`${repo}BEST_PRACTICES.md`, "utf8");
+const technicalPractices = readFileSync(`${repo}TECHNICAL_PRACTICES.md`, "utf8");
 
 type Blocks = {
   /** Full example files, by the path each block names in its first line. */
@@ -58,10 +59,12 @@ type Example = {
   command: string[];
   /** The output the README promises. */
   output: string;
+  /** Files another document adds to the example at paths of their own, such as its tests; they are type-checked with it, and run when they are `*.test.ts`. */
+  additions: Record<string, string>;
 };
 
 /** The README holds the one runnable example; every other code block of the README and of BEST_PRACTICES.md is an excerpt of it. */
-function readExample(readmeText: string, bestPracticesText: string): Example {
+function readExample(readmeText: string, bestPracticesText: string, technicalText: string): Example {
   const blocks = readBlocks("README", readmeText);
   const { files, commands, outputs } = blocks;
   checkExcerpts("README", blocks, files);
@@ -74,7 +77,13 @@ function readExample(readmeText: string, bestPracticesText: string): Example {
   assert.deepEqual(Object.keys(practices.files), [], "BEST_PRACTICES.md may show excerpts of the README example only, not whole files");
   assert.deepEqual([...practices.commands, ...practices.outputs], [], "BEST_PRACTICES.md may show excerpts of the README example only, not commands or output");
   checkExcerpts("BEST_PRACTICES.md", practices, files);
-  return { files, command: (commands[0] ?? "").split(" ").slice(2), output: outputs[0] ?? "" };
+
+  // TECHNICAL_PRACTICES.md shows excerpts of the README example, and whole files at new paths that join it; a README path there would be a second, unchecked version of it.
+  const technical = readBlocks("TECHNICAL_PRACTICES.md", technicalText);
+  assert.deepEqual([...technical.commands, ...technical.outputs], [], "TECHNICAL_PRACTICES.md may show code only, not commands or output");
+  checkExcerpts("TECHNICAL_PRACTICES.md", technical, files);
+  for (const path of Object.keys(technical.files)) assert.ok(!(path in files), `TECHNICAL_PRACTICES.md shows ${path} in full, which is a README example file; show an excerpt of it instead`);
+  return { files, command: (commands[0] ?? "").split(" ").slice(2), output: outputs[0] ?? "", additions: technical.files };
 }
 
 /** What a consumer has installed: the package, here served straight from `src/`, and a compiler configuration. */
@@ -95,14 +104,16 @@ type Run = { code: number; stdout: string; stderr: string };
 
 /** Runs a tool of this repo inside the example directory, as the reader would from their project root. */
 function run(tool: string, args: string[], cwd: string): Promise<Run> {
+  // This file itself runs under the test runner, which marks its children through NODE_TEST_CONTEXT; a test run inside the example must report as a run of its own.
+  const { NODE_TEST_CONTEXT, ...env } = process.env;
   return new Promise((done) => {
-    execFile(`${repo}node_modules/.bin/${tool}`, args, { cwd, env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" } }, (error, stdout, stderr) => {
+    execFile(`${repo}node_modules/.bin/${tool}`, args, { cwd, env: { ...env, NO_COLOR: "1", FORCE_COLOR: "0" } }, (error, stdout, stderr) => {
       done({ code: error ? (typeof error.code === "number" ? error.code : 1) : 0, stdout, stderr });
     });
   });
 }
 
-const example = readExample(readme, bestPractices);
+const example = readExample(readme, bestPractices, technicalPractices);
 
 test("the README covers the three kinds, the start and the container", () => {
   const sources = Object.values(example.files).join("\n");
@@ -332,16 +343,23 @@ test("the README leaves the recommendations to BEST_PRACTICES.md and links to it
   assert.equal(readme.split("\n").filter((line) => line.includes("(BEST_PRACTICES.md")).length, 1);
 });
 
+test("the README points to TECHNICAL_PRACTICES.md on the line that points to BEST_PRACTICES.md", () => {
+  const lines = readme.split("\n").filter((line) => line.includes("(TECHNICAL_PRACTICES.md"));
+  assert.equal(lines.length, 1);
+  assert.ok(lines[0]?.includes("(BEST_PRACTICES.md"));
+});
+
 test("the README and CLAUDE.md name the exclude option, the constant and every default entry", () => {
   for (const text of [readme, readFileSync(`${repo}CLAUDE.md`, "utf8")]) {
     for (const needed of ["exclude", "DEFAULT_EXCLUDE", ...DEFAULT_EXCLUDE]) assert.ok(text.includes(`\`${needed}\``), `${needed} is not documented`);
   }
 });
 
-test("the README and BEST_PRACTICES.md stay clear of what Skeleto dropped", () => {
+test("the README and the practice files stay clear of what Skeleto dropped", () => {
   for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i]) {
     assert.doesNotMatch(readme, banned);
     assert.doesNotMatch(bestPractices, banned);
+    assert.doesNotMatch(technicalPractices, banned);
   }
 });
 
@@ -433,5 +451,87 @@ test("the README example's transaction wrapper joins an open transaction, runs q
     assert.equal(result.code, 0, result.stderr);
     // One begin for the two nested actions: the inner one joined the outer transaction.
     assert.deepEqual(result.stdout.trim().split("\n"), ["begin", "rollback", "begin", "commit", JSON.stringify({ joined: true, ran: ["failed", "committed"], cleared: true })]);
+  });
+});
+
+test("every rule of TECHNICAL_PRACTICES.md is a numbered heading with a level, followed by its reason", () => {
+  const sections = technicalPractices.split(/^(?=#{1,3} )/m).filter((section) => section.startsWith("### "));
+  assert.ok(sections.length >= 13, "TECHNICAL_PRACTICES.md has fewer rules than topics");
+  sections.forEach((section, index) => {
+    const heading = section.slice(0, section.indexOf("\n"));
+    assert.match(heading, new RegExp(`^### T${index + 1}\\. \\S.* \\((Mandatory|Optional)\\)$`), `rule ${index + 1} is not numbered T${index + 1} with a level: ${heading}`);
+    assert.match(section, /^Why: \S/m, `${heading} gives no Why: paragraph`);
+  });
+  // No deeper heading hides a rule from the numbering.
+  assert.doesNotMatch(technicalPractices, /^#{4,} /m);
+});
+
+test("TECHNICAL_PRACTICES.md covers every agreed topic, and names no product or framework", () => {
+  const rule = (pattern: RegExp): string => {
+    const section = technicalPractices.split(/^(?=#{1,3} )/m).find((part) => part.startsWith("### T") && pattern.test(part.slice(0, part.indexOf("\n"))));
+    assert.ok(section, `no rule heading matches ${pattern}`);
+    return section;
+  };
+  rule(/takes its dependencies and returns/);
+  assert.match(rule(/named `impl` followed by/), /implConnection/);
+  rule(/named type alias/);
+  rule(/never an inline or generic type/);
+  rule(/parameter is named after its type/);
+  rule(/path follows from the name/);
+  assert.match(rule(/description first/), /README\.md#rules-worth-knowing/);
+  assert.match(rule(/allowed markers are kept in one exported constant/), /`UseCase`, `Gateway` and `Transaction`/);
+  rule(/One wrapper per marker/);
+  rule(/opens the transaction and keeps it in the context/);
+  assert.match(rule(/only through a function of the context \(Mandatory\)/), /implDatabase/);
+  assert.match(rule(/joined, never doubled \(Mandatory\)/), /ctx\.data\.transaction/);
+  const afterCommit = rule(/only after commit \(Mandatory\)/);
+  assert.match(afterCommit, /ctx\.data\.afterCommit\.push/);
+  assert.match(afterCommit, /for \(const effect of afterCommit\) await effect\(\);/);
+  assert.match(afterCommit, /\*\*This form can lose the effect\.\*\* If the process stops after the commit/);
+  assert.match(afterCommit, /outbox[^\n]*\(BEST_PRACTICES\.md\)/);
+  assert.match(rule(/sets its own timeout/), /README\.md#asynchronous-configs/);
+  rule(/taken from the container once, at startup/);
+  rule(/hand-written fakes typed by the gateway contracts, without starting Skeleto and without a mock library/);
+  rule(/fix every unpredictable value/);
+  rule(/compares whole objects/);
+  rule(/One integration test starts Skeleto/);
+  assert.match(rule(/generated files are left out of the scan/), /README\.md#files-the-scan-leaves-out/);
+  for (const banned of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /mongo/i, /redis/i, /kafka/i, /express/i, /fastify/i, /\bnest/i, /\bkoa\b/i, /\bhono\b/i, /next\.js/i, /\bhttp\b/i]) {
+    assert.doesNotMatch(technicalPractices, banned);
+  }
+});
+
+test("the files TECHNICAL_PRACTICES.md adds type-check with the README example, and its tests pass", async () => {
+  const tests = Object.keys(example.additions).filter((path) => path.endsWith(".test.ts"));
+  assert.deepEqual(tests.sort(), ["main.test.ts", "src/usecase/stock/stock_transfer.test.ts"]);
+  await withFixture({ ...installation(), ...example.files, ...example.additions }, async (directory) => {
+    const checked = await run("tsc", ["-p", "."], directory);
+    assert.equal(checked.code, 0, checked.stdout + checked.stderr);
+    const tested = await run("tsx", ["--test", ...tests], directory);
+    assert.equal(tested.code, 0, tested.stdout + tested.stderr);
+    assert.match(tested.stdout, /pass 3\b/);
+    assert.match(tested.stdout, /fail 0\b/);
+    // The added test files are left out of the scan: the example still prints exactly what the README shows.
+    const started = await run("tsx", example.command, directory);
+    assert.equal(started.code, 0, started.stderr);
+    assert.equal(started.stdout, example.output);
+  });
+});
+
+test("the tests TECHNICAL_PRACTICES.md adds catch a broken use case and an application that does not start", async () => {
+  const useCase = "src/usecase/stock/stock_transfer.ts";
+  const broken = {
+    // The use case forgets to report what it changed.
+    [useCase]: (example.files[useCase] ?? "").replace("    await notifyWarehouses(ctx, moved);\n", ""),
+    // The marker list lacks a marker the example uses, so startup stops.
+    "src/markers.ts": (example.files["src/markers.ts"] ?? "").replace(', "Audit"', ""),
+  };
+  assert.notEqual(broken[useCase], example.files[useCase]);
+  assert.notEqual(broken["src/markers.ts"], example.files["src/markers.ts"]);
+  await withFixture({ ...installation(), ...example.files, ...example.additions, ...broken }, async (directory) => {
+    const tested = await run("tsx", ["--test", "main.test.ts", "src/usecase/stock/stock_transfer.test.ts"], directory);
+    assert.notEqual(tested.code, 0);
+    assert.match(tested.stdout, /fail 2\b/);
+    assert.match(tested.stdout, /@Audit is not an allowed marker/);
   });
 });

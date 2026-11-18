@@ -40,13 +40,13 @@ Write TECHNICAL_PRACTICES.md covering the topics above as numbered rules, each m
 
 ## Done when
 
-- [ ] TECHNICAL_PRACTICES.md exists, and every topic listed in Background appears in it as at least one numbered rule with a level and a reason.
-- [ ] No rule refers to a particular application, database product or web framework.
-- [ ] The naming rules leave no choice of words for the names of components, functions, parameters and files.
-- [ ] The after-commit form is shown as code that runs, and the risk of losing the effect is stated next to it.
-- [ ] Every code block in the file runs or is checked by the README test: excerpts of the README example, or full files at new paths (never a README path) that the README test adds to the example, type-checks, and runs when they are `*.test.ts`.
-- [ ] Every rule is a heading `### T<n>. <rule> (Mandatory|Optional)` followed by a `Why:` paragraph, and the README test checks each has both.
-- [ ] The README points to TECHNICAL_PRACTICES.md next to its pointer to BEST_PRACTICES.md.
+- [x] TECHNICAL_PRACTICES.md exists, and every topic listed in Background appears in it as at least one numbered rule with a level and a reason.
+- [x] No rule refers to a particular application, database product or web framework.
+- [x] The naming rules leave no choice of words for the names of components, functions, parameters and files.
+- [x] The after-commit form is shown as code that runs, and the risk of losing the effect is stated next to it.
+- [x] Every code block in the file runs or is checked by the README test: excerpts of the README example, or full files at new paths (never a README path) that the README test adds to the example, type-checks, and runs when they are `*.test.ts`.
+- [x] Every rule is a heading `### T<n>. <rule> (Mandatory|Optional)` followed by a `Why:` paragraph, and the README test checks each has both.
+- [x] The README points to TECHNICAL_PRACTICES.md next to its pointer to BEST_PRACTICES.md.
 
 ## Out of scope
 
@@ -67,7 +67,29 @@ Write TECHNICAL_PRACTICES.md covering the topics above as numbered rules, each m
 - A1 [unseen] The naming rules state exactly the scheme answered in 261118104601 Q2 (impl prefix) and Q8 (names and file layout), with no additional word left to choose.
   Why: The ticket requires the code here to follow the reworked README example, which follows those answers
   If wrong: Rewrite the naming rules section
+- A2 [unseen] The README example's LogWrapper becomes AuditWrapper and reads the @Audit marker instead of @UseCase, so that every wrapper is named <Marker>Wrapper after the one marker it reads; the printed output changes only in the container line of that wrapper
+  Why: The naming rules must leave no word to choose and topic 6 asks for one wrapper per marker; LogWrapper read @UseCase, so no rule could derive its name, while @Audit had no wrapper at all
+  If wrong: Rename AuditWrapper back to LogWrapper reading @UseCase in README.md and give the wrapper naming rule in TECHNICAL_PRACTICES.md a stated exception
+- A3 [unseen] The parameter naming rule covers dependency parameters (camelCase of the type), the handler's ctx and the wrapper's (handler, metadata); the name of a handler's input is left to the author
+  Why: Background topic 2 speaks of dependency parameters; the README gateways name their input ids and warehouses, which no rule over the type alone derives
+  If wrong: Add a rule for the input parameter and rename the gateway inputs in the README example
 
 ## Decisions
 - Lane standard: a new document whose code blocks must be checked by the README test, so the test changes too
 - Waits for 261118104601: its code blocks are excerpts of the reworked README example. Runs side by side with 261118104603; both edit test/readme.test.ts, which the merge queue settles
+- run() in test/readme.test.ts drops NODE_TEST_CONTEXT from the child env: without it a nested tsx --test inside the fixture prints nothing and always exits 0, so the added tests would never really be checked
+
+## Handoff
+New TECHNICAL_PRACTICES.md holds rules T1-T22 as '### T<n>. <rule> (Mandatory|Optional)' plus a Why: line; 604 lists them. Its code blocks are verbatim excerpts of README example files, or full files at new paths (src/usecase/stock/stock_transfer.test.ts, main.test.ts) that test/readme.test.ts adds to the example as example.additions, type-checks and runs with tsx --test. The README example's LogWrapper is now AuditWrapper reading @Audit, so every wrapper is <Marker>Wrapper. run() in the README test strips NODE_TEST_CONTEXT so a nested tsx --test reports normally. Editing README blocks quoted by T-rules, or the rule headings matched by the topic test, breaks the README test.
+
+## Review
+- 2026-11-18 standard, round 1, at f69fec5: passed.
+  1: readme.test 'covers every agreed topic' ran green in a copy; read all 22 rules and mapped each of the 13 Background topics to T1-T22 (topic 2 -> T3,T5-T8; 7 -> T12-T14; 8 -> T15)
+  2: product/framework ban test passes; an extra grep for ORM, queue, cloud, API-style names and nukitu found none (only winston, see note)
+  3: judged by reading: T5 impl prefix, T3 alias, T6 camelCase params plus ctx/(handler, metadata), T7 name table, T8 path table incl. both test files; free words limited to business words and resource/marker name; handler input names left free per A3
+  4: T15 excerpts are verbatim from the README example whose printed output (stock changed after commit, nothing on rollback) the README test checks; loss risk and outbox pointer sit right after the code
+  5: mutating one T14 excerpt in a copy made readme.test.ts fail at load with 'excerpt of src/wrappers.ts is not part of that README example file'; additions test type-checks and runs the two new test files (pass 3), mutation test shows fail 2
+  6: rule-format test passes; removing the Why: of T2 in a copy made it fail with 'T2 ... gives no Why: paragraph'
+  7: README line 27 links both files; the new README test passes
+  note: T4 names winston.Logger (a logging library) as a counterexample; not a database or web framework, so outside line 2, but it could be replaced by a neutral qualified name
+  note: k2 test runs its command through sh, so an unquoted '|' in --test-name-pattern must be quoted twice

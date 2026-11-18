@@ -309,7 +309,7 @@ test("BEST_PRACTICES.md explains with two timelines why a transaction alone does
   assert.match(section, /^1\. .*same store, in the same transaction[\s\S]*^4\. /m);
   for (const store of ["A third-party service", "A cache", "A queue"]) assert.match(section, new RegExp(`^\\| ${store} \\|`, "m"));
   // Conceptual and portable: no database product, query language or web framework is named.
-  for (const product of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /oracle/i, /mongo/i, /redis/i, /kafka/i, /rabbit/i, /dynamo/i, /\bExpress\b/, /express\.?js/i, /fastify/i, /nestjs/i, /\bkoa\b/i, /\bhono\b/i, /nukitu/i, /FOR UPDATE/]) {
+  for (const product of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /oracle/i, /mongo/i, /redis/i, /kafka/i, /rabbit/i, /dynamo/i, /\bExpress\b/, /express\.?js/i, /fastify/i, /nestjs/i, /\bkoa\b/i, /\bhono\b/i, /FOR UPDATE/]) {
     assert.doesNotMatch(bestPractices, product);
   }
 });

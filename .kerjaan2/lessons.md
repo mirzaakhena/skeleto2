@@ -23,3 +23,5 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - A tsx --test started from inside a node:test run inherits NODE_TEST_CONTEXT, prints nothing and exits 0; drop that variable from the child's env
 - BEST_PRACTICES.md rules are '### B<n>. ... (Mandatory|Optional)' then a 'Why:' paragraph; test/readme.test.ts checks them and bans database product and framework names
 - REVIEW_CHECKLIST.md rows must match the practice rule headings word for word, and its example finding cites stock_transfer.ts:18; edit them together
+- TECHNICAL_PRACTICES.md T1 excerpts implSaveWarehouses whole and verbatim from README; changing that function means changing the excerpt too
+- The README impl-name check scans the example with scanDirectory; its proving test expects implSaveWarehouses in src/gateway/memory/warehouse.ts

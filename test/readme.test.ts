@@ -268,7 +268,7 @@ test("BEST_PRACTICES.md has a rule for every agreed topic", () => {
     ["entities import nothing outside entities", /Entities import nothing outside entities/],
     ["use cases know only gateway contracts", /knows gateways only by their contract types/],
     ["contracts apart from implementations", /contract apart from its implementation/],
-    ["standard shapes", /save, find one and find many/],
+    ["standard shapes", /insert, save, find one and find many/],
     ["gateways are not only stores", /outside the process.*gateway/],
     ["determinism", /unpredictable value comes from a gateway.*once, at the start/],
     ["the context is passed on, never read", /passes the context on and never reads it/],

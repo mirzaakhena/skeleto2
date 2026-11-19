@@ -35,6 +35,6 @@ role_guard: true
 
 # Model per role: sonnet, opus, haiku, a full model id, or inherit (the session's model).
 model_worker_light: sonnet
-model_worker: inherit
+model_worker: sonnet
 model_reviewer: inherit
 model_planner: inherit

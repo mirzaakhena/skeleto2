@@ -3,7 +3,7 @@ type: task
 priority: medium
 lane: standard
 labels: [docs, best-practices, workflow]
-blocked_by: [261118134601]
+blocked_by: [261119090501]
 related: []
 touches: []
 created: 2026-11-18 22:01
@@ -11,7 +11,7 @@ created: 2026-11-18 22:01
 
 ## Background
 
-When Core areas are built first (ticket 261118134601), whatever a Core use case needs from Supporting and Generic areas becomes a stub, an assumption, or a simplified version. Technical debt is then planned, not a failure: it is how the core-first order works. Once the Core is done, the list of debts is the backlog of the next layer, so Supporting and Generic areas are built only as far as the Core really uses them, and no code is written before it is needed.
+When Core areas are built first (ticket 261119090501), whatever a Core use case needs from Supporting and Generic areas becomes a stub, an assumption, or a simplified version. Technical debt is then planned, not a failure: it is how the core-first order works. Once the Core is done, the list of debts is the backlog of the next layer, so Supporting and Generic areas are built only as far as the Core really uses them, and no code is written before it is needed.
 
 Evidence from the owner's study-case application (2026-11-18): every use case skeleton (about 151 use cases in 35 areas) was written before any of them was finished, which overwhelmed the owner. Of 45 technical-debt markers, 30 were obsolete: code written before later decisions replaced it, never removed.
 

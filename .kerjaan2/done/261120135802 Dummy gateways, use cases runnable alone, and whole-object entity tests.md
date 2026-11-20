@@ -65,3 +65,9 @@ Added T23 (dummy gateway allowed, Optional) and T24 (each use case runs alone, M
   3: Met. The T20 heading is unchanged per Q2, and its body and Why name entity tests with an example. Judged by reading.
   4: Met as written. The rows match the headings word for word, proved by the checklist readme test (ok on a copy of HEAD). They must move with the rules.
   5: Met. readme.test.ts (runs the README example) gave pass 40 / fail 0 on a copy of HEAD. The full suite was recorded as passed on ec674f0839 and was not rerun.
+- 2026-11-20 standard, round 2, at 3a42992: passed.
+  1: Round 1 finding fixed. T23 is now under '## Tests' after T19 (TECHNICAL_PRACTICES.md:330), keeps its number per 261120135801 Q1, and '## Development' is gone. Text unchanged: Optional, Why, Q3 sentence.
+  2: T24 is under Tests (line 336), Mandatory, with a Why. Its T18/T23 citations point to rules that exist.
+  3: Carried from round 1, text untouched. T20 heading kept per Q2; body and Why cover entity tests. Judged by reading.
+  4: Rows T23/T24 are in file order (REVIEW_CHECKLIST.md:91-92). The checklist readme test passes on a copy of HEAD. The relaxed T numbering test still requires 1..n each once: with T24 renamed T23 in a copy it fails (pass 40 / fail 2).
+  5: test/readme.test.ts on a copy of HEAD gave pass 42 / fail 0, and it runs the README example. The full suite was recorded as passed on 69e89092d5 and was not rerun.

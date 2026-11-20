@@ -270,13 +270,22 @@ The context's `date` says when the context was made, for tracing; the business's
 
 Why: they are two different questions. Whether the input is well formed (a number where a number is expected, a required field present) depends on how the input arrived, and only the caller knows that. Whether the operation is allowed (enough stock, an id that is not empty) is the business's question, and must be answered the same way for every caller, so it lives in the entity (B8, B9). A use case receives a Request that already has its type.
 
-### B21. Business errors are typed by kind: validation, not found, conflict (Mandatory)
+### B21. Business errors are typed by kind: validation, not found, conflict, tech debt (Mandatory)
 
 Why: a caller has to tell "your input broke a rule" from "that does not exist" from "the state does not allow it now" in order to answer usefully. A kind does that without the caller reading messages, and without the business knowing anything of the caller.
 
+There are four kinds:
+
+- `validation`: the input breaks a rule. Example: a transfer of zero units, or of a negative number.
+- `not_found`: what the input names does not exist. Example: a transfer from a warehouse id the store does not hold.
+- `conflict`: the input is fine, but the current state does not allow the operation. Example: a transfer of 50 units from a warehouse that holds 3.
+- `tech_debt`: the condition is possible, but the business has not decided yet what should happen in it. The use case may be called, and refuses honestly, saying that this is a debt and not a rule. Example: a transfer between two warehouses in different countries, for which nobody has decided the customs and tax treatment. Never use it for a rule that forbids the operation: if the business has decided that the operation is refused, the refusal is a `validation`, `not_found` or `conflict` error, and calling it debt would hide a decision behind a promise to decide. And never use it to avoid choosing among the first three: it is for a decision that has not been made, not for one that has not been written.
+
+A caller translates `tech_debt` into its own answer of "not available yet", distinct from the refusals of the other three kinds: those say that a rule was applied and retrying the same call changes nothing until the input or the state changes, while this one says that the operation will exist once the business decides. A caller must not present it as the user's mistake (`validation`), as a missing thing (`not_found`) or as a state to wait out (`conflict`). Because it is a kind and not a message, the debt can be counted without reading messages.
+
 ```ts
 // src/entity/error.ts (excerpt)
-export type BusinessErrorKind = "validation" | "not_found" | "conflict";
+export type BusinessErrorKind = "validation" | "not_found" | "conflict" | "tech_debt";
 ```
 
 ### B22. The caller translates business errors; entities and use cases never mention a transport (Mandatory)
@@ -286,7 +295,7 @@ Why: the same use case is called over HTTP, by a scheduled job, from a queue and
 ```ts
 // main.ts (excerpt)
 // The caller translates the kind of a business error into what its own users understand.
-const answers = { validation: "rejected", not_found: "unknown", conflict: "refused" } satisfies Record<BusinessErrorKind, string>;
+const answers = { validation: "rejected", not_found: "unknown", conflict: "refused", tech_debt: "not available yet" } satisfies Record<BusinessErrorKind, string>;
 ```
 
 ## The boundary with callers

@@ -31,7 +31,7 @@ The entity. Plain types and pure functions, with no marker: Skeleto reads these 
 ```ts
 // src/entity/error.ts
 /** Which kind of business rule an operation broke. The caller decides what each kind means to its own users. */
-export type BusinessErrorKind = "validation" | "not_found" | "conflict";
+export type BusinessErrorKind = "validation" | "not_found" | "conflict" | "tech_debt";
 
 /** The one error the business throws: entities, use cases and gateways name its kind and nothing about who called them. */
 export class BusinessError extends Error {
@@ -362,7 +362,7 @@ const stockTransfer: StockTransfer = container.get("StockTransfer")!.getInstance
 console.log(await stockTransfer(newContext(), { from: "north", to: "south", units: 3 }));
 
 // The caller translates the kind of a business error into what its own users understand.
-const answers = { validation: "rejected", not_found: "unknown", conflict: "refused" } satisfies Record<BusinessErrorKind, string>;
+const answers = { validation: "rejected", not_found: "unknown", conflict: "refused", tech_debt: "not available yet" } satisfies Record<BusinessErrorKind, string>;
 try {
   await stockTransfer(newContext(), { from: "south", to: "north", units: 50 });
 } catch (error) {

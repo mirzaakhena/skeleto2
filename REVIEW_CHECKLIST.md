@@ -46,7 +46,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | B18 | Every unpredictable value comes from a gateway of its own and is asked for once, at the start of the use case | Mandatory | Reviewer |
 | B19 | A use case passes the context on and never reads it | Mandatory | Reviewer |
 | B20 | Check the shape of the input in the caller and the business rules in the entities | Mandatory | Reviewer |
-| B21 | Business errors are typed by kind: validation, not found, conflict | Mandatory | Reviewer |
+| B21 | Business errors are typed by kind: validation, not found, conflict, tech debt | Mandatory | Reviewer |
 | B22 | The caller translates business errors; entities and use cases never mention a transport | Mandatory | Reviewer |
 | B23 | A caller makes the context and calls use cases only, never a gateway | Mandatory | Reviewer |
 | B24 | A use case that reads, decides and then writes is protected by its gateways against a concurrent change | Mandatory | Reviewer |

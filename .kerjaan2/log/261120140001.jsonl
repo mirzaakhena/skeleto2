@@ -9,3 +9,16 @@
 {"t":"2026-11-20 14:14:43","event":"answer","key":"Q3","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:14:43","event":"answer","key":"Q4","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:17:54","event":"moved","to":"todo","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 14:26:46","event":"started","branch":"k2/261120140001-record-the-core-design","base":"03385a6","contract":"3d3236f3cf56","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:26:50","event":"agent","role":"worker","agent":"a0a368438cdc92ba8","step":"first:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:27:34","event":"test","by":"worker:a0a368438cdc92ba8","exit":0,"seconds":11,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:27:40","event":"check","n":1,"evidence":"P9 added with level and reason, names docs/CORE.md and lists what it holds; test asserts it","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a0a368438cdc92ba8"}
+{"t":"2026-11-20 14:27:40","event":"check","n":2,"evidence":"P10 added, Mandatory with Why; states, choices per actor, time limits, gaps with ids","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a0a368438cdc92ba8"}
+{"t":"2026-11-20 14:27:40","event":"check","n":3,"evidence":"P10 fixes docs/scenarios/<process>.json and the top-level gaps array; no tool named","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a0a368438cdc92ba8"}
+{"t":"2026-11-20 14:27:41","event":"check","n":4,"evidence":"Rows P9 and P10 added to REVIEW_CHECKLIST.md, Reviewer; readme test compares headings word for word and passes","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a0a368438cdc92ba8"}
+{"t":"2026-11-20 14:27:41","event":"check","n":5,"evidence":"Banned-name test passes; typecheck, tests and build passed via k2 test","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a0a368438cdc92ba8"}
+{"t":"2026-11-20 14:27:51","event":"test","by":"worker:a0a368438cdc92ba8","exit":0,"seconds":9,"fingerprint":"808f1a78816e6f7b668591f0836dc1f9a7dacf28","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:27:51","event":"submitted","commit":"8214ad1","lane":"standard","to":"review","files":3,"fingerprint":"808f1a78816e6f7b668591f0836dc1f9a7dacf28","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a0a368438cdc92ba8"}
+{"t":"2026-11-20 14:28:07","event":"agent","role":"reviewer","agent":"a98dcfc7000882fa5","step":"review:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:29:02","event":"verdict","result":"pass","round":1,"commit":"8214ad1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a98dcfc7000882fa5"}
+{"t":"2026-11-20 14:29:16","event":"landed","branch":"k2/261120140001-record-the-core-design","files":["DEVELOPMENT_PROCESS.md","REVIEW_CHECKLIST.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

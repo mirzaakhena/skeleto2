@@ -25,11 +25,11 @@ Add to the technical practices:
 
 ## Done when
 
-- [ ] The technical practices say a gateway may be an in-memory or hardcoded dummy behind its contract during development, with a reason.
-- [ ] The technical practices say each use case can be run on its own, with a reason.
-- [ ] The rule on comparing whole objects says it covers entity tests as well as use case tests.
-- [ ] The review checklist reflects the new and changed rules, word for word as their headings.
-- [ ] The README example still runs with its documented output, and the project's checks pass.
+- [x] The technical practices say a gateway may be an in-memory or hardcoded dummy behind its contract during development, with a reason.
+- [x] The technical practices say each use case can be run on its own, with a reason.
+- [x] The rule on comparing whole objects says it covers entity tests as well as use case tests.
+- [x] The review checklist reflects the new and changed rules, word for word as their headings.
+- [x] The README example still runs with its documented output, and the project's checks pass.
 
 ## Out of scope
 
@@ -52,3 +52,16 @@ Add to the technical practices:
 
 ## Decisions
 - Lane standard: two new technical rules and a widened T20 with checklist rows. Waits for 261118134601, which is solo and edits TECHNICAL_PRACTICES.md citations
+
+## Handoff
+Added T23 (dummy gateway allowed, Optional) and T24 (each use case runs alone, Mandatory) under Tests in TECHNICAL_PRACTICES.md, after T19, with the next free numbers out of order, as the owner decided on 261120135801. Checklist rows follow the same file order. The T numbering test now requires each number 1..n once, not in reading order. T20 heading unchanged; its body and Why cover entity tests. T23 states how a started dummy differs from a T18 fake.
+
+## Review
+- 2026-11-20 standard, round 1, at 3af1d12: sent back.
+  Placement contradicts the owner's decision (one instance, for T23 and T24 both). A1 defers to 261120135801 Q1, which the owner answered: '(a) in the topical section with the next free numbers, out of numeric order; the T rules of 261120135802 follow the same way (owner, 2026-11-20)'. The change does the option the owner turned down: a new '## Development' section at the end (TECHNICAL_PRACTICES.md:361-373).
+  Fix: move T23/T24 into their topical section, likely '## Tests' near T18/T20, keeping the numbers. Drop '## Development'. Move the REVIEW_CHECKLIST.md rows to the same file order. Relax test/readme.test.ts:531, which requires T{index+1} in reading order, the way 261120135801 did for B (each number 1..n used once). Evidence: on a copy with T23/T24 moved before T21, 'k2 test --dir <copy> -- npx tsx --test test/readme.test.ts' gave pass 38 / fail 2: the T numbering test, and :624 (checklist rows not moved).
+  1: The T23 text is sound (Optional per Q1, a Why, and the Q3 dummy-vs-T18-fake sentence). It fails only on placement.
+  2: The T24 text is sound (Mandatory per Q1, a Why). It fails only on placement.
+  3: Met. The T20 heading is unchanged per Q2, and its body and Why name entity tests with an example. Judged by reading.
+  4: Met as written. The rows match the headings word for word, proved by the checklist readme test (ok on a copy of HEAD). They must move with the rules.
+  5: Met. readme.test.ts (runs the README example) gave pass 40 / fail 0 on a copy of HEAD. The full suite was recorded as passed on ec674f0839 and was not rerun.

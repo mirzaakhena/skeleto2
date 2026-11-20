@@ -7,3 +7,21 @@
 {"t":"2026-11-20 14:14:44","event":"answer","key":"Q2","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:14:44","event":"answer","key":"Q3","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:17:54","event":"moved","to":"todo","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 14:23:35","event":"started","branch":"k2/261120135802-dummy-gateways-use-cases","base":"077a8c8","contract":"5df6de3c8f59","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:23:43","event":"agent","role":"worker","agent":"a8b79923289d84beb","step":"first:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:24:26","event":"test","by":"worker:a8b79923289d84beb","exit":0,"seconds":11,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:24:31","event":"check","n":1,"evidence":"T23 added (Optional) with reason and the dummy vs T18 fake sentence","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:24:32","event":"check","n":2,"evidence":"T24 added (Mandatory) with reason","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:24:32","event":"check","n":3,"evidence":"T20 heading kept (Q2); body and Why now cover entity tests","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:24:32","event":"check","n":4,"evidence":"REVIEW_CHECKLIST rows T23, T24 match headings word for word; T20 row unchanged","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:24:32","event":"check","n":5,"evidence":"npm typecheck, test, build passed via k2 test; README untouched","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:25:05","event":"test","by":"worker:a8b79923289d84beb","exit":0,"seconds":10,"fingerprint":"ec674f08398b911c7380fa82dc8ce6759ccee8cc","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:25:05","event":"submitted","commit":"3af1d12","lane":"standard","to":"review","files":2,"fingerprint":"ec674f08398b911c7380fa82dc8ce6759ccee8cc","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:25:12","event":"agent","role":"reviewer","agent":"a38978471b561bc8e","step":"review:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:27:51","event":"verdict","result":"reject","round":1,"commit":"3af1d12","failed":"1,2","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a38978471b561bc8e"}
+{"t":"2026-11-20 14:28:07","event":"agent","role":"worker","agent":"a8b79923289d84beb","step":"fix:2:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:28:29","event":"check","n":1,"evidence":"T23 now under Tests, after T19; heading, level and Why unchanged","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:28:29","event":"check","n":2,"evidence":"T24 now under Tests; Development section dropped","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:28:40","event":"test","by":"worker:a8b79923289d84beb","exit":0,"seconds":9,"fingerprint":"69e89092d5094d55b76912cd79b6dbb288fe693b","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:28:40","event":"submitted","commit":"3a42992","lane":"standard","to":"review","files":3,"fingerprint":"69e89092d5094d55b76912cd79b6dbb288fe693b","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
+{"t":"2026-11-20 14:28:49","event":"agent","role":"reviewer","agent":"a38978471b561bc8e","step":"review:2:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

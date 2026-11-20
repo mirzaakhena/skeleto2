@@ -106,9 +106,59 @@ Why: a Core use case that quietly depends on something unbuilt is either wrong o
 
 ### P8. Write code only after P1 to P7, and write the Core first, in depth, before any other layer (Mandatory)
 
-Step 5. No code is written before the business areas are classified and decided (P1 to P4), the glossary is agreed (P5), and the Core is designed with every dependency on another area handled (P6 and P7). Then the Core is built first, in depth: its entities, its use cases and their tests, until it works. Supporting and Generic layers follow, as they are needed.
+Step 5. No code is written before the business areas are classified and decided (P1 to P4), the glossary is agreed (P5), and the Core is designed with every dependency on another area handled (P6 and P7) and its result recorded (P9 and P10). Then the Core is built first, in depth: its entities, its use cases and their tests, until it works. Supporting and Generic layers follow, as they are needed.
 
 Why: code written before the agreement is written against guesses, and has to be undone when a guess turns out wrong. Building the Core first means that what the business stands on is the best-tested part of the application, and that the rest is built on something that works.
+
+### P9. Record the result of step 4 in `docs/CORE.md`, in the application's repository (Mandatory)
+
+Step 4, continued. What the agent works out for the Core areas (P6, P7) is kept in one file, `docs/CORE.md`, in the repository of the application. It holds, for each Core area:
+
+- its **use cases**, each in a line or two, in the words of the glossary (P5);
+- its **basic entities**, with what each one is for;
+- its **gateways**, each with what its contract promises, and not how anything behind it works;
+- the **owner's decisions** that shaped the above, with their dates;
+- every **stub, assumption and simplification** of P7, in the form P7 asks for, next to the use case that needs it.
+
+A short sample of the file:
+
+| Area | Kind | Name | What it says | Decision |
+| --- | --- | --- | --- | --- |
+| Stock | Use case | Transfer stock | Moves units of a product from one warehouse to another, and refuses when the source holds too few | Accepted, owner, 2026-02-10 |
+| Stock | Entity | Warehouse | Holds a count of units for each product | Accepted, owner, 2026-02-10 |
+| Stock | Gateway | Save warehouses | Stores the given warehouses whole, and reports a failure | Accepted, owner, 2026-02-10 |
+| Stock | Stub | Notify the owner of a transfer | Writes nothing; the notifications layer is to send a message | Accepted, owner, 2026-02-10 |
+
+The file has this name and this place so that a reviewer or a later mechanical check finds it without being told.
+
+Why: the work of step 4 is the longest thing agreed with the owner, and it is the thing the code is written from. Left in a conversation, it is lost, and the stubs and simplifications in it are forgotten, which is how a part waiting for its layer becomes a part nobody knows is unfinished.
+
+### P10. Write the flow of every business process as one scenario map, in `docs/scenarios/<process>.json` (Mandatory)
+
+Step 4, continued. The flow between the Core use cases is also written as **one scenario map for each business process**, a JSON file at `docs/scenarios/<process>.json`, in the repository of the application. `<process>` is the name of the process in snake_case, such as `stock_transfer`. A map describes the process by:
+
+- its **states**, the situations the process can be in;
+- the **choices** each actor can make in each state, and the state each choice leads to;
+- the **time limits**: what happens when time passes and nobody acts;
+- its **gaps**: the questions about the process that the owner has not answered yet, each with a stable id.
+
+The rules fix only the gaps. A map has a top-level array `gaps`, and each gap is an object with:
+
+- `id`: `<process>-<n>`, such as `stock_transfer-3`, with `<process>` the name of the map's file and `<n>` a number. An id is unique across all maps of the application and is never reused, not even after its gap is closed;
+- `question`: the open question, in the words of the glossary;
+- `decision`: only once the owner has answered, the answer, and the date.
+
+A sample of the part that is fixed, in a map named `stock_transfer.json`:
+
+| Field in `gaps` | Value |
+| --- | --- |
+| `id` | `stock_transfer-3` |
+| `question` | What happens to a transfer that nobody receives within three days? |
+| `decision` | Absent until the owner answers |
+
+How states, choices and time limits are written is left free: it is the map's author who decides, and nothing reads it but people. The gap ids are fixed, because a later check, and the marker of a debt in code, must find them in one place: the `gaps` array of a file under `docs/scenarios/`.
+
+Why: a flow written as prose hides its holes: a state with no way out, a choice with no rule, a wait with no limit. Writing each state, choice and limit separately makes the missing ones visible, and giving each missing rule an id that never changes lets code and review point at it exactly.
 
 ## What a reviewer can check
 
@@ -116,6 +166,8 @@ Most of this file is agreed in conversation and cannot be seen in a repository. 
 
 - `docs/AREAS.md` and `docs/GLOSSARY.md` exist, under these names and in this place (P4, P5);
 - every row of `docs/AREAS.md` has one of the three classes, a reason and a decision (P4);
-- every entity name and every business-area name appears in `docs/GLOSSARY.md` (P5).
+- every entity name and every business-area name appears in `docs/GLOSSARY.md` (P5);
+- `docs/CORE.md` exists, and holds use cases, entities, gateways, decisions and every stub, assumption and simplification of the Core areas (P9);
+- every business process has a file under `docs/scenarios/`, and each has a `gaps` array whose ids are `<process>-<n>` and unique across the files (P10).
 
 The other rules are checked with the owner, not in the code: the interview, the classification being the owner's decision, the handling of what Core needs, and the order of the work.

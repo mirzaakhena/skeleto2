@@ -43,6 +43,8 @@ A second application of the owner, built core-first on Skeleto (2026-11-19 to 20
 
 Note on rule numbers (2026-11-20): ticket 261118134601 renumbered the conceptual rules once, B(n) becoming B(n+4). Numbers written below before that ticket landed are the old ones: B21 is now B25.
 
+Note (2026-11-20): DEVELOPMENT_PROCESS.md, written by ticket 261119090501, says in P7 that these technical-debt rules are not decided yet. They are decided now (answers below), so that text is replaced by the new rules or by pointers to them.
+
 ## Request
 
 Written from the owner's answers of 2026-11-20 (Q1-Q6 below); approved by the owner on 2026-11-20 (Q7).

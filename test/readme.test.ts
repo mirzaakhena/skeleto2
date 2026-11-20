@@ -242,13 +242,18 @@ function practiceRules(text: string): { heading: string; body: string }[] {
   return [...text.matchAll(/^### (.*)\n([\s\S]*?)(?=^##+ |(?![\s\S]))/gm)].map((match) => ({ heading: match[1] ?? "", body: match[2] ?? "" }));
 }
 
-test("every rule of BEST_PRACTICES.md is numbered in order, has a level, and gives its reason first", () => {
+test("every rule of BEST_PRACTICES.md is numbered once, has a level, and gives its reason first", () => {
   const rules = practiceRules(bestPractices);
   assert.ok(rules.length >= 16, "BEST_PRACTICES.md has too few rules");
-  rules.forEach(({ heading, body }, index) => {
-    assert.match(heading, new RegExp(`^B${index + 1}\\. \\S.* \\((Mandatory|Optional)\\)$`), `rule heading ${index + 1} is not '### B${index + 1}. <rule> (Mandatory|Optional)':\n${heading}`);
+  // A rule takes the next free number and sits under its topic, so numbers need not rise down the file; each must appear exactly once.
+  const numbers: number[] = [];
+  rules.forEach(({ heading, body }) => {
+    const match = /^B(\d+)\. \S.* \((Mandatory|Optional)\)$/.exec(heading);
+    assert.ok(match, `rule heading is not '### B<n>. <rule> (Mandatory|Optional)':\n${heading}`);
+    numbers.push(Number(match[1]));
     assert.match(body, /^\nWhy: \S/, `${heading} is not followed by a 'Why:' paragraph`);
   });
+  assert.deepEqual([...numbers].sort((a, b) => a - b), numbers.map((_, index) => index + 1), "rule numbers are not 1..n, each once");
   // A rule is cited by its number; after a renumbering, a citation of a number that no longer exists is caught here.
   for (const [, cited] of bestPractices.matchAll(/\bB(\d+)\b/g)) assert.ok(Number(cited) >= 1 && Number(cited) <= rules.length, `BEST_PRACTICES.md cites B${cited}, which does not exist`);
 });
@@ -366,9 +371,9 @@ test("BEST_PRACTICES.md states the principle of building from use cases before a
   assert.equal([...section.matchAll(/^Why: /gm)].length, 4);
 });
 
-test("every B citation in the repository points to a rule that exists, and rules are numbered in reading order", () => {
+test("every B citation in the repository points to a rule that exists, and every number is used once", () => {
   const numbers = [...bestPractices.matchAll(/^### B(\d+)\. /gm)].map((match) => Number(match[1]));
-  assert.deepEqual(numbers, numbers.map((_, index) => index + 1));
+  assert.deepEqual([...numbers].sort((a, b) => a - b), numbers.map((_, index) => index + 1));
   for (const text of [bestPractices, technicalPractices, checklist, readme]) {
     for (const match of text.matchAll(/\bB(\d+)\b/g)) assert.ok(Number(match[1]) >= 1 && Number(match[1]) <= numbers.length, `B${match[1]} does not exist`);
   }

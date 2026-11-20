@@ -1,1 +1,11 @@
 {"t":"2026-11-18 13:46:22","event":"created","status":"backlog","session":"0fca9853-b93c-465b-a1ae-5970ee22be25"}
+{"t":"2026-11-20 10:25:54","event":"question","key":"Q1","blocking":true,"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 10:25:55","event":"question","key":"Q2","blocking":true,"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 10:25:55","event":"assumption","key":"A1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 10:25:55","event":"assumption","key":"A2","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 10:25:55","event":"assumption","key":"A3","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 10:26:03","event":"question","key":"Q3","blocking":true,"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 13:57:54","event":"answer","key":"Q1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 13:57:54","event":"answer","key":"Q2","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 13:57:55","event":"answer","key":"Q3","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:15:28","event":"moved","to":"todo","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}

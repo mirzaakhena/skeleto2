@@ -2,10 +2,11 @@
 type: task
 priority: medium
 lane: standard
+solo: true
 labels: [docs, best-practices]
 blocked_by: []
 related: [261118104603, 261119090501]
-touches: []
+touches: [BEST_PRACTICES.md, TECHNICAL_PRACTICES.md, REVIEW_CHECKLIST.md, README.md, test/readme.test.ts]
 created: 2026-11-18 13:46
 ---
 
@@ -47,3 +48,28 @@ Add the principle and its rules to the conceptual practices, so that an agent gi
 - The development process and the classification into Core, Supporting and Generic (ticket 261119090501).
 - Any rule about how a frontend itself is built.
 - Changes to Skeleto's own behaviour.
+
+<!-- k2:record — written by k2 only; do not edit by hand -->
+
+## Questions
+- Q1 [answered] Where do the four new rules sit? Options: (a) all four in the new opening section after 'Two levels', so they become B1-B4 and today's B1 (@UseCase/@Gateway) becomes B5; (b) each in the section it belongs to: 'work starts from use cases' in the opening section, the Request/Response rule next to today's B5, the screen-to-use-case rule in 'The boundary with callers' next to today's B23, the view/query-use-case rule next to today's B6. Recommended (a): they are consequences of one principle and read best with it, and the principle section is where a reviewer finds them; (b) scatters the principle.
+  → Bagian pembuka, B1-B4: (a) all four rules in the new opening section as B1-B4; today's B1 becomes B5 (owner, 2026-11-20)
+- Q2 [answered] The repo's test already bans database products and backend frameworks in BEST_PRACTICES.md. Should test/readme.test.ts also ban frontend framework names (React, Vue, Angular, Svelte, Next.js, and the like) to prove the Done when line 'No rule refers to a particular ... frontend framework'? Options: (a) yes, extend the banned list; (b) no, a reviewer checks it. Recommended (a): it is a one-line extension and keeps the line checkable by machine.
+  → Ya, dilarang juga: (a) extend the banned list in test/readme.test.ts with frontend framework names (owner, 2026-11-20)
+- Q3 [answered] REVIEW_CHECKLIST.md and TECHNICAL_PRACTICES.md say rule numbers are 'never reused, so a citation keeps its meaning'. After this renumbering, what holds? (a) one-time renumbering now, while nothing cites them; afterwards numbers are fixed, a new rule takes the next free number, and the sentence stays; (b) numbers always follow reading order and are renumbered on every insert, and the sentence is replaced; (c) drop the sentence. Recommended (a): 'now is the cheapest time' implies later is expensive, and reviewers cite by number only.
+  → Sekali ini saja: (a) one-time renumbering now; numbers fixed afterwards, a new rule takes the next free number, and the 'never reused' sentence stays (owner, 2026-11-20)
+
+## Assumptions
+- A1 [unseen] The four new rules are checked by 'Reviewer' in REVIEW_CHECKLIST.md; the Machine rules stay the same two rules (today's B1 and B4), only under their new numbers, and the architecture test's messages, the startup guard's message ('which B4 forbids') and the test assertions on them follow
+  Why: The architecture test checks only container metadata; none of the new rules is visible there
+  If wrong: Change the Checked by column
+- A2 [unseen] test/readme.test.ts gains assertions on the new section (its heading before the first rule, the iceberg image, the sentence that it is about complexity not importance, the parallel frontend/backend sentence) like the existing tests on the 'Two levels' opening
+  Why: Every earlier practice ticket pinned its content with readme.test.ts assertions
+  If wrong: Remove the added assertions
+- A3 [unseen] 'What lies under the waterline' lists at least business rules, validation and errors, concurrency, transactions that fail halfway, effects after commit, and determinism, each pointing to the existing rules by their new numbers
+  Why: The Background names these, and the existing sections cover them
+  If wrong: Rewrite the list
+
+## Decisions
+- Lane standard: documentation only, but a renumbering of every B rule across five files and the tests, where a missed citation silently points at the wrong rule
+- Solo: renumbering every B rule is a rename across BEST_PRACTICES.md, TECHNICAL_PRACTICES.md, REVIEW_CHECKLIST.md, README.md and test/readme.test.ts (including the architecture test's B1/B4 messages); anything running beside it would cite old numbers. It goes first; 261119090501 already waits for it

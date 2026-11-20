@@ -1,2 +1,5 @@
-goal: Make BEST_PRACTICES.md consistent on inserting, saving and the context, warn against relocking, and make the README naming check read what Skeleto reads
+goal: State the use-cases-not-screens principle with a one-time B renumbering, fix the business error wording, and write DEVELOPMENT_PROCESS.md
 order:
+  - 261118134601   # State why an application is built from its use cases, not from its screens
+  - 261120100801   # Make the business error wording fit all four kinds
+  - 261119090501   # Write DEVELOPMENT_PROCESS.md the core-first way of building an application

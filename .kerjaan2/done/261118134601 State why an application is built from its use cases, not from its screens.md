@@ -35,13 +35,13 @@ Add the principle and its rules to the conceptual practices, so that an agent gi
 
 ## Done when
 
-- [ ] BEST_PRACTICES.md has an opening section, after the two levels, that states the principle with the iceberg image and says plainly that it is about where the complexity lies, not that the frontend matters less.
-- [ ] That section names what lies under the waterline and points to the existing rules that cover each part.
-- [ ] The four consequences above appear as numbered rules at the levels given, each with its reason.
-- [ ] The section says that an agreed Request and Response let the frontend and the backend be built at the same time.
-- [ ] The rules of BEST_PRACTICES.md are numbered in reading order, and every citation of a rule number anywhere in the repo points to the right rule.
-- [ ] No rule refers to a particular application, frontend framework or product.
-- [ ] REVIEW_CHECKLIST.md lists the new rules with their levels, and the README test passes.
+- [x] BEST_PRACTICES.md has an opening section, after the two levels, that states the principle with the iceberg image and says plainly that it is about where the complexity lies, not that the frontend matters less.
+- [x] That section names what lies under the waterline and points to the existing rules that cover each part.
+- [x] The four consequences above appear as numbered rules at the levels given, each with its reason.
+- [x] The section says that an agreed Request and Response let the frontend and the backend be built at the same time.
+- [x] The rules of BEST_PRACTICES.md are numbered in reading order, and every citation of a rule number anywhere in the repo points to the right rule.
+- [x] No rule refers to a particular application, frontend framework or product.
+- [x] REVIEW_CHECKLIST.md lists the new rules with their levels, and the README test passes.
 
 ## Out of scope
 
@@ -73,3 +73,22 @@ Add the principle and its rules to the conceptual practices, so that an agent gi
 ## Decisions
 - Lane standard: documentation only, but a renumbering of every B rule across five files and the tests, where a missed citation silently points at the wrong rule
 - Solo: renumbering every B rule is a rename across BEST_PRACTICES.md, TECHNICAL_PRACTICES.md, REVIEW_CHECKLIST.md, README.md and test/readme.test.ts (including the architecture test's B1/B4 messages); anything running beside it would cite old numbers. It goes first; 261119090501 already waits for it
+
+## Handoff
+Added section 'Built from use cases' (B1-B4) after 'Two levels' in BEST_PRACTICES.md. All rules renumbered once: old Bn is now B(n+4), through B35. REVIEW_CHECKLIST rows, the architecture test's B5/B8 messages and the startup guard message follow. Numbers are now fixed: a new rule takes the next free number. readme.test.ts gained tests for the section and for numbering/citations, and bans frontend framework names. Must not break: checklist rows matching headings word for word; Machine rules are B5 and B8.
+
+## Review
+- 2026-11-20 standard, round 1, at 01c1f57: passed.
+  1: BEST_PRACTICES.md:33-52 '## Built from use cases' sits after Two levels, before ### B1; iceberg image and 'where the complexity lies, not about what matters'; test 'states the principle of building from use cases...' passes (run by name via k2 test).
+  2: Waterline table names six parts with covering rules; each cited range checked against the headings (B11-B14,B16; B24-B26; B28-B32; B33-B35; B22; B27). Same test passes.
+  3: B1 Optional, B2 Mandatory, B3 Mandatory, B4 Optional, each with a Why; B3 has 'incomplete on purpose, not broken'; test asserts levels and four Why lines.
+  4: BEST_PRACTICES.md:52 says frontend and backend can be built at the same time against the agreed contract with made-up data; asserted by the same test.
+  5: Applied B(n)->B(n+4) to main's BEST_PRACTICES, REVIEW_CHECKLIST and readme.test.ts and diffed with HEAD: only the new section, rows, B1 anchors and new tests differ, so all old citations (incl. B5/B8 test and guard messages) follow. README, TECHNICAL_PRACTICES, src cite no B (grep).
+  6: Banned list in readme test extended with frontend framework names (Q2); test 'two timelines... stays generic' passes. New rules use only the example's stock domain, like the other rules.
+  7: REVIEW_CHECKLIST.md:29-32 lists B1-B4 with levels, checked by Reviewer; 'REVIEW_CHECKLIST.md lists every rule...' passes with Machine rules B5,B8; full suite passed per brief.
+  note: waterline row 'Transactions that fail halfway' points to B33/B34 (effects); B10 and B11 are the more direct rules. Not blocking: B33 does address rollback.
+  note: the new citation test only checks that cited numbers exist, not that they point to the right rule; correctness proved by the mechanical diff.
+  note: follow-up F1 filed for open tickets citing old numbers (B21, B18).
+
+## Follow-ups
+- F1 [open] Ticket 261118134601 renumbered every BEST_PRACTICES.md rule once (old Bn is now B(n+4)). Open board tickets still cite the old numbers: 261118220101 (Technical debt as part of the core-first workflow) cites B21 for the tech_debt business error kind, now B25 (Done when line and Q6, Q11); 261120100801 (Make the business error wording fit all four kinds) cites B21 in Q2 and its answer, now B25; 261120135801 (Time-dependent states are derived) cites 'today's B18' for the clock gateway, now B22 (A1). Update those tickets' text to the new numbers before they are worked, or a worker edits the wrong rule.

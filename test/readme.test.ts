@@ -309,7 +309,7 @@ test("BEST_PRACTICES.md explains with two timelines why a transaction alone does
   assert.match(section, /^1\. .*same store, in the same transaction[\s\S]*^4\. /m);
   for (const store of ["A third-party service", "A cache", "A queue"]) assert.match(section, new RegExp(`^\\| ${store} \\|`, "m"));
   // Conceptual and portable: no database product, query language or web framework is named.
-  for (const product of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /oracle/i, /mongo/i, /redis/i, /kafka/i, /rabbit/i, /dynamo/i, /\bExpress\b/, /express\.?js/i, /fastify/i, /nestjs/i, /\bkoa\b/i, /\bhono\b/i, /FOR UPDATE/]) {
+  for (const product of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /oracle/i, /mongo/i, /redis/i, /kafka/i, /rabbit/i, /dynamo/i, /\bExpress\b/, /express\.?js/i, /fastify/i, /nestjs/i, /\bkoa\b/i, /\bhono\b/i, /FOR UPDATE/, /\bReact\b/, /\bVue\b/, /\bAngular\b/, /svelte/i, /next\.?js/i, /\bNuxt\b/, /solid\.?js/i, /\bRemix\b/, /\bastro\b/i, /jquery/i]) {
     assert.doesNotMatch(bestPractices, product);
   }
 });
@@ -349,6 +349,28 @@ test("BEST_PRACTICES.md opens with the two levels and maps every architectural c
   assert.match(rows.get("Cross-cutting concern, such as logging or transactions")?.expressed ?? "", /^`@Wrapper`, chosen per action by additional markers/);
   // The opening comes first, before any rule.
   assert.ok(bestPractices.indexOf("## Two levels") >= 0 && bestPractices.indexOf("## Two levels") < bestPractices.indexOf("### B1."));
+});
+
+test("BEST_PRACTICES.md states the principle of building from use cases before any rule, with the iceberg and the parallel work it allows", () => {
+  const start = bestPractices.indexOf("## Built from use cases");
+  assert.ok(start > bestPractices.indexOf("## Two levels") && start < bestPractices.indexOf("### B1."));
+  const section = bestPractices.slice(start, bestPractices.indexOf("## Use cases and gateways"));
+  assert.match(section, /tip of an iceberg/);
+  assert.match(section, /where the complexity lies, not about what matters/);
+  assert.match(section, /The frontend is as important as the rest/);
+  for (const part of ["business rules", "validation", "concurrent", "fail halfway", "commit", "unpredictable"]) assert.match(section, new RegExp(part, "i"));
+  assert.match(section, /the frontend and the backend can be built at the same time/);
+  const levels = [...section.matchAll(/^### (B\d+)\. .* \((Mandatory|Optional)\)$/gm)].map((match) => `${match[1]} ${match[2]}`);
+  assert.deepEqual(levels, ["B1 Optional", "B2 Mandatory", "B3 Mandatory", "B4 Optional"]);
+  assert.equal([...section.matchAll(/^Why: /gm)].length, 4);
+});
+
+test("every B citation in the repository points to a rule that exists, and rules are numbered in reading order", () => {
+  const numbers = [...bestPractices.matchAll(/^### B(\d+)\. /gm)].map((match) => Number(match[1]));
+  assert.deepEqual(numbers, numbers.map((_, index) => index + 1));
+  for (const text of [bestPractices, technicalPractices, checklist, readme]) {
+    for (const match of text.matchAll(/\bB(\d+)\b/g)) assert.ok(Number(match[1]) >= 1 && Number(match[1]) <= numbers.length, `B${match[1]} does not exist`);
+  }
 });
 
 test("the README leaves the recommendations to BEST_PRACTICES.md and links to it on one line", () => {
@@ -606,7 +628,7 @@ test("REVIEW_CHECKLIST.md lists every rule of both practice files exactly once, 
   );
   for (const { number, text, level } of rows) assert.deepEqual({ text, level }, rules.get(number), `REVIEW_CHECKLIST.md states ${number} differently from its practice file`);
   // A machine checks only what the architecture test checks; everything else is left to the reviewer.
-  assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B1", "B4"]);
+  assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B5", "B8"]);
 });
 
 test("the README links to REVIEW_CHECKLIST.md on the line that links to the two practice files", () => {
@@ -687,7 +709,7 @@ test("both the architecture test and the startup guard catch a use case that dep
     const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
     assert.notEqual(tested.code, 0);
     assert.match(tested.stdout, /fail 1\b/);
-    assert.match(tested.stdout, /not ok \d+ - B4: no use case depends on another use case/);
+    assert.match(tested.stdout, /not ok \d+ - B8: no use case depends on another use case/);
     assert.match(tested.stdout, /StockTransfer -> StockCount/);
   });
   // With the guard the application does not start at all.
@@ -695,7 +717,7 @@ test("both the architecture test and the startup guard catch a use case that dep
     const started = await run("tsx", example.command, directory);
     assert.notEqual(started.code, 0);
     assert.equal(started.stdout, "");
-    assert.match(started.stderr, /implStockTransfer .* failed while wrapping it with UseCaseWrapper: use case StockTransfer depends on use case StockCount, which B4 forbids/);
+    assert.match(started.stderr, /implStockTransfer .* failed while wrapping it with UseCaseWrapper: use case StockTransfer depends on use case StockCount, which B8 forbids/);
   });
 });
 
@@ -707,8 +729,8 @@ test("the architecture test fails when an action carries neither marker, and whe
     .replace('import type { NotifyWarehouses } from "../warehouse.js";\n', 'import type { NotifyWarehouses } from "../warehouse.js";\nimport type { StockCount } from "../../usecase/stock/stock_count.js";\n')
     .replace("implNotifyWarehouses(logger: Logger)", "implNotifyWarehouses(logger: Logger, stockCount: StockCount)");
   const cases: [string, Record<string, string>, RegExp, RegExp][] = [
-    ["an action with neither marker", { [gatewayFile]: unmarked }, /B1: every action is marked exactly one of @UseCase and @Gateway/, /SaveWarehouses: neither/],
-    ["a gateway on a use case", { [logFile]: onUseCase, "src/usecase/stock/stock_count.ts": stockCount }, /B4: no gateway depends on a use case/, /NotifyWarehouses -> StockCount/],
+    ["an action with neither marker", { [gatewayFile]: unmarked }, /B5: every action is marked exactly one of @UseCase and @Gateway/, /SaveWarehouses: neither/],
+    ["a gateway on a use case", { [logFile]: onUseCase, "src/usecase/stock/stock_count.ts": stockCount }, /B8: no gateway depends on a use case/, /NotifyWarehouses -> StockCount/],
   ];
   for (const [name, changes, failing, offender] of cases) {
     for (const [path, source] of Object.entries(changes)) assert.notEqual(source, example.files[path], `${name}: ${path} is unchanged`);

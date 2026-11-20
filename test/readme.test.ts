@@ -529,6 +529,45 @@ test("the README example's transaction wrapper joins an open transaction, runs q
   });
 });
 
+// Runs the use case of the example with an observer in the context, as a tool outside the application would.
+const observed = `import { Skeleto, newContext } from "skeleto";
+import { MARKERS } from "./src/markers.js";
+
+const container = (await Skeleto.start("src", { decorators: MARKERS })).getContainer();
+const stockTransfer = container.get("StockTransfer")!.getInstance();
+const calls: { gateway: string; input: unknown; proceeded: boolean }[] = [];
+const ctx = newContext();
+ctx.data.gatewayObserver = async (call: { gateway: string; input: unknown; proceed: () => Promise<unknown> }) => {
+  const call2 = { gateway: call.gateway, input: call.input, proceeded: false };
+  calls.push(call2);
+  const result = await call.proceed();
+  call2.proceeded = true;
+  return result;
+};
+const result = await stockTransfer(ctx, { from: "north", to: "south", units: 3 });
+console.log(JSON.stringify({ result, calls }));
+`;
+
+test("with an observer in the context, every gateway call of a use case run reaches it, and the result of the use case is unchanged", async () => {
+  await withFixture({ ...installation(), ...example.files, "observed.ts": observed }, async (directory) => {
+    const result = await run("tsx", ["observed.ts"], directory);
+    assert.equal(result.code, 0, result.stderr);
+    const lines = result.stdout.trim().split("\n");
+    const moved = [{ id: "north", units: 7 }, { id: "south", units: 3 }];
+    // The same answer as the README shows for this call, and every gateway call, in order, with its name and input, which the observer let through.
+    assert.deepEqual(JSON.parse(lines[lines.length - 1] ?? ""), {
+      result: { fromUnits: 7, toUnits: 3 },
+      calls: [
+        { gateway: "LockWarehouses", input: ["north", "south"], proceeded: true },
+        { gateway: "SaveWarehouses", input: moved, proceeded: true },
+        { gateway: "NotifyWarehouses", input: moved, proceeded: true },
+      ],
+    });
+    // The transaction and the audit around the use case are unchanged by it.
+    assert.deepEqual(lines.slice(0, 5), ["enter StockTransfer", "begin", "commit", "stock changed: north 7, south 3", "leave StockTransfer"]);
+  });
+});
+
 test("every rule of TECHNICAL_PRACTICES.md is a numbered heading with a level, followed by its reason", () => {
   const sections = technicalPractices.split(/^(?=#{1,3} )/m).filter((section) => section.startsWith("### "));
   assert.ok(sections.length >= 13, "TECHNICAL_PRACTICES.md has fewer rules than topics");
@@ -646,7 +685,7 @@ test("REVIEW_CHECKLIST.md lists every rule of the three practice files exactly o
   );
   for (const { number, text, level } of rows) assert.deepEqual({ text, level }, rules.get(number), `REVIEW_CHECKLIST.md states ${number} differently from its practice file`);
   // A machine checks only what the architecture test checks; everything else is left to the reviewer.
-  assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B5", "B8"]);
+  assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B5", "B8", "T27"]);
   // Of the process rules, only those that leave a file in the repository can be read by a reviewer; the rest are checked with the owner.
   assert.deepEqual(rows.filter(({ number }) => number.startsWith("P") && checkerOf(number) === "Reviewer").map(({ number }) => number), ["P4", "P5", "P9", "P10", "P12", "P13", "P14"]);
   assert.deepEqual(rows.filter(({ number }) => !number.startsWith("P")).filter(({ checker }) => checker === "Process"), []);
@@ -667,7 +706,7 @@ test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a r
 });
 
 test("REVIEW_CHECKLIST.md marks the startup guard Optional and states the ordering it relies on", () => {
-  assert.deepEqual(Object.keys(example.checklist).sort(), ["architecture.test.ts", "src/use_case_wrapper.ts"]);
+  assert.deepEqual(Object.keys(example.checklist).sort(), ["architecture.test.ts", "gaps.test.ts", "src/use_case_wrapper.ts"]);
   const section = checklist.slice(checklist.indexOf("## Optional: the startup guard"));
   assert.ok(checklist.includes("## Optional: the startup guard"));
   assert.match(section, /It is \*\*Optional\*\*/);
@@ -763,6 +802,55 @@ test("the architecture test fails when an action carries neither marker, and whe
       assert.match(tested.stdout, offender, name);
     });
   }
+});
+
+// A map and the markers of an application whose gaps are all closed: one by a marker, one by a decision.
+const closedMap = JSON.stringify({ gaps: [{ id: "stock_transfer-1", question: "Who may move stock?" }, { id: "stock_transfer-2", question: "May stock go negative?", decision: "No, 2026-11-20" }] });
+
+/** The example's use case, with markers on the line above the step they concern. */
+function withMarkers(...markers: string[]): Record<string, string> {
+  const path = "src/usecase/stock/stock_transfer.ts";
+  const source = (example.files[path] ?? "").replace("    const moved = ", `${markers.map((marker) => `    // TechDebt ${marker}\n`).join("")}    const moved = `);
+  assert.notEqual(source, example.files[path]);
+  return { [path]: source };
+}
+
+test("the gap test passes when every gap has a marker or a decision and every marker names a gap, and leaves Planned and Shortcut markers alone", async () => {
+  const changes = { "docs/scenarios/stock_transfer.json": closedMap, ...withMarkers("stock_transfer-1: nobody checks who moves", "Planned Notifications: a real notifier", "Shortcut: one lock at a time") };
+  await withFixture(application(changes, false), async (directory) => {
+    const checked = await run("tsc", ["-p", "."], directory);
+    assert.equal(checked.code, 0, checked.stdout + checked.stderr);
+    const tested = await run("tsx", ["--test", "gaps.test.ts"], directory);
+    assert.equal(tested.code, 0, tested.stdout + tested.stderr);
+    assert.match(tested.stdout, /pass 2\b/);
+    assert.match(tested.stdout, /fail 0\b/);
+  });
+});
+
+test("the gap test fails, naming it, for a gap without a marker or a decision, and for a marker that names an unknown id", async () => {
+  const cases: [string, Record<string, string>, RegExp, RegExp][] = [
+    ["a gap with neither marker nor decision", { "docs/scenarios/stock_transfer.json": closedMap }, /T27: every gap has a marker or a recorded decision/, /stock_transfer-1/],
+    ["a marker for an id on no map", { "docs/scenarios/stock_transfer.json": closedMap, ...withMarkers("stock_transfer-1: x", "stock_transfer-9: x") }, /T27: every marker names a gap that is on a map/, /stock_transfer-9 in src\/usecase\/stock\/stock_transfer\.ts/],
+    ["a marker with no map at all", withMarkers("stock_transfer-3: x"), /T27: every marker names a gap that is on a map/, /stock_transfer-3/],
+  ];
+  for (const [name, changes, failing, offender] of cases) {
+    await withFixture(application(changes, false), async (directory) => {
+      const tested = await run("tsx", ["--test", "gaps.test.ts"], directory);
+      assert.notEqual(tested.code, 0, `${name}: the gap test passed`);
+      assert.match(tested.stdout, /fail 1\b/, name);
+      assert.match(tested.stdout, new RegExp(`not ok \\d+ - ${failing.source}`), name);
+      assert.match(tested.stdout, offender, name);
+    });
+  }
+});
+
+test("the practices state what a tool may rely on, the gateway observer rule and the gap test rule, and name no application or tool", () => {
+  assert.match(technicalPractices, /^## What a tool outside the application may rely on$/m);
+  const section = technicalPractices.slice(technicalPractices.indexOf("## What a tool outside"));
+  for (const needed of ["getContainer()", "getMetadata()", "`dependencies`", "`additionalDecorators`", "ctx.data.gatewayObserver"]) assert.ok(section.includes(needed), `the section lacks ${needed}`);
+  assert.match(technicalPractices, /^### T26\. A gateway observer wrapper .* \(Optional\)$/m);
+  assert.match(technicalPractices, /^### T27\. A test fails when a gap .* \(Mandatory\)$/m);
+  for (const text of [technicalPractices, checklist]) assert.doesNotMatch(text, /sequence diagram|diagram tool/i);
 });
 
 test("every rule of DEVELOPMENT_PROCESS.md is a numbered heading with a level, followed by its reason, and the steps come in order", () => {

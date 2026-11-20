@@ -24,7 +24,7 @@ Any other dependency, and any circular one, stops startup. Configs are created f
 
 ## Example
 
-The example moves stock from one warehouse to another. How to lay out an application on Skeleto (one use case per file, business rules in entities, use cases that only orchestrate) is recommended in [BEST_PRACTICES.md](BEST_PRACTICES.md), how to use Skeleto's mechanism well (names, markers, wrappers, transactions, tests) in [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md), and the example follows both. In which order a new application is built, Core first and after the business areas and their words are agreed with the owner, is in [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md). Every rule of the two, with its level and whether a machine or a reviewer checks it, is listed in [REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md), together with an architecture test to copy. Every component function is named `impl` followed by its component's name: the type it returns is the contract, and the function implements it.
+The example moves stock from one warehouse to another. How to lay out an application on Skeleto (one use case per file, business rules in entities, use cases that only orchestrate) is recommended in [BEST_PRACTICES.md](BEST_PRACTICES.md), how to use Skeleto's mechanism well (names, markers, wrappers, transactions, tests) in [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md), and the example follows both. In which order a new application is built, Core first and after the business areas and their words are agreed with the owner, is in [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md). Every rule of the two, with its level and whether a machine or a reviewer checks it, is listed in [REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md), together with an architecture test and a gap test to copy. Every component function is named `impl` followed by its component's name: the type it returns is the contract, and the function implements it.
 
 The entity. Plain types and pure functions, with no marker: Skeleto reads these files like any other, finds no marked function, and makes no component of them. Every failure the business knows of is a `BusinessError`, whose `kind` says why the business refused the operation.
 
@@ -286,6 +286,8 @@ export function implStockTransfer(lockWarehouses: LockWarehouses, saveWarehouses
 
 Wrappers. **Every** wrapper is offered **every** action, together with the action's metadata. A wrapper that returns the handler it was given leaves that action alone. The wrapper with the larger `ordinal` ends up further outside; without one the `ordinal` is `0`, and wrappers with equal ordinals are layered by name, the later name outside.
 
+The gateway observer wrapper is **Optional**. When the context carries an observer at `ctx.data.gatewayObserver`, it hands each gateway call to it, with the gateway's name, its input and a way to call through; when there is none, it returns the handler's own result and changes nothing.
+
 The transaction wrapper keeps the open transaction at `ctx.data.transaction`, and an action called inside it joins that transaction instead of opening a second one. Effects queued at `ctx.data.afterCommit` run only after a successful commit; when the transaction fails they are dropped.
 
 ```ts
@@ -295,6 +297,10 @@ import type { Connection, Logger } from "./config.js";
 
 export type AuditWrapper = WrapperHandler;
 export type TransactionWrapper = WrapperHandler;
+export type GatewayWrapper = WrapperHandler;
+
+/** What a tool outside the application puts at `ctx.data.gatewayObserver` to see each gateway call. It must call `proceed()` once and return its result. */
+export type GatewayObserver = (call: { gateway: string; input: unknown; proceed: () => Promise<unknown> }) => Promise<unknown>;
 
 function marked(metadata: FuncMetadata, marker: string): boolean {
   return metadata.additionalDecorators.some((decorator) => decorator.name === marker);
@@ -312,6 +318,24 @@ export function implAuditWrapper(logger: Logger): AuditWrapper {
       } finally {
         logger(`leave ${metadata.name}`);
       }
+    };
+  };
+}
+
+/**
+ * Optional: only an application that lets a tool outside it observe a run needs this wrapper.
+ * It is the innermost wrapper, so what it reports is the gateway call itself, without the transaction or the audit around it.
+ *
+ * @Wrapper {"ordinal": -10}
+ */
+export function implGatewayWrapper(): GatewayWrapper {
+  return (handler, metadata) => {
+    if (!marked(metadata, "Gateway")) return handler;
+    return (ctx, input) => {
+      const observer: GatewayObserver | undefined = ctx.data.gatewayObserver;
+      // Nobody observes: the call goes through untouched.
+      if (!observer) return handler(ctx, input);
+      return observer({ gateway: metadata.name, input, proceed: () => handler(ctx, input) }) as ReturnType<typeof handler>;
     };
   };
 }
@@ -399,6 +423,7 @@ Connection: @Config {"dependencies":[],"additionalDecorators":[]}
 Database: @Config {"dependencies":[],"additionalDecorators":[]}
 Logger: @Config {"dependencies":[],"additionalDecorators":[]}
 AuditWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
+GatewayWrapper: @Wrapper {"dependencies":[],"additionalDecorators":[]}
 TransactionWrapper: @Wrapper {"dependencies":["Connection","Logger"],"additionalDecorators":[]}
 NotifyWarehouses: @Action {"dependencies":["Logger"],"additionalDecorators":[{"name":"Gateway"}]}
 LockWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[{"name":"Gateway"}]}
@@ -406,7 +431,7 @@ SaveWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[{"n
 StockTransfer: @Action {"dependencies":["LockWarehouses","SaveWarehouses","NotifyWarehouses"],"additionalDecorators":[{"name":"UseCase"},{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
 ```
 
-The output shows the layering: `AuditWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), and it wraps only the use case marked `@Audit`, so the gateways do not appear in it. The report of the changed stock comes after the commit, and the failed transfer rolls back without one. The entity's functions are not in the container.
+The output shows the layering: `AuditWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), and `GatewayWrapper` (ordinal -10) is inside both. `AuditWrapper` wraps only the use case marked `@Audit`, so the gateways do not appear in its log, and `GatewayWrapper` does nothing here because no observer is in the context. The report of the changed stock comes after the commit, and the failed transfer rolls back without one. The entity's functions are not in the container.
 
 ## Rules worth knowing
 

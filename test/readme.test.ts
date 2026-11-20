@@ -800,5 +800,5 @@ test("DEVELOPMENT_PROCESS.md states its scope, relates to BEST_PRACTICES.md, and
   assert.match(developmentProcess, /\(BEST_PRACTICES\.md#built-from-use-cases\)/);
   assert.ok(bestPractices.includes("](DEVELOPMENT_PROCESS.md)"), "BEST_PRACTICES.md does not point to DEVELOPMENT_PROCESS.md");
   assert.ok(readme.includes("](DEVELOPMENT_PROCESS.md)"), "the README does not point to DEVELOPMENT_PROCESS.md");
-  for (const banned of [/kerjaan/i, /\bk2\b/i, /\bticket/i, /\bboard\b/i, /\bSQL\b/, /postgres/i, /mongo/i, /redis/i, /\bReact\b/]) assert.doesNotMatch(developmentProcess, banned);
+  for (const banned of [/kerjaan/i, /\bk2\b/i, /\bticket/i, /\bstudy\b/i, /one application/i, /\bboard\b/i, /\bSQL\b/, /postgres/i, /mongo/i, /redis/i, /\bReact\b/]) assert.doesNotMatch(developmentProcess, banned);
 });

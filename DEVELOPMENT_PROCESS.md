@@ -188,13 +188,13 @@ Step 5, continued. Besides a gap (an open question of a scenario map, marked as 
 
 There is no third kind. Code that a later decision has replaced is **obsolete**, and obsolete code is forbidden: the change that replaces it removes it, together with its marker. It is neither kept with a deadline nor marked.
 
-Why: a debt marker that is never removed becomes a false promise, and a study of one application found that 30 of its 45 markers were obsolete: written before a later decision replaced them, and never removed. Two kinds with a rule each keep the markers few and true, and removing replaced code at once needs no tracking that nobody does.
+Why: a debt marker that is never removed becomes a false promise: markers written before a later decision replaced the code are left behind, and soon most of them describe nothing. Two kinds with a rule each keep the markers few and true, and removing replaced code at once needs no tracking that nobody does.
 
 ### P14. Skeleton use cases are allowed only in the area being worked on (Mandatory)
 
 Step 5, continued. A skeleton use case, whose body only throws "not implemented", may exist only in the business area that is being worked on at the moment. No area that is not being worked on holds one. A gap is not a skeleton: it lives inside the branches of a use case, as a marker (T25) and a refusal of kind `tech_debt` that carries the gap's id ([B25](BEST_PRACTICES.md)), not in an empty body.
 
-Why: writing the skeleton of every use case before any of them is finished buries the work in a list that is longer than anyone can hold in mind (about 151 use cases in 35 areas in one study), and most of it is rewritten once the Core is known. Allowing a skeleton in the one area being worked on still lets that area be sketched.
+Why: writing the skeleton of every use case before any of them is finished buries the work in a list that is longer than anyone can hold in mind, and most of it is rewritten once the Core is known. Allowing a skeleton in the one area being worked on still lets that area be sketched.
 
 ## What a reviewer can check
 

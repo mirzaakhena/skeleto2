@@ -88,6 +88,8 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | T20 | A test compares whole objects, never picked fields | Mandatory | Reviewer |
 | T21 | One integration test starts Skeleto, and proves that the application starts | Mandatory | Reviewer |
 | T22 | Test files and generated files are left out of the scan | Mandatory | Reviewer |
+| T23 | During development a gateway may be a dummy, in memory or hardcoded, behind the same contract as the real one | Optional | Reviewer |
+| T24 | Each use case can be run on its own | Mandatory | Reviewer |
 
 ## The architecture test
 

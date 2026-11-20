@@ -43,7 +43,7 @@ What lies under the waterline, and the rules that cover each part:
 | Business rules and invariants | B11 to B14 and B16 |
 | Validation and errors | B24 to B26 |
 | Concurrent requests | B28 to B32 |
-| Transactions that fail halfway | B33 and B34 |
+| Transactions that fail halfway | T12 to T14 |
 | Effects that must wait for the commit | B33 to B35 |
 | Unpredictable values (the clock, generated ids) | B22 |
 

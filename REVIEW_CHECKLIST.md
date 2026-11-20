@@ -4,7 +4,7 @@ Every rule of [BEST_PRACTICES.md](BEST_PRACTICES.md), [TECHNICAL_PRACTICES.md](T
 
 ## How to review
 
-- **Machine** rules are checked by the [architecture test](#the-architecture-test) and the [gap test](#the-gap-test) below. Run it; a reviewer does not check them by reading.
+- **Machine** rules are checked by the [architecture test](#the-architecture-test) and the [gap test](#the-gap-test) below. Run the two; a reviewer does not check them by reading.
 - **Reviewer** rules are checked by reading the change, or, for the process rules, the files in the repository. Skeleto checks none of them.
 - **Process** rules are checked with the owner, not in the code: a repository does not show them, so a reviewer does not look for them there.
 - A change that breaks a **Mandatory** rule gets a finding, always.

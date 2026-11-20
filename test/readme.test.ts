@@ -532,11 +532,16 @@ test("the README example's transaction wrapper joins an open transaction, runs q
 test("every rule of TECHNICAL_PRACTICES.md is a numbered heading with a level, followed by its reason", () => {
   const sections = technicalPractices.split(/^(?=#{1,3} )/m).filter((section) => section.startsWith("### "));
   assert.ok(sections.length >= 13, "TECHNICAL_PRACTICES.md has fewer rules than topics");
-  sections.forEach((section, index) => {
+  // A rule takes the next free number and sits under its topic, so numbers need not rise down the file; each must appear exactly once.
+  const numbers: number[] = [];
+  sections.forEach((section) => {
     const heading = section.slice(0, section.indexOf("\n"));
-    assert.match(heading, new RegExp(`^### T${index + 1}\\. \\S.* \\((Mandatory|Optional)\\)$`), `rule ${index + 1} is not numbered T${index + 1} with a level: ${heading}`);
+    const match = /^### T(\d+)\. \S.* \((Mandatory|Optional)\)$/.exec(heading);
+    assert.ok(match, `rule heading is not '### T<n>. <rule> (Mandatory|Optional)': ${heading}`);
+    numbers.push(Number(match[1]));
     assert.match(section, /^Why: \S/m, `${heading} gives no Why: paragraph`);
   });
+  assert.deepEqual([...numbers].sort((a, b) => a - b), numbers.map((_, index) => index + 1), "rule numbers are not 1..n, each once");
   // No deeper heading hides a rule from the numbering.
   assert.doesNotMatch(technicalPractices, /^#{4,} /m);
 });

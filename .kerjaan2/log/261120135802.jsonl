@@ -25,3 +25,6 @@
 {"t":"2026-11-20 14:28:40","event":"test","by":"worker:a8b79923289d84beb","exit":0,"seconds":9,"fingerprint":"69e89092d5094d55b76912cd79b6dbb288fe693b","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:28:40","event":"submitted","commit":"3a42992","lane":"standard","to":"review","files":3,"fingerprint":"69e89092d5094d55b76912cd79b6dbb288fe693b","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a8b79923289d84beb"}
 {"t":"2026-11-20 14:28:49","event":"agent","role":"reviewer","agent":"a38978471b561bc8e","step":"review:2:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:29:45","event":"verdict","result":"pass","round":2,"commit":"3a42992","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a38978471b561bc8e"}
+{"t":"2026-11-20 14:30:08","event":"test","by":"land","exit":0,"seconds":10,"fingerprint":"0e2909c2c0da843ed513cfb3e9f14bb39d930b9d","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:30:08","event":"landed","branch":"k2/261120135802-dummy-gateways-use-cases","files":["REVIEW_CHECKLIST.md","TECHNICAL_PRACTICES.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

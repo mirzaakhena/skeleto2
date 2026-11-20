@@ -88,6 +88,8 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | T17 | Instances are taken from the container once, at startup, by the start of the application only | Mandatory | Reviewer |
 | T18 | A use case is tested by calling its `impl` function with hand-written fakes typed by the gateway contracts, without starting Skeleto and without a mock library | Mandatory | Reviewer |
 | T19 | The fakes fix every unpredictable value | Mandatory | Reviewer |
+| T23 | During development a gateway may be a dummy, in memory or hardcoded, behind the same contract as the real one | Optional | Reviewer |
+| T24 | Each use case can be run on its own | Mandatory | Reviewer |
 | T20 | A test compares whole objects, never picked fields | Mandatory | Reviewer |
 | T21 | One integration test starts Skeleto, and proves that the application starts | Mandatory | Reviewer |
 | T22 | Test files and generated files are left out of the scan | Mandatory | Reviewer |

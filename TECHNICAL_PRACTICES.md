@@ -165,6 +165,38 @@ A marker that only tells use cases from gateways, such as `@UseCase` and `@Gatew
 
 Why: Skeleto offers every action to every wrapper. Returning the handler itself adds nothing to the actions the marker is not on, not even a function call. With one wrapper per marker, what a marker means is written in one place, and removing the marker from an action removes exactly that behaviour.
 
+### T26. A gateway observer wrapper hands every gateway call to the observer in the context, and passes the call through when there is none (Optional)
+
+```ts
+// src/wrappers.ts (excerpt)
+export type GatewayObserver = (call: { gateway: string; input: unknown; proceed: () => Promise<unknown> }) => Promise<unknown>;
+```
+
+```ts
+// src/wrappers.ts (excerpt)
+/**
+ * Optional: only an application that lets a tool outside it observe a run needs this wrapper.
+ * It is the innermost wrapper, so what it reports is the gateway call itself, without the transaction or the audit around it.
+ *
+ * @Wrapper {"ordinal": -10}
+ */
+export function implGatewayWrapper(): GatewayWrapper {
+  return (handler, metadata) => {
+    if (!marked(metadata, "Gateway")) return handler;
+    return (ctx, input) => {
+      const observer: GatewayObserver | undefined = ctx.data.gatewayObserver;
+      // Nobody observes: the call goes through untouched.
+      if (!observer) return handler(ctx, input);
+      return observer({ gateway: metadata.name, input, proceed: () => handler(ctx, input) }) as ReturnType<typeof handler>;
+    };
+  };
+}
+```
+
+An application that lets a tool outside it observe a run has this wrapper, named after the `@Gateway` marker (T7, T11). It reads the observer at `ctx.data.gatewayObserver`, the one key every such tool looks at. The observer gets the gateway's name, its input and `proceed`, calls `proceed()` once and returns its result; it may time the call or look at what comes back, but the caller of the gateway gets what `proceed()` returned. With no observer in the context, the wrapper returns the handler's own result and changes nothing. It carries the lowest `ordinal` of all wrappers, so it is the innermost, closest to the gateway. An application that no tool observes does not need it.
+
+Why: a tool that draws or measures a run needs to see every call that leaves the use case, and the gateways are exactly those calls. One wrapper on the marker finds them all without a change to any gateway or use case, and agreeing on the key, the signature and the place among the wrappers lets one tool read any application. Innermost, it reports the gateway call itself, not the transaction or the audit that happen around it.
+
 ## Transactions
 
 ### T12. The transaction wrapper opens the transaction and keeps it in the context (Mandatory)
@@ -270,6 +302,18 @@ const stockTransfer: StockTransfer = container.get("StockTransfer")!.getInstance
 The start of the application takes each use case it needs once, under its type, and hands the typed functions to its callers. No component reads the container, and nothing reads it per call.
 
 Why: the container is looked up by a string and returns an untyped instance. Doing it once, in one place, turns a wrong name into a failure at startup rather than on the first call that needs it, keeps the cast to one line per use case, and leaves every other piece of code with a typed function. Components get what they need as dependencies; a component that read the container would hide a dependency Skeleto cannot see or order.
+
+## What a tool outside the application may rely on
+
+This is a guarantee of how an application is built, not a rule for its code, so it has no number. A tool that reads or checks an application from outside may learn from its container, after `Skeleto.start` with the application's `MARKERS` (T10), and rely on all of this:
+
+- `getContainer()` lists every component, `@Config`, `@Wrapper` and `@Action`, under its name (T3).
+- `getMetadata()` of a component gives its `dependencies`, the names of the components it asks for, in parameter order (T4, T6), and its `additionalDecorators`, the markers with their data (T9).
+- The name of a component is the name of its type (T3), so the tool finds the type of a component by looking the name up in the container.
+- A use case is told from a gateway by its `@UseCase` and `@Gateway` markers (B5), and a wrapper is named after the marker it reads (T7, T11).
+- A tool that observes a run finds the observer at `ctx.data.gatewayObserver`, when the application has the wrapper of T26.
+
+A tool takes nothing else from the application, and the container is read once, at its start (T17). The architecture test and the gap test of [REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md) are such tools.
 
 ## Tests
 
@@ -389,3 +433,9 @@ The marker is a line comment that starts with `TechDebt`, in one of these forms:
 - A marker is removed in the change that pays the debt or replaces the code it marks ([P13](DEVELOPMENT_PROCESS.md)).
 
 Why: a fixed form can be found and counted by a search or a test, which is how a gap on a map is matched to a marker in code and the other way round. A reference to a ticket outlives the ticket and says nothing to a reader of the code, while a gap id or a layer is part of the repository and can be checked there.
+
+### T27. A test fails when a gap of a scenario map has neither a marker nor a recorded decision, or when a marker names a gap that is on no map (Mandatory)
+
+The test is the gap test of [REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md#the-gap-test), copied as it is to the root of the application. It reads the maps at `docs/scenarios/` (P10) and the markers of T25 in `src/`, and names each gap or marker at fault. A gap is closed by either a marker in the use case it concerns or a `decision` field on the gap in its map (P12).
+
+Why: a debt that is not found when the code is read is a debt nobody pays. Checking both directions keeps the map and the code in step: a gap with neither a marker nor a decision is a question that was forgotten, and a marker for an id that is on no map is a debt that no one can trace to a question. A test does this at every run, which a review cannot.

@@ -4,7 +4,7 @@ Every rule of [BEST_PRACTICES.md](BEST_PRACTICES.md), [TECHNICAL_PRACTICES.md](T
 
 ## How to review
 
-- **Machine** rules are checked by the [architecture test](#the-architecture-test) below. Run it; a reviewer does not check them by reading.
+- **Machine** rules are checked by the [architecture test](#the-architecture-test) and the [gap test](#the-gap-test) below. Run it; a reviewer does not check them by reading.
 - **Reviewer** rules are checked by reading the change, or, for the process rules, the files in the repository. Skeleto checks none of them.
 - **Process** rules are checked with the owner, not in the code: a repository does not show them, so a reviewer does not look for them there.
 - A change that breaks a **Mandatory** rule gets a finding, always.
@@ -80,6 +80,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | T9 | A JSDoc block holds the description first, then the markers, one per line, with nothing after a marker but its data | Mandatory | Reviewer |
 | T10 | The allowed markers are kept in one exported constant, which is always passed to `Skeleto.start` | Mandatory | Reviewer |
 | T11 | One wrapper per marker, named after it, whose first step returns the handler unchanged when its marker is absent | Mandatory | Reviewer |
+| T26 | A gateway observer wrapper hands every gateway call to the observer in the context, and passes the call through when there is none | Optional | Reviewer |
 | T12 | The transaction wrapper opens the transaction and keeps it in the context | Mandatory | Reviewer |
 | T13 | Gateways reach their resource only through a function of the context | Mandatory | Reviewer |
 | T14 | A transaction already in the context is joined, never doubled | Mandatory | Reviewer |
@@ -94,6 +95,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | T21 | One integration test starts Skeleto, and proves that the application starts | Mandatory | Reviewer |
 | T22 | Test files and generated files are left out of the scan | Mandatory | Reviewer |
 | T25 | A debt is marked in code, on the line above what it concerns, in one of three fixed forms, and no marker refers to a ticket number | Mandatory | Reviewer: every marker has one of the three forms, and names no ticket |
+| T27 | A test fails when a gap of a scenario map has neither a marker nor a recorded decision, or when a marker names a gap that is on no map | Mandatory | Machine: the gap test |
 
 ## Development process
 
@@ -168,6 +170,55 @@ test("B8: no gateway depends on a use case", async () => {
   assert.deepEqual(useCaseDependencies(await readActions(), "Gateway"), []);
 });
 ```
+
+## The gap test
+
+A gap on a scenario map (P10) is closed by a marker in the code (T25) or a recorded decision (P12). Skeleto knows nothing of maps or debts, so this test reads files only: it does not start the application. Copy it as it is to the root of your application, next to `architecture.test.ts`.
+
+It fails, naming each gap or marker at fault:
+
+- when a gap of a map in `docs/scenarios/` has neither a marker `// TechDebt <gap id>: <reason>` in `src/` nor a `decision` field (T27);
+- when such a marker names an id that is on no map. `Planned` and `Shortcut` markers are not about a gap, and are left alone.
+
+```ts
+// gaps.test.ts
+import assert from "node:assert/strict";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { test } from "node:test";
+
+type Gap = { id: string; decision?: string };
+
+/** Every gap of every map under `docs/scenarios`. An application without one has no gaps. */
+function readGaps(): Gap[] {
+  if (!existsSync("docs/scenarios")) return [];
+  return readdirSync("docs/scenarios")
+    .filter((file) => file.endsWith(".json"))
+    .flatMap((file) => (JSON.parse(readFileSync(`docs/scenarios/${file}`, "utf8")) as { gaps?: Gap[] }).gaps ?? []);
+}
+
+/** The gap ids named by the markers of `src`, each with the file that holds it: `// TechDebt <gap id>: <reason>` (T25). */
+function readMarkedIds(): Map<string, string> {
+  const marked = new Map<string, string>();
+  for (const file of readdirSync("src", { recursive: true, encoding: "utf8" }).filter((name) => name.endsWith(".ts"))) {
+    for (const [, id] of readFileSync(`src/${file}`, "utf8").matchAll(/^\s*\/\/ TechDebt (?!Planned |Shortcut:)(\S+): /gm)) marked.set(id ?? "", `src/${file}`);
+  }
+  return marked;
+}
+
+test("T27: every gap has a marker or a recorded decision", () => {
+  const marked = readMarkedIds();
+  const open = readGaps().filter((gap) => !marked.has(gap.id) && !gap.decision).map((gap) => gap.id);
+  assert.deepEqual(open, []);
+});
+
+test("T27: every marker names a gap that is on a map", () => {
+  const ids = new Set(readGaps().map((gap) => gap.id));
+  const unknown = [...readMarkedIds()].filter(([id]) => !ids.has(id)).map(([id, file]) => `${id} in ${file}`);
+  assert.deepEqual(unknown, []);
+});
+```
+
+Run it from the root of the application, as `tsx --test gaps.test.ts`: the paths it reads are relative to the folder it runs in.
 
 ## Optional: the startup guard
 

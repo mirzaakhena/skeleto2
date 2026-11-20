@@ -29,12 +29,12 @@ Make it possible, by documented practice, for outside tools to rely on any Skele
 
 ## Done when
 
-- [ ] The practices say that reading the container is a supported way for tools to learn an application's components, dependencies, markers and types, and what a tool may rely on.
-- [ ] The README example has a gateway observer wrapper that does nothing when the context carries no observer, and its documented output changes only by the one line the wrapper adds to the container listing (owner, 2026-11-20).
-- [ ] A test shows that with an observer in the context, every gateway call of a use case run reaches it with the gateway's name and input, and the use case's result is unchanged.
-- [ ] A copyable guard test for gap ids and markers is documented, and a test proves it fails both for a gap without a marker or decision and for a marker naming an unknown id.
-- [ ] Nothing is added to Skeleto's own source, and no rule names a particular application or tool.
-- [ ] The review checklist reflects the new rules, and the project's checks pass.
+- [x] The practices say that reading the container is a supported way for tools to learn an application's components, dependencies, markers and types, and what a tool may rely on.
+- [x] The README example has a gateway observer wrapper that does nothing when the context carries no observer, and its documented output changes only by the one line the wrapper adds to the container listing (owner, 2026-11-20).
+- [x] A test shows that with an observer in the context, every gateway call of a use case run reaches it with the gateway's name and input, and the use case's result is unchanged.
+- [x] A copyable guard test for gap ids and markers is documented, and a test proves it fails both for a gap without a marker or decision and for a marker naming an unknown id.
+- [x] Nothing is added to Skeleto's own source, and no rule names a particular application or tool.
+- [x] The review checklist reflects the new rules, and the project's checks pass.
 
 ## Out of scope
 
@@ -65,3 +65,16 @@ Make it possible, by documented practice, for outside tools to rely on any Skele
 
 ## Decisions
 - Lane standard: a new wrapper in the README example, two copyable tests and rules; nothing in src/. Waits for 261118220101 (marker form) and 261120140001 (where gap ids are in a map), which the guard test reads
+
+## Handoff
+Added to the README example an optional GatewayWrapper (ordinal -10, innermost) that passes each gateway call to ctx.data.gatewayObserver and passes through when absent; its output gains one container line. TECHNICAL_PRACTICES gains a numberless section on what outside tools may rely on, T26 (observer wrapper, Optional) and T27 (gap guard, Mandatory). REVIEW_CHECKLIST gains the copyable gaps.test.ts, rows T26/T27 (T27 Machine). Tests in test/readme.test.ts prove the observer and both guard failures. Do not change the wrapper's excerpts in TECHNICAL_PRACTICES without the README, nor the TechDebt marker regex without T25. Nothing in src/.
+
+## Review
+- 2026-11-20 standard, round 1, at 1889fe6: passed.
+  1: TECHNICAL_PRACTICES.md section 'What a tool outside the application may rely on' covers getContainer, getMetadata dependencies/additionalDecorators, name = type, markers, observer key; test 'the practices state what a tool may rely on...' passes
+  2: README GatewayWrapper (ordinal -10) passes through without observer; test 'the README examples start and print exactly the output the README shows' passes, and the diff of the output block is exactly one added GatewayWrapper line (Q1)
+  3: test 'with an observer in the context...' passes, asserting all three gateway calls with name and input in order and the documented result; mutating the wrapper in a copy to bypass the observer makes it fail
+  4: gaps.test.ts in REVIEW_CHECKLIST.md 'The gap test'; tests 'the gap test passes...' and 'the gap test fails...' run the copied file in a fixture and assert fail 1 with the offending id for missing marker/decision, unknown id, and no map
+  5: git diff main...HEAD --stat -- src is empty; added text names no application or tool (read, and asserted by test 18)
+  6: T26/T27 rows present, Machine list B5,B8,T27 asserted by the checklist test; full typecheck/test/build passed on 58e91b9cf3 per board, targeted tests rerun green
+  note: REVIEW_CHECKLIST 'How to review' now names two tests but still says 'Run it'; the reliance section cites T9 (JSDoc layout) for marker data, a loose citation; gaps.test.ts uses readdirSync recursive, needing Node 20.1+

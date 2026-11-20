@@ -28,11 +28,11 @@ Add to the conceptual practices two rules that hold for any application:
 
 ## Done when
 
-- [ ] The conceptual practices hold both rules, each with a level, a reason and an example from the warehouse domain or a neutral one.
-- [ ] The rules say what a scheduler may be, if one is ever needed, and that it calls use cases.
-- [ ] The review checklist lists both rules, word for word as their headings.
-- [ ] No rule names a particular application, product or tool.
-- [ ] The project's checks pass.
+- [x] The conceptual practices hold both rules, each with a level, a reason and an example from the warehouse domain or a neutral one.
+- [x] The rules say what a scheduler may be, if one is ever needed, and that it calls use cases.
+- [x] The review checklist lists both rules, word for word as their headings.
+- [x] No rule names a particular application, product or tool.
+- [x] The project's checks pass.
 
 ## Out of scope
 
@@ -53,3 +53,15 @@ Add to the conceptual practices two rules that hold for any application:
 
 ## Decisions
 - Lane standard: two new conceptual rules with checklist rows. Waits for 261118134601 (it takes the next free B numbers after the renumbering)
+
+## Handoff
+Added B36 (time-dependent state is derived, no scheduler changes stored state) and B37 (derived status never stored), both Mandatory, in BEST_PRACTICES.md under Entities after B16, with checklist rows in the same place. Per owner Q1 they sit out of numeric order, so test/readme.test.ts now requires numbers 1..n each used once rather than rising down the file; the checklist test still needs file order. Later rules (T rules of 261120135802) follow the same way. B36 cites B22 and B27.
+
+## Review
+- 2026-11-20 standard, round 1, at 2ac2457: passed.
+  1: BEST_PRACTICES.md B36 and B37 under Entities (after B16, per owner Q1), both Mandatory (owner Q2), each with a Why paragraph and a warehouse-transfer example (transferStatus(transfer, now)); readme.test.ts 'numbered once, has a level, gives its reason first' passes on a copy and fails when B37 is renumbered B36
+  2: B36 third bullet: a scheduler is allowed only as infrastructure, starts use cases through the context like any caller (B27), holds no business rule; B22/B27 citations checked against current headings
+  3: REVIEW_CHECKLIST.md rows B36/B37 equal the headings; checklist test passes and fails (1 test) when one word of the B36 row is changed in a copy
+  4: read the new text: no application, product or tool named; product-ban tests in readme.test.ts pass
+  5: k2 test record of typecheck, test and build on b5d21cc3a3; I reran test/readme.test.ts on a copy (40 pass)
+  note: the numbering tests now check 1..n each once rather than reading order, which follows owner Q1 and is stated in 'How to read the rules'

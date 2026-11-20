@@ -59,13 +59,13 @@ Write DEVELOPMENT_PROCESS.md so that an agent starting a new application on Skel
 
 ## Done when
 
-- [ ] DEVELOPMENT_PROCESS.md exists, and states the five steps above in order as numbered rules (P1, ...) with a level (Mandatory or Optional) and a reason for each.
-- [ ] The classification, its three questions, its unit (the business area) and who decides it are rules of their own.
-- [ ] The three ways of handling what Core needs from other areas are a rule, and each way says what must be recorded.
-- [ ] The rules name `docs/GLOSSARY.md` and `docs/AREAS.md` as files in the application's repository, say what each holds, and require every entity and business-area name to appear in the glossary.
-- [ ] The file says how it relates to BEST_PRACTICES.md (use cases first; Core first), and BEST_PRACTICES.md and the README point to it.
-- [ ] No rule refers to a particular application, product or the board tool.
-- [ ] REVIEW_CHECKLIST.md lists the P rules with their levels, marking which a reviewer can check in a repository (the glossary and areas files and their names), and the README test checks the rule format of the new file and passes.
+- [x] DEVELOPMENT_PROCESS.md exists, and states the five steps above in order as numbered rules (P1, ...) with a level (Mandatory or Optional) and a reason for each.
+- [x] The classification, its three questions, its unit (the business area) and who decides it are rules of their own.
+- [x] The three ways of handling what Core needs from other areas are a rule, and each way says what must be recorded.
+- [x] The rules name `docs/GLOSSARY.md` and `docs/AREAS.md` as files in the application's repository, say what each holds, and require every entity and business-area name to appear in the glossary.
+- [x] The file says how it relates to BEST_PRACTICES.md (use cases first; Core first), and BEST_PRACTICES.md and the README point to it.
+- [x] No rule refers to a particular application, product or the board tool.
+- [x] REVIEW_CHECKLIST.md lists the P rules with their levels, marking which a reviewer can check in a repository (the glossary and areas files and their names), and the README test checks the rule format of the new file and passes.
 
 ## Out of scope
 
@@ -100,3 +100,17 @@ Write DEVELOPMENT_PROCESS.md so that an agent starting a new application on Skel
 - Lane standard: a new documentation file plus checklist rows and a new rule-format test; nothing that cannot be undone
 - Waits for 261118134601: it points to that ticket's principle section and cites B rules by the numbers that ticket assigns. Not solo: a new file plus small edits elsewhere
 - Split on 2026-11-20: the docs/CORE.md and scenario-map Done-when lines (9 lines in all) moved to 261120140001, which waits for this ticket
+
+## Handoff
+Added DEVELOPMENT_PROCESS.md with rules P1-P8 (all Mandatory, scope: new application or large new part): interview, classification per area by three questions, owner decides, docs/AREAS.md, docs/GLOSSARY.md before naming, Core-only design, three ways to handle what Core needs (stub, assumed, simplified, each recorded), Core-first code. REVIEW_CHECKLIST.md gained a Development process table and a Process checker value; BEST_PRACTICES.md and the README point to the file. test/readme.test.ts extends rule rows to P and checks the new file. Must not break: checklist rows match headings word for word; the new file holds no code fences.
+
+## Review
+- 2026-11-20 standard, round 1, at b432e66: passed.
+  1: P1-P8, each '### Pn. ... (Mandatory)' with a Why:, mapped to steps 1-5 in order (P2-P4 step 2, P5 step 3, P6-P7 step 4, P8 step 5); all Mandatory per Q1 with scope sentence; the format test passes, and fails on a copy with P4's Why: removed
+  2: P2 (unit = business area, never use case; three questions in order) and P3 (owner decides, agent proposes) are separate rules; read and pinned by the same test
+  3: P7 table gives Stub, Assumed to exist, Simplified, each with a 'What is recorded' column plus owner decision; tech-debt left unnamed per A2; checked by reading and the P7 regex
+  4: P4/P5 name docs/AREAS.md and docs/GLOSSARY.md in the application's repository, with the Q3 table layouts, and P5 requires every entity and area name in the glossary; pinned by test
+  5: 'How it relates to BEST_PRACTICES.md' section links #built-from-use-cases (anchor exists), cites B1 and B18 correctly; BEST_PRACTICES.md and README link back; pinned by the scope/relation test
+  6: grep for kerjaan/k2/ticket/board finds nothing; samples (Stock, Notifications, Warehouse) name no application; banned-word test passes
+  7: Development process table, P4/P5 Reviewer, rest Process; checklist test passes and fails on a copy with P4 set to Process; full suite passed on e2c075438a per brief
+  note: README line 27 still says 'Every rule of the two, with its level and whether a machine or a reviewer checks it' after the new sentence; the checklist now covers three files and a Process checker. Stale, not false; the README test name 'two practice files' likewise

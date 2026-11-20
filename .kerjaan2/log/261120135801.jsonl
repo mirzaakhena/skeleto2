@@ -5,3 +5,21 @@
 {"t":"2026-11-20 14:14:43","event":"answer","key":"Q1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:14:43","event":"answer","key":"Q2","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:17:54","event":"moved","to":"todo","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"planner:a706f0db5180ac97d"}
+{"t":"2026-11-20 14:22:25","event":"started","branch":"k2/261120135801-time-dependent-states-are","base":"fb15362","contract":"e07dc9880730","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:22:36","event":"agent","role":"worker","agent":"ac76cd172980fc7e5","step":"first:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:23:07","event":"test","by":"worker:ac76cd172980fc7e5","exit":1,"seconds":11,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:23:26","event":"test","by":"worker:ac76cd172980fc7e5","exit":1,"seconds":9,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:23:38","event":"test","by":"worker:ac76cd172980fc7e5","exit":1,"seconds":9,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:23:50","event":"test","by":"worker:ac76cd172980fc7e5","exit":1,"seconds":9,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:24:36","event":"test","by":"worker:ac76cd172980fc7e5","exit":0,"seconds":9,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:24:41","event":"check","n":1,"evidence":"B36 and B37 added under Entities, Mandatory, each with Why and a warehouse-transfer example","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:ac76cd172980fc7e5"}
+{"t":"2026-11-20 14:24:41","event":"check","n":2,"evidence":"B36 says a scheduler is only infrastructure that starts use cases via the context and holds no business rule","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:ac76cd172980fc7e5"}
+{"t":"2026-11-20 14:24:41","event":"check","n":3,"evidence":"Checklist rows B36/B37 match headings; the checklist test passes","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:ac76cd172980fc7e5"}
+{"t":"2026-11-20 14:24:42","event":"check","n":4,"evidence":"No application, product or tool named; banned-word tests pass","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:ac76cd172980fc7e5"}
+{"t":"2026-11-20 14:24:42","event":"check","n":5,"evidence":"k2 test: typecheck, tests, build passed","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:ac76cd172980fc7e5"}
+{"t":"2026-11-20 14:24:56","event":"test","by":"worker:ac76cd172980fc7e5","exit":0,"seconds":10,"fingerprint":"b5d21cc3a30534de39f51f7c50ff9fdb335b3fc7","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:24:56","event":"submitted","commit":"2ac2457","lane":"standard","to":"review","files":3,"fingerprint":"b5d21cc3a30534de39f51f7c50ff9fdb335b3fc7","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:ac76cd172980fc7e5"}
+{"t":"2026-11-20 14:25:03","event":"agent","role":"reviewer","agent":"a7e68fde7bd874084","step":"review:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:26:42","event":"verdict","result":"pass","round":1,"commit":"2ac2457","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a7e68fde7bd874084"}
+{"t":"2026-11-20 14:27:09","event":"test","by":"land","exit":0,"seconds":10,"fingerprint":"281832077e8aa4bdedb117ecb908d35e75b8401a","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 14:27:09","event":"landed","branch":"k2/261120135801-time-dependent-states-are","files":["BEST_PRACTICES.md","REVIEW_CHECKLIST.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

@@ -1,8 +1,5 @@
 goal: Use-cases-first principle, core-first process and its records, technical debt, and the rules brought in from a second application
 order:
-  - 261120100801   # Make the business error wording fit all four kinds
-  - 261119090501   # Write DEVELOPMENT_PROCESS.md the core-first way of building an application
-  - 261120135801   # Time-dependent states are derived, and derived status is never stored
   - 261120135802   # Dummy gateways, use cases runnable alone, and whole-object entity tests
   - 261120140001   # Record the Core design in docs CORE.md and one scenario map per business process
   - 261118220101   # Technical debt as part of the core-first workflow

@@ -23,7 +23,7 @@ It is a matter of mechanism versus policy: Skeleto provides the mechanism, and t
 
 ## How to read the rules
 
-Every rule has a number (`B1`, `B2`, ...), a level and a reason:
+Every rule has a number (`B1`, `B2`, ...), a level and a reason. A rule added later takes the next free number and sits under its topic, so numbers do not always rise down the page:
 
 - **Mandatory**: follow it. Breaking it gives code that is wrong, or that will be wrong after the next change.
 - **Optional**: follow it unless you have a reason not to; it is a good default, not a correctness matter.
@@ -220,6 +220,22 @@ This literal is allowed: it is a gateway mapping stored data, not a use case mak
 ### B16. Let the store enforce the most important invariants as well (Optional)
 
 Why: a constraint in the store (a value that may not be negative, an id that must be unique) catches what slips past the code: a script run by hand, a bug, an old version still running. It mirrors a rule the entity already holds; it never replaces it, and the entity's check stays the one that gives a clear business error. Not every store can express every rule, so this is chosen per invariant.
+
+### B36. A state that depends on time is derived from the stored state, its time and the current time; no scheduler changes stored state (Mandatory)
+
+Why: a job that rewrites stored state when time passes makes the state wrong between its runs, needs a second place for business rules, and cannot be tested without waiting. A state computed from what is stored and the clock is correct at every moment, needs no background job, and is tested with a fixed clock.
+
+- Example: a transfer is sent and must be received within 48 hours. What is stored is its last action, "sent", and when that happened. Whether it is "late" is a function of the entity: `transferStatus(transfer, now)` says late when the transfer was sent and `now` is more than 48 hours after the time of sending.
+- The current time comes from the clock gateway, asked for once at the start of the use case (B22), and is passed to the entity function. The entity function never reads the clock itself.
+- A scheduler is allowed only as infrastructure, for example to remind people of late transfers. It starts use cases through the context like any other caller (B27) and holds no business rule: what is late, and what follows from it, is decided by the entity and the use case.
+
+### B37. A derived status is never stored: store the result of the last action and its time, and compute the effective status with a function of the entity (Mandatory)
+
+Why: a stored status that can be computed is a second copy of the truth. It drifts from the data it was computed from, and whoever forgets to update it leaves the application contradicting itself. With only the last action and its time stored, there is one truth and the status is always an answer, never a record.
+
+- Example: store that the transfer was sent and when; do not store a field "status: late". The effective status, whether sent, late or received, is always `transferStatus(transfer, now)`.
+- A status that no stored fact can produce, such as one a person chose, is not derived and may be stored.
+- A query that must filter by a derived status asks the gateway for the stored facts it depends on, such as the sending time, and applies the entity function to the rows it gets back. It does not add a status column to answer the query faster.
 
 ## Direction of dependencies
 

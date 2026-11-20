@@ -42,6 +42,8 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | B14 | A use case never writes an entity literal | Mandatory | Reviewer |
 | B15 | A gateway that reads maps stored data to the type and applies no business rule: validate on write, not on read | Mandatory | Reviewer |
 | B16 | Let the store enforce the most important invariants as well | Optional | Reviewer |
+| B36 | A state that depends on time is derived from the stored state, its time and the current time; no scheduler changes stored state | Mandatory | Reviewer |
+| B37 | A derived status is never stored: store the result of the last action and its time, and compute the effective status with a function of the entity | Mandatory | Reviewer |
 | B17 | Entities import nothing outside entities | Mandatory | Reviewer |
 | B18 | A use case knows gateways only by their contract types | Mandatory | Reviewer |
 | B19 | Keep a gateway's contract apart from its implementation | Mandatory | Reviewer |

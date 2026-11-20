@@ -23,11 +23,11 @@ Make the wording in those two places, and in the README sentence just above the 
 
 ## Done when
 
-- [ ] The comment on the error kind in the README example describes all four kinds, e.g. why the business refused an operation, not which rule it broke.
-- [ ] The README sentence above the example's error type no longer says the kind tells which rule was broken.
-- [ ] The "Why" paragraph of the business error rule names the "not decided yet" distinction next to the other three.
-- [ ] The README example still runs with its documented output.
-- [ ] The project's checks pass.
+- [x] The comment on the error kind in the README example describes all four kinds, e.g. why the business refused an operation, not which rule it broke.
+- [x] The README sentence above the example's error type no longer says the kind tells which rule was broken.
+- [x] The "Why" paragraph of the business error rule names the "not decided yet" distinction next to the other three.
+- [x] The README example still runs with its documented output.
+- [x] The project's checks pass.
 
 <!-- k2:record — written by k2 only; do not edit by hand -->
 
@@ -45,3 +45,6 @@ Make the wording in those two places, and in the README sentence just above the 
 ## Decisions
 - Lane light: two wording edits in documentation, cheap to undo
 - Not solo and waits for nothing: it touches B21 in BEST_PRACTICES.md and the error.ts block in README.md, which 261118134601 also edits, but only as overlapping text; the merge queue settles it
+
+## Handoff
+Reworded three places so a tech-debt error is not called a broken rule: the README sentence above error.ts, the BusinessError kind comment in the README example, and the first Why paragraph of B25 (now names 'not decided yet' as a fourth distinction). B25 heading untouched, so REVIEW_CHECKLIST needs no change. Comment stays inside the error.ts block; no excerpt includes it. Must not break: README example output and verbatim excerpts.

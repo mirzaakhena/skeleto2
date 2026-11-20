@@ -311,7 +311,7 @@ Why: they are two different questions. Whether the input is well formed (a numbe
 
 ### B25. Business errors are typed by kind: validation, not found, conflict, tech debt (Mandatory)
 
-Why: a caller has to tell "your input broke a rule" from "that does not exist" from "the state does not allow it now" in order to answer usefully. A kind does that without the caller reading messages, and without the business knowing anything of the caller.
+Why: a caller has to tell "your input broke a rule" from "that does not exist" from "the state does not allow it now" from "the business has not decided yet what should happen" in order to answer usefully. A kind does that without the caller reading messages, and without the business knowing anything of the caller.
 
 There are four kinds:
 

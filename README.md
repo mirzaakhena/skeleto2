@@ -26,11 +26,11 @@ Any other dependency, and any circular one, stops startup. Configs are created f
 
 The example moves stock from one warehouse to another. How to lay out an application on Skeleto (one use case per file, business rules in entities, use cases that only orchestrate) is recommended in [BEST_PRACTICES.md](BEST_PRACTICES.md), how to use Skeleto's mechanism well (names, markers, wrappers, transactions, tests) in [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md), and the example follows both. In which order a new application is built, Core first and after the business areas and their words are agreed with the owner, is in [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md). Every rule of the two, with its level and whether a machine or a reviewer checks it, is listed in [REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md), together with an architecture test to copy. Every component function is named `impl` followed by its component's name: the type it returns is the contract, and the function implements it.
 
-The entity. Plain types and pure functions, with no marker: Skeleto reads these files like any other, finds no marked function, and makes no component of them. Every failure the business knows of is a `BusinessError`, whose `kind` says which rule was broken.
+The entity. Plain types and pure functions, with no marker: Skeleto reads these files like any other, finds no marked function, and makes no component of them. Every failure the business knows of is a `BusinessError`, whose `kind` says why the business refused the operation.
 
 ```ts
 // src/entity/error.ts
-/** Which kind of business rule an operation broke. The caller decides what each kind means to its own users. */
+/** Why the business refused an operation: one of four kinds. The caller decides what each kind means to its own users. */
 export type BusinessErrorKind = "validation" | "not_found" | "conflict" | "tech_debt";
 
 /** The one error the business throws: entities, use cases and gateways name its kind and nothing about who called them. */

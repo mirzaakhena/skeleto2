@@ -13,6 +13,7 @@ const readme = readFileSync(`${repo}README.md`, "utf8");
 const bestPractices = readFileSync(`${repo}BEST_PRACTICES.md`, "utf8");
 const technicalPractices = readFileSync(`${repo}TECHNICAL_PRACTICES.md`, "utf8");
 const checklist = readFileSync(`${repo}REVIEW_CHECKLIST.md`, "utf8");
+const developmentProcess = readFileSync(`${repo}DEVELOPMENT_PROCESS.md`, "utf8");
 
 type Blocks = {
   /** Full example files, by the path each block names in its first line. */
@@ -612,20 +613,24 @@ test("the tests TECHNICAL_PRACTICES.md adds catch a broken use case and an appli
 
 /** The numbered rules of a practice file, by number, with their text and level. */
 function numberedRules(text: string): Map<string, { text: string; level: string }> {
-  return new Map([...text.matchAll(/^### ([BT]\d+)\. (.*) \((Mandatory|Optional)\)$/gm)].map((match) => [match[1] ?? "", { text: match[2] ?? "", level: match[3] ?? "" }]));
+  return new Map([...text.matchAll(/^### ([BTP]\d+)\. (.*) \((Mandatory|Optional)\)$/gm)].map((match) => [match[1] ?? "", { text: match[2] ?? "", level: match[3] ?? "" }]));
 }
 
-test("REVIEW_CHECKLIST.md lists every rule of both practice files exactly once, with its text, its level and who checks it", () => {
-  const rules = new Map([...numberedRules(bestPractices), ...numberedRules(technicalPractices)]);
+function checkerOf(number: string): string {
+  return new RegExp(`^\\| ${number} \\| .* \\| (Machine|Reviewer|Process)\\b`, "m").exec(checklist)?.[1] ?? "";
+}
+
+test("REVIEW_CHECKLIST.md lists every rule of the three practice files exactly once, with its text, its level and who checks it", () => {
+  const rules = new Map([...numberedRules(bestPractices), ...numberedRules(technicalPractices), ...numberedRules(developmentProcess)]);
   assert.ok(rules.size >= 50, "the practice files have fewer rules than expected");
-  const rows = [...checklist.matchAll(/^\| ([BT]\d+) \| (.*) \| (Mandatory|Optional) \| (Machine|Reviewer)\b[^|]* \|$/gm)].map((match) => ({
+  const rows = [...checklist.matchAll(/^\| ([BTP]\d+) \| (.*) \| (Mandatory|Optional) \| (Machine|Reviewer|Process)\b[^|]* \|$/gm)].map((match) => ({
     number: match[1] ?? "",
     text: match[2] ?? "",
     level: match[3] ?? "",
     checker: match[4] ?? "",
   }));
   // Every table row of a rule is one of the rows read above, so no row escapes the check by a different form.
-  assert.equal(rows.length, [...checklist.matchAll(/^\| [BT]\d+ \|/gm)].length, "a rule row of REVIEW_CHECKLIST.md is not '| <number> | <text> | <level> | Machine|Reviewer |'");
+  assert.equal(rows.length, [...checklist.matchAll(/^\| [BTP]\d+ \|/gm)].length, "a rule row of REVIEW_CHECKLIST.md is not '| <number> | <text> | <level> | Machine|Reviewer|Process |'");
   assert.deepEqual(
     rows.map(({ number }) => number),
     [...rules.keys()],
@@ -634,6 +639,9 @@ test("REVIEW_CHECKLIST.md lists every rule of both practice files exactly once, 
   for (const { number, text, level } of rows) assert.deepEqual({ text, level }, rules.get(number), `REVIEW_CHECKLIST.md states ${number} differently from its practice file`);
   // A machine checks only what the architecture test checks; everything else is left to the reviewer.
   assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B5", "B8"]);
+  // Of the process rules, only those that leave a file in the repository can be read by a reviewer; the rest are checked with the owner.
+  assert.deepEqual(rows.filter(({ number }) => number.startsWith("P") && checkerOf(number) === "Reviewer").map(({ number }) => number), ["P4", "P5"]);
+  assert.deepEqual(rows.filter(({ number }) => !number.startsWith("P")).filter(({ checker }) => checker === "Process"), []);
 });
 
 test("the README links to REVIEW_CHECKLIST.md on the line that links to the two practice files", () => {
@@ -644,9 +652,9 @@ test("the README links to REVIEW_CHECKLIST.md on the line that links to the two 
 
 test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a real rule at the real line", () => {
   assert.match(checklist, /^> `<rule> <file>:<line>: <what breaks the rule>\. Fix: <the change asked for>\.`$/m);
-  const [, rule, path, line] = /^> ([BT]\d+) (\S+\.ts):(\d+): .*\. Fix: \S.*\.$/m.exec(checklist) ?? [];
+  const [, rule, path, line] = /^> ([BTP]\d+) (\S+\.ts):(\d+): .*\. Fix: \S.*\.$/m.exec(checklist) ?? [];
   assert.ok(rule && path && line, "REVIEW_CHECKLIST.md gives no example finding in the form it asks for");
-  assert.ok(new Map([...numberedRules(bestPractices), ...numberedRules(technicalPractices)]).has(rule), `the example finding cites ${rule}, which does not exist`);
+  assert.ok(new Map([...numberedRules(bestPractices), ...numberedRules(technicalPractices), ...numberedRules(developmentProcess)]).has(rule), `the example finding cites ${rule}, which does not exist`);
   assert.match(example.files[path]?.split("\n")[Number(line) - 1] ?? "", /^export function implStockTransfer\(/, `${path}:${line} is not the line the example finding is about`);
 });
 
@@ -747,4 +755,35 @@ test("the architecture test fails when an action carries neither marker, and whe
       assert.match(tested.stdout, offender, name);
     });
   }
+});
+
+test("every rule of DEVELOPMENT_PROCESS.md is a numbered heading with a level, followed by its reason, and the steps come in order", () => {
+  const sections = developmentProcess.split(/^(?=#{1,3} )/m).filter((section) => section.startsWith("### "));
+  assert.equal(sections.length, 8);
+  sections.forEach((section, index) => {
+    const heading = section.slice(0, section.indexOf("\n"));
+    assert.match(heading, new RegExp(`^### P${index + 1}\\. \\S.* \\((Mandatory|Optional)\\)$`), `rule ${index + 1} is not numbered P${index + 1} with a level: ${heading}`);
+    assert.match(section, /^Why: \S/m, `${heading} gives no Why: paragraph`);
+  });
+  assert.doesNotMatch(developmentProcess, /^#{4,} /m);
+  // The samples of the two files are tables in the text; a code block would be checked by no test.
+  assert.doesNotMatch(developmentProcess, /^\s*(`{3,}|~{3,})/m);
+  const rule = (number: string): string => sections.find((section) => section.startsWith(`### ${number}.`)) ?? "";
+  assert.match(rule("P1"), /interview/);
+  assert.match(rule("P2"), /business area[\s\S]*never a use case/);
+  assert.ok(rule("P2").indexOf("**Core**") < rule("P2").indexOf("**Supporting**") && rule("P2").indexOf("**Supporting**") < rule("P2").indexOf("**Generic**"));
+  assert.match(rule("P3"), /owner decides[\s\S]*only proposes/);
+  assert.match(rule("P4"), /`docs\/AREAS\.md`[\s\S]*\| Area \| Class \| Reason \| Decision \|/);
+  assert.match(rule("P5"), /`docs\/GLOSSARY\.md`[\s\S]*\| Term \| Meaning \|[\s\S]*Every entity name and every business-area name appears in the glossary/);
+  for (const way of ["Stub", "Assumed to exist", "Simplified"]) assert.match(rule("P7"), new RegExp(`\\| \\*\\*${way}\\*\\* \\|.*\\|.*\\|`));
+  assert.match(rule("P8"), /Core first/);
+});
+
+test("DEVELOPMENT_PROCESS.md states its scope, relates to BEST_PRACTICES.md, and names no application, product or tool", () => {
+  assert.match(developmentProcess, /new application, or a large new part of one/);
+  assert.match(developmentProcess, /^## How it relates to BEST_PRACTICES\.md$/m);
+  assert.match(developmentProcess, /\(BEST_PRACTICES\.md#built-from-use-cases\)/);
+  assert.ok(bestPractices.includes("](DEVELOPMENT_PROCESS.md)"), "BEST_PRACTICES.md does not point to DEVELOPMENT_PROCESS.md");
+  assert.ok(readme.includes("](DEVELOPMENT_PROCESS.md)"), "the README does not point to DEVELOPMENT_PROCESS.md");
+  for (const banned of [/kerjaan/i, /\bk2\b/i, /\bticket/i, /\bboard\b/i, /\bSQL\b/, /postgres/i, /mongo/i, /redis/i, /\bReact\b/]) assert.doesNotMatch(developmentProcess, banned);
 });

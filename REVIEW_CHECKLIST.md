@@ -1,14 +1,15 @@
 # Review checklist
 
-Every rule of [BEST_PRACTICES.md](BEST_PRACTICES.md) and [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md), in one list, for whoever reviews a change to an application built on Skeleto: a person, or an agent given this file. The rules themselves, with their reasons and code, are in those two files; this one says only which rules there are, how strong each is, and who checks it.
+Every rule of [BEST_PRACTICES.md](BEST_PRACTICES.md), [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md) and [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md), in one list, for whoever reviews a change to an application built on Skeleto: a person, or an agent given this file. The rules themselves, with their reasons and code, are in those three files; this one says only which rules there are, how strong each is, and who checks it.
 
 ## How to review
 
 - **Machine** rules are checked by the [architecture test](#the-architecture-test) below. Run it; a reviewer does not check them by reading.
-- **Reviewer** rules are checked by reading the change. Skeleto checks none of them.
+- **Reviewer** rules are checked by reading the change, or, for the process rules, the files in the repository. Skeleto checks none of them.
+- **Process** rules are checked with the owner, not in the code: a repository does not show them, so a reviewer does not look for them there.
 - A change that breaks a **Mandatory** rule gets a finding, always.
 - A change that departs from an **Optional** rule gets a finding only when it gives no reason in a comment.
-- Cite a rule by its number only (`B8`, `T11`). Numbers are never reused, so a citation keeps its meaning.
+- Cite a rule by its number only (`B8`, `T11`, `P4`). Numbers are never reused, so a citation keeps its meaning.
 
 ## Writing a finding
 
@@ -90,6 +91,19 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | T20 | A test compares whole objects, never picked fields | Mandatory | Reviewer |
 | T21 | One integration test starts Skeleto, and proves that the application starts | Mandatory | Reviewer |
 | T22 | Test files and generated files are left out of the scan | Mandatory | Reviewer |
+
+## Development process
+
+| Rule | What it says | Level | Checked by |
+| --- | --- | --- | --- |
+| P1 | Start from what the user tells, and interview until the business areas are visible | Mandatory | Process |
+| P2 | Classify every business area, never every use case, as Core, Supporting or Generic, by three questions asked in order | Mandatory | Process |
+| P3 | The owner decides the classification; the agent only proposes it, with its reasons | Mandatory | Process |
+| P4 | Record the classification in `docs/AREAS.md`, in the application's repository | Mandatory | Reviewer: `docs/AREAS.md` exists, and every row has a class, a reason and a decision |
+| P5 | Agree the words of the business in `docs/GLOSSARY.md` before any entity or use case is named | Mandatory | Reviewer: `docs/GLOSSARY.md` exists, and holds every entity name and business-area name |
+| P6 | Design only the Core areas first: their use cases, their basic entities and their flow | Mandatory | Process |
+| P7 | What a Core area needs from another area is handled in one of three ways, and each way is recorded | Mandatory | Process |
+| P8 | Write code only after P1 to P7, and write the Core first, in depth, before any other layer | Mandatory | Process |
 
 ## The architecture test
 

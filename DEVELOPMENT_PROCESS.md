@@ -100,7 +100,7 @@ Step 4, continued. When a Core use case needs something from a Supporting or Gen
 
 In every case the owner's decision is recorded with it.
 
-When a stub leaves a debt behind, it is marked as P13 and T23 say.
+When a stub leaves a debt behind, it is marked as P13 and T25 say.
 
 Why: a Core use case that quietly depends on something unbuilt is either wrong or stuck. Naming the way makes the dependency visible, and writing it down is what lets a later reader tell a stub that is waiting for its layer from a part that was forgotten.
 
@@ -171,7 +171,7 @@ Why: whatever a Core use case needs from another area becomes a stub, an assumpt
 Step 5, continued. A Core area is done when all of these hold:
 
 - every step of the main path and every branch of its scenario maps (P10) has a test;
-- every gap on those maps has a marker (T23) in the use case it concerns, or a recorded decision of the owner: a `decision` field on the gap in its map.
+- every gap on those maps has a marker (T25) in the use case it concerns, or a recorded decision of the owner: a `decision` field on the gap in its map.
 
 Whether its own gateways are real is not part of it: during development they may stay in-memory dummies. A dummy that stands in for a later layer is a Planned debt and carries its marker (P13); a dummy that only exists so that the Core can be developed and tested carries none.
 
@@ -179,7 +179,7 @@ Why: "done" has to be something a reviewer can check against files. A map with a
 
 ### P13. Debt that is not a gap is either Planned or Shortcut, and obsolete code is forbidden: it is removed in the change that replaces it (Mandatory)
 
-Step 5, continued. Besides a gap (an open question of a scenario map, marked as T23 says), there are exactly two kinds of debt:
+Step 5, continued. Besides a gap (an open question of a scenario map, marked as T25 says), there are exactly two kinds of debt:
 
 | Kind | Meaning | What it names |
 | --- | --- | --- |
@@ -192,7 +192,7 @@ Why: a debt marker that is never removed becomes a false promise, and a study of
 
 ### P14. Skeleton use cases are allowed only in the area being worked on (Mandatory)
 
-Step 5, continued. A skeleton use case, whose body only throws "not implemented", may exist only in the business area that is being worked on at the moment. No area that is not being worked on holds one. A gap is not a skeleton: it lives inside the branches of a use case, as a marker (T23) and a refusal of kind `tech_debt` that carries the gap's id ([B25](BEST_PRACTICES.md)), not in an empty body.
+Step 5, continued. A skeleton use case, whose body only throws "not implemented", may exist only in the business area that is being worked on at the moment. No area that is not being worked on holds one. A gap is not a skeleton: it lives inside the branches of a use case, as a marker (T25) and a refusal of kind `tech_debt` that carries the gap's id ([B25](BEST_PRACTICES.md)), not in an empty body.
 
 Why: writing the skeleton of every use case before any of them is finished buries the work in a list that is longer than anyone can hold in mind (about 151 use cases in 35 areas in one study), and most of it is rewritten once the Core is known. Allowing a skeleton in the one area being worked on still lets that area be sketched.
 
@@ -205,7 +205,7 @@ Most of this file is agreed in conversation and cannot be seen in a repository. 
 - every entity name and every business-area name appears in `docs/GLOSSARY.md` (P5);
 - `docs/CORE.md` exists, and holds use cases, entities, gateways, decisions and every stub, assumption and simplification of the Core areas (P9);
 - every business process has a file under `docs/scenarios/`, and each has a `gaps` array whose ids are `<process>-<n>` and unique across the files (P10);
-- every gap of a map has a marker in the code or a `decision` field, and no marker names a gap that is not on a map (P12, T23);
+- every gap of a map has a marker in the code or a `decision` field, and no marker names a gap that is not on a map (P12, T25);
 - no obsolete code is left, and no area that is not being worked on holds a skeleton use case (P13, P14).
 
 The other rules are checked with the owner, not in the code: the interview, the classification being the owner's decision, the handling of what Core needs, and the order of the work, including the order of the layers (P11).

@@ -372,7 +372,7 @@ Why: Skeleto imports every file it scans. A test file imported at startup would 
 
 ## Technical debt
 
-### T23. A debt is marked in code, on the line above what it concerns, in one of three fixed forms, and no marker refers to a ticket number (Mandatory)
+### T25. A debt is marked in code, on the line above what it concerns, in one of three fixed forms, and no marker refers to a ticket number (Mandatory)
 
 The marker is a line comment that starts with `TechDebt`, in one of these forms:
 

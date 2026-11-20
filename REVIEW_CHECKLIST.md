@@ -93,7 +93,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | T20 | A test compares whole objects, never picked fields | Mandatory | Reviewer |
 | T21 | One integration test starts Skeleto, and proves that the application starts | Mandatory | Reviewer |
 | T22 | Test files and generated files are left out of the scan | Mandatory | Reviewer |
-| T23 | A debt is marked in code, on the line above what it concerns, in one of three fixed forms, and no marker refers to a ticket number | Mandatory | Reviewer: every marker has one of the three forms, and names no ticket |
+| T25 | A debt is marked in code, on the line above what it concerns, in one of three fixed forms, and no marker refers to a ticket number | Mandatory | Reviewer: every marker has one of the three forms, and names no ticket |
 
 ## Development process
 

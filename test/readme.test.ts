@@ -554,7 +554,7 @@ test("TECHNICAL_PRACTICES.md covers every agreed topic, and names no product or 
   };
   rule(/takes its dependencies and returns/);
   const marker = rule(/A debt is marked in code/);
-  for (const form of ["// TechDebt <gap id>: <reason>", "// TechDebt Planned <layer>: <reason>", "// TechDebt Shortcut: <reason>"]) assert.ok(marker.includes(`\`${form}\``), `T23 lacks ${form}`);
+  for (const form of ["// TechDebt <gap id>: <reason>", "// TechDebt Planned <layer>: <reason>", "// TechDebt Shortcut: <reason>"]) assert.ok(marker.includes(`\`${form}\``), `T25 lacks ${form}`);
   assert.doesNotMatch(technicalPractices, /TECH-DEBT/);
   assert.match(rule(/named `impl` followed by/), /implConnection/);
   rule(/named type alias/);

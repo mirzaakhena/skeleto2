@@ -52,4 +52,5 @@ Added tech_debt as the fourth BusinessErrorKind: B21 (heading, four kinds with e
   note: README error.ts doc comment 'Which kind of business rule an operation broke' no longer fits tech_debt; follow-up written
 
 ## Follow-ups
-- F1 [open] README.md src/entity/error.ts example (line 33) documents BusinessErrorKind as 'Which kind of business rule an operation broke', but B21 now says tech_debt is 'a debt and not a rule'; reword the doc comment (e.g. 'Why the business refused an operation') so the type's comment fits all four kinds. Also B21's 'Why:' paragraph still names only three distinctions; consider adding 'not decided yet'.
+- F1 [ticketed] README.md src/entity/error.ts example (line 33) documents BusinessErrorKind as 'Which kind of business rule an operation broke', but B21 now says tech_debt is 'a debt and not a rule'; reword the doc comment (e.g. 'Why the business refused an operation') so the type's comment fits all four kinds. Also B21's 'Why:' paragraph still names only three distinctions; consider adding 'not decided yet'.
+  → 261120100801

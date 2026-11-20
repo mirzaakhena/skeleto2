@@ -104,6 +104,8 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | P6 | Design only the Core areas first: their use cases, their basic entities and their flow | Mandatory | Process |
 | P7 | What a Core area needs from another area is handled in one of three ways, and each way is recorded | Mandatory | Process |
 | P8 | Write code only after P1 to P7, and write the Core first, in depth, before any other layer | Mandatory | Process |
+| P9 | Record the result of step 4 in `docs/CORE.md`, in the application's repository | Mandatory | Reviewer: `docs/CORE.md` exists, and holds the use cases, entities, gateways, decisions, stubs, assumptions and simplifications of the Core areas |
+| P10 | Write the flow of every business process as one scenario map, in `docs/scenarios/<process>.json` | Mandatory | Reviewer: one file for each business process, each with a `gaps` array of `{id, question}` whose ids are `<process>-<n>` and unique across files |
 
 ## The architecture test
 

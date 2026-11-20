@@ -24,11 +24,11 @@ Add to DEVELOPMENT_PROCESS.md the rules for `docs/CORE.md` and for the scenario 
 
 ## Done when
 
-- [ ] DEVELOPMENT_PROCESS.md has a numbered P rule, with a level and a reason, naming `docs/CORE.md` as the record of step 4 and saying what it holds.
-- [ ] DEVELOPMENT_PROCESS.md has a numbered P rule, with a level and a reason, requiring one scenario map per business process and saying what it holds (states, choices per actor, time limits, gaps with stable ids).
-- [ ] The rules say where the scenario maps live and where in a map the gap ids are, and name no tool that reads them.
-- [ ] REVIEW_CHECKLIST.md lists the new P rules with their levels and who checks them, word for word as their headings.
-- [ ] No rule refers to a particular application, product or the board tool, and the project's checks pass.
+- [x] DEVELOPMENT_PROCESS.md has a numbered P rule, with a level and a reason, naming `docs/CORE.md` as the record of step 4 and saying what it holds.
+- [x] DEVELOPMENT_PROCESS.md has a numbered P rule, with a level and a reason, requiring one scenario map per business process and saying what it holds (states, choices per actor, time limits, gaps with stable ids).
+- [x] The rules say where the scenario maps live and where in a map the gap ids are, and name no tool that reads them.
+- [x] REVIEW_CHECKLIST.md lists the new P rules with their levels and who checks them, word for word as their headings.
+- [x] No rule refers to a particular application, product or the board tool, and the project's checks pass.
 
 ## Out of scope
 
@@ -55,3 +55,15 @@ Add to DEVELOPMENT_PROCESS.md the rules for `docs/CORE.md` and for the scenario 
 ## Decisions
 - Split from 261119090501 (9 Done-when lines): the docs/CORE.md and scenario-map rules are an outcome of their own. Waits for 261119090501, which creates DEVELOPMENT_PROCESS.md and the P numbering
 - Lane standard: documentation and checklist rows; the gap-id location it fixes is read by 261118220101 and 261120135803
+
+## Handoff
+Added P9 (docs/CORE.md: use cases, entities, gateways, owner decisions, stubs/assumptions/simplifications) and P10 (one scenario map per process at docs/scenarios/<process>.json; only a top-level gaps array of {id, question, decision?} is fixed, ids are <process>-<n>, unique across maps, never reused) to DEVELOPMENT_PROCESS.md, with checklist rows (Reviewer) and updated tests in test/readme.test.ts (10 rules, Reviewer set P4,P5,P9,P10). P8 body now cites P9 and P10. Gap-id location must not change: later debt markers and the guard read it.
+
+## Review
+- 2026-11-20 standard, round 1, at 8214ad1: passed.
+  1: P9 heading '### P9. Record the result of step 4 in docs/CORE.md ... (Mandatory)' with Why, lists use cases, basic entities, gateways, owner's decisions, stubs/assumptions/simplifications; test 'every rule of DEVELOPMENT_PROCESS.md is a numbered heading...' passes (asserts P9 content and heading form)
+  2: P10 Mandatory with Why; lists states, choices per actor, time limits, gaps with stable ids (<process>-<n>, unique across maps, never reused, per Q3/Q4); same test asserts it and passes
+  3: P10 fixes docs/scenarios/<process>.json (Q1) and a top-level gaps array of {id, question, decision?} (Q2); grep for k2/kerjaan/board/tool names in DEVELOPMENT_PROCESS.md found none
+  4: REVIEW_CHECKLIST.md rows P9, P10 Mandatory/Reviewer; test 'REVIEW_CHECKLIST.md lists every rule ... with its text, its level and who checks it' compares heading text and level per rule and passes
+  5: banned-name test ('...names no application, product or tool') passes; full typecheck/test/build passed on 808f1a7881 per brief, not rerun; 6 targeted tests rerun via k2 test: 6 pass, 0 fail
+  note: README and its example untouched, consistent with A1

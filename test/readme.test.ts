@@ -640,7 +640,7 @@ test("REVIEW_CHECKLIST.md lists every rule of the three practice files exactly o
   // A machine checks only what the architecture test checks; everything else is left to the reviewer.
   assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B5", "B8"]);
   // Of the process rules, only those that leave a file in the repository can be read by a reviewer; the rest are checked with the owner.
-  assert.deepEqual(rows.filter(({ number }) => number.startsWith("P") && checkerOf(number) === "Reviewer").map(({ number }) => number), ["P4", "P5"]);
+  assert.deepEqual(rows.filter(({ number }) => number.startsWith("P") && checkerOf(number) === "Reviewer").map(({ number }) => number), ["P4", "P5", "P9", "P10"]);
   assert.deepEqual(rows.filter(({ number }) => !number.startsWith("P")).filter(({ checker }) => checker === "Process"), []);
 });
 
@@ -759,7 +759,7 @@ test("the architecture test fails when an action carries neither marker, and whe
 
 test("every rule of DEVELOPMENT_PROCESS.md is a numbered heading with a level, followed by its reason, and the steps come in order", () => {
   const sections = developmentProcess.split(/^(?=#{1,3} )/m).filter((section) => section.startsWith("### "));
-  assert.equal(sections.length, 8);
+  assert.equal(sections.length, 10);
   sections.forEach((section, index) => {
     const heading = section.slice(0, section.indexOf("\n"));
     assert.match(heading, new RegExp(`^### P${index + 1}\\. \\S.* \\((Mandatory|Optional)\\)$`), `rule ${index + 1} is not numbered P${index + 1} with a level: ${heading}`);
@@ -777,6 +777,8 @@ test("every rule of DEVELOPMENT_PROCESS.md is a numbered heading with a level, f
   assert.match(rule("P5"), /`docs\/GLOSSARY\.md`[\s\S]*\| Term \| Meaning \|[\s\S]*Every entity name and every business-area name appears in the glossary/);
   for (const way of ["Stub", "Assumed to exist", "Simplified"]) assert.match(rule("P7"), new RegExp(`\\| \\*\\*${way}\\*\\* \\|.*\\|.*\\|`));
   assert.match(rule("P8"), /Core first/);
+  assert.match(rule("P9"), /`docs\/CORE\.md`[\s\S]*use cases[\s\S]*basic entities[\s\S]*gateways[\s\S]*owner's decisions[\s\S]*stub, assumption and simplification/);
+  assert.match(rule("P10"), /`docs\/scenarios\/<process>\.json`[\s\S]*states[\s\S]*choices[\s\S]*time limits[\s\S]*`gaps`[\s\S]*`<process>-<n>`[\s\S]*never reused/);
 });
 
 test("DEVELOPMENT_PROCESS.md states its scope, relates to BEST_PRACTICES.md, and names no application, product or tool", () => {

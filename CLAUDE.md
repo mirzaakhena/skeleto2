@@ -134,69 +134,13 @@ Data lain adalah kesalahan. Dengan begitu sisa `{"readTypeArguments": true}` dar
 
 ## 5. API publik
 
-Inilah seluruh yang diekspor dari `src/index.ts`. Nama-nama ini adalah kontrak bagi setiap pemakai paket, jadi mengubah, mengganti nama, atau menghapusnya merusak kode mereka; jangan diubah tanpa keputusan pemilik.
-
-```typescript
-export type Context = {
-  data: Record<string, any>;
-  traceId: string;
-  date: Date;
-};
-
-export type ActionHandler<REQUEST = any, RESPONSE = any> = (ctx: Context, request: REQUEST) => Promise<RESPONSE>;
-
-export type Decorator = { name: string; data: any };
-
-export type FuncMetadata = {
-  name: string;                         // nama komponen = nama return type
-  dependencies: string[];               // nama tipe parameter, sesuai urutan
-  mainDecorator: Decorator;             // { name: "Config" | "Wrapper" | "Action", data }
-  additionalDecorators: Decorator[];    // mis. [{ name: "Transaction", data: undefined }]
-};
-
-export type WrapperHandler = (actionHandler: ActionHandler, functionMetadata: FuncMetadata) => ActionHandler;
-
-export type SkeletoOptions = {
-  decorators?: string[];
-  exclude?: readonly string[];          // menggantikan DEFAULT_EXCLUDE (4.2)
-};
-
-export const DEFAULT_EXCLUDE: readonly string[]; // ["node_modules", "*.d.ts", "*.test.ts", "*.spec.ts"]
-
-export class FuncInstanceMetadata {
-  getInstance(): any;
-  getMetadata(): FuncMetadata;
-}
-
-export class Skeleto {
-  static start(directory?: string, options?: SkeletoOptions): Promise<Skeleto>;
-  getContainer(): Map<string, FuncInstanceMetadata>;
-}
-
-export function newContext(): Context; // { data: {}, traceId: "", date: new Date() }
-```
+Seluruh API publik adalah yang diekspor `src/index.ts`; definisinya ada di `src/type.ts` dan `src/skeleto.ts`. Nama-nama ini adalah kontrak bagi setiap pemakai paket, jadi mengubah, mengganti nama, atau menghapusnya merusak kode mereka; jangan diubah tanpa keputusan pemilik.
 
 `exclude` dan `DEFAULT_EXCLUDE` ada supaya berkas tes, berkas `.d.ts`, dan `node_modules` tidak ikut terpindai. `getMetadata()` dipertahankan karena murah dan berguna untuk menelusuri isi container.
 
 ## 6. Struktur repo
 
-```
-src/
-  index.ts             ekspor publik (bagian 5), tanpa logika
-  type.ts              tipe publik dan newContext
-  decorator.ts         pembaca penanda JSDoc (4.1); fungsi murni, tanpa ts-morph
-  dependency.ts        pengurut dependency (4.6 siklus, 4.7 urutan); fungsi murni, tanpa ts-morph
-  scanner.ts           pemindai berkas dengan ts-morph (4.2 sampai 4.5); tidak mengimpor berkas aplikasi
-  skeleto.ts           kelas Skeleto: startup, aturan jenis, instansiasi, wrapper, container (4.6 sampai 4.8)
-test/
-  decorator.test.ts
-  dependency.test.ts
-  scanner.test.ts
-  skeleto.test.ts
-  type.test.ts         tes tipe publik
-  readme.test.ts       menjalankan contoh di README
-  fixture.ts           pembuat direktori fixture sementara
-```
+Letak berkas terlihat dari `src/` dan `test/`. Yang tidak terlihat dari kode:
 
 - Hanya `scanner.ts` yang mengimpor `ts-morph`.
 - `decorator.ts` dan `dependency.ts` adalah fungsi murni dan diuji tanpa berkas.
@@ -224,10 +168,4 @@ test/
 
 ## 9. Perintah
 
-| Perintah | Isi |
-| --- | --- |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | `tsx --test test/*.test.ts` |
-| `npm run build` | menghasilkan `dist/` berisi `.js` dan `.d.ts` |
-
-Sebelum menyatakan selesai, ketiganya harus lulus.
+Sebelum menyatakan selesai, `npm run typecheck`, `npm test`, dan `npm run build` (skrip di `package.json`) harus lulus.

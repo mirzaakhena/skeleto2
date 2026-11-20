@@ -26,9 +26,14 @@ Loosen the observer rule so that an observer may answer a call itself, and fix t
 
 ## Done when
 
-- [ ] The observer rule says an observer either calls the real gateway at most once and returns its result, or answers the call itself without calling it, and that an observer used in production always calls it.
-- [ ] The README sentence introducing the practice files matches the three files and the three kinds of checker.
-- [ ] The "Transactions that fail halfway" row cites the rules on transactions.
-- [ ] "How to review" in the review checklist speaks of the two tests it names.
-- [ ] The section on what outside tools may rely on cites a rule that fits for marker data, or none.
-- [ ] The README example still runs with its documented output, and the project's checks pass.
+- [x] The observer rule says an observer either calls the real gateway at most once and returns its result, or answers the call itself without calling it, and that an observer used in production always calls it.
+- [x] The README sentence introducing the practice files matches the three files and the three kinds of checker.
+- [x] The "Transactions that fail halfway" row cites the rules on transactions.
+- [x] "How to review" in the review checklist speaks of the two tests it names.
+- [x] The section on what outside tools may rely on cites a rule that fits for marker data, or none.
+- [x] The README example still runs with its documented output, and the project's checks pass.
+
+<!-- k2:record — written by k2 only; do not edit by hand -->
+
+## Handoff
+Wording only. T26 in TECHNICAL_PRACTICES.md now lets an observer either call proceed() at most once or answer the call itself (replay, typed value), with production observers always calling it. README intro now speaks of three files and three checkers; the waterline row for transactions cites T12 to T14; the checklist says Run the two; the tool-reliance bullet no longer cites T9. No code or headings changed, so the numbering and checklist tests are untouched.

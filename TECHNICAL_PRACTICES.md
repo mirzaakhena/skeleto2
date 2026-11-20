@@ -193,7 +193,7 @@ export function implGatewayWrapper(): GatewayWrapper {
 }
 ```
 
-An application that lets a tool outside it observe a run has this wrapper, named after the `@Gateway` marker (T7, T11). It reads the observer at `ctx.data.gatewayObserver`, the one key every such tool looks at. The observer gets the gateway's name, its input and `proceed`, calls `proceed()` once and returns its result; it may time the call or look at what comes back, but the caller of the gateway gets what `proceed()` returned. With no observer in the context, the wrapper returns the handler's own result and changes nothing. It carries the lowest `ordinal` of all wrappers, so it is the innermost, closest to the gateway. An application that no tool observes does not need it.
+An application that lets a tool outside it observe a run has this wrapper, named after the `@Gateway` marker (T7, T11). It reads the observer at `ctx.data.gatewayObserver`, the one key every such tool looks at. The observer gets the gateway's name, its input and `proceed`, and returns what the caller of the gateway gets. It either calls `proceed()` at most once and returns its result, and may time the call or look at what comes back, or it answers the call itself without calling `proceed()`, as a tool does that replays a recorded call or supplies a value. An observer used in production always calls `proceed()`: only a tool that runs the application for a look may answer in the gateway's place. With no observer in the context, the wrapper returns the handler's own result and changes nothing. It carries the lowest `ordinal` of all wrappers, so it is the innermost, closest to the gateway. An application that no tool observes does not need it.
 
 Why: a tool that draws or measures a run needs to see every call that leaves the use case, and the gateways are exactly those calls. One wrapper on the marker finds them all without a change to any gateway or use case, and agreeing on the key, the signature and the place among the wrappers lets one tool read any application. Innermost, it reports the gateway call itself, not the transaction or the audit that happen around it.
 
@@ -308,7 +308,7 @@ Why: the container is looked up by a string and returns an untyped instance. Doi
 This is a guarantee of how an application is built, not a rule for its code, so it has no number. A tool that reads or checks an application from outside may learn from its container, after `Skeleto.start` with the application's `MARKERS` (T10), and rely on all of this:
 
 - `getContainer()` lists every component, `@Config`, `@Wrapper` and `@Action`, under its name (T3).
-- `getMetadata()` of a component gives its `dependencies`, the names of the components it asks for, in parameter order (T4, T6), and its `additionalDecorators`, the markers with their data (T9).
+- `getMetadata()` of a component gives its `dependencies`, the names of the components it asks for, in parameter order (T4, T6), and its `additionalDecorators`, the markers with their data.
 - The name of a component is the name of its type (T3), so the tool finds the type of a component by looking the name up in the container.
 - A use case is told from a gateway by its `@UseCase` and `@Gateway` markers (B5), and a wrapper is named after the marker it reads (T7, T11).
 - A tool that observes a run finds the observer at `ctx.data.gatewayObserver`, when the application has the wrapper of T26.

@@ -1,2 +1,14 @@
 {"t":"2026-11-20 20:23:13","event":"created","status":"backlog","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 20:27:10","event":"moved","to":"todo","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:27:17","event":"started","branch":"k2/261120202301-loosen-t26-for-observers","base":"0165583","contract":"bdfd4503909f","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:27:24","event":"agent","role":"worker","agent":"a1360b334b3fea0f7","step":"first:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:28:24","event":"test","by":"worker:a1360b334b3fea0f7","exit":0,"seconds":16,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:28:32","event":"check","n":1,"evidence":"T26 text now allows answering without proceed(), and says production observers always call it","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a1360b334b3fea0f7"}
+{"t":"2026-11-20 20:28:32","event":"check","n":2,"evidence":"README sentence says the three files and machine, reviewer or owner","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a1360b334b3fea0f7"}
+{"t":"2026-11-20 20:28:32","event":"check","n":3,"evidence":"Row now cites T12 to T14","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a1360b334b3fea0f7"}
+{"t":"2026-11-20 20:28:32","event":"check","n":4,"evidence":"How to review says Run the two","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a1360b334b3fea0f7"}
+{"t":"2026-11-20 20:28:32","event":"check","n":5,"evidence":"Dropped the T9 citation from the additionalDecorators bullet","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a1360b334b3fea0f7"}
+{"t":"2026-11-20 20:28:32","event":"check","n":6,"evidence":"k2 test passed (typecheck, tests including README example, build)","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a1360b334b3fea0f7"}
+{"t":"2026-11-20 20:28:48","event":"test","by":"worker:a1360b334b3fea0f7","exit":0,"seconds":15,"fingerprint":"5912c9b2ad20be78e12aa8fd857acf7ca46d309b","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:28:48","event":"submitted","commit":"fe4fe3f","lane":"light","to":"review","passed":true,"files":4,"fingerprint":"5912c9b2ad20be78e12aa8fd857acf7ca46d309b","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:a1360b334b3fea0f7"}
+{"t":"2026-11-20 20:28:59","event":"landed","branch":"k2/261120202301-loosen-t26-for-observers","files":["BEST_PRACTICES.md","README.md","REVIEW_CHECKLIST.md","TECHNICAL_PRACTICES.md"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

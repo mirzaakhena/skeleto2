@@ -46,9 +46,10 @@ Add to the technical practices:
   → Ya: one sentence states how a dummy gateway (a started component) differs from a T18 fake (test only) (owner, 2026-11-20)
 
 ## Assumptions
-- A1 [unseen] Placement and numbering of the new T rules follow the owner's answer on 261120135801's placement question (next free numbers T23, T24)
+- A1 [confirmed] Placement and numbering of the new T rules follow the owner's answer on 261120135801's placement question (next free numbers T23, T24)
   Why: 261118134601 Q3 fixed numbers, and the same choice should hold for both files
   If wrong: Place them as answered separately
+  Confirmed by owner, 2026-11-20
 
 ## Decisions
 - Lane standard: two new technical rules and a widened T20 with checklist rows. Waits for 261118134601, which is solo and edits TECHNICAL_PRACTICES.md citations

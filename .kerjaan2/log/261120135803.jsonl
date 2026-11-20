@@ -25,3 +25,5 @@
 {"t":"2026-11-20 14:41:10","event":"agent","role":"reviewer","agent":"a1b924e76cda457d0","step":"review:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:42:54","event":"verdict","result":"pass","round":1,"commit":"1889fe6","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a1b924e76cda457d0"}
 {"t":"2026-11-20 14:43:05","event":"landed","branch":"k2/261120135803-let-outside-tools-read","files":["README.md","REVIEW_CHECKLIST.md","TECHNICAL_PRACTICES.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:23:13","event":"assumption-confirmed","key":"A1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:23:13","event":"assumption-confirmed","key":"A2","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

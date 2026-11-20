@@ -52,3 +52,5 @@
 {"t":"2026-11-20 14:35:23","event":"agent","role":"reviewer","agent":"a1ae1279d88e66c60","step":"review:2:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:35:53","event":"verdict","result":"pass","round":2,"commit":"f426498","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a1ae1279d88e66c60"}
 {"t":"2026-11-20 14:36:04","event":"landed","branch":"k2/261118220101-technical-debt-as-part","files":["BEST_PRACTICES.md","DEVELOPMENT_PROCESS.md","README.md","REVIEW_CHECKLIST.md","TECHNICAL_PRACTICES.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:23:13","event":"assumption-confirmed","key":"A1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:23:13","event":"assumption-confirmed","key":"A2","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

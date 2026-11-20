@@ -22,3 +22,4 @@
 {"t":"2026-11-20 14:28:07","event":"agent","role":"reviewer","agent":"a98dcfc7000882fa5","step":"review:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:29:02","event":"verdict","result":"pass","round":1,"commit":"8214ad1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a98dcfc7000882fa5"}
 {"t":"2026-11-20 14:29:16","event":"landed","branch":"k2/261120140001-record-the-core-design","files":["DEVELOPMENT_PROCESS.md","REVIEW_CHECKLIST.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:23:13","event":"assumption-confirmed","key":"A1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

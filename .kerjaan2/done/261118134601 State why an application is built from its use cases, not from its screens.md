@@ -60,15 +60,18 @@ Add the principle and its rules to the conceptual practices, so that an agent gi
   → Sekali ini saja: (a) one-time renumbering now; numbers fixed afterwards, a new rule takes the next free number, and the 'never reused' sentence stays (owner, 2026-11-20)
 
 ## Assumptions
-- A1 [unseen] The four new rules are checked by 'Reviewer' in REVIEW_CHECKLIST.md; the Machine rules stay the same two rules (today's B1 and B4), only under their new numbers, and the architecture test's messages, the startup guard's message ('which B4 forbids') and the test assertions on them follow
+- A1 [confirmed] The four new rules are checked by 'Reviewer' in REVIEW_CHECKLIST.md; the Machine rules stay the same two rules (today's B1 and B4), only under their new numbers, and the architecture test's messages, the startup guard's message ('which B4 forbids') and the test assertions on them follow
   Why: The architecture test checks only container metadata; none of the new rules is visible there
   If wrong: Change the Checked by column
-- A2 [unseen] test/readme.test.ts gains assertions on the new section (its heading before the first rule, the iceberg image, the sentence that it is about complexity not importance, the parallel frontend/backend sentence) like the existing tests on the 'Two levels' opening
+  Confirmed by owner, 2026-11-20
+- A2 [confirmed] test/readme.test.ts gains assertions on the new section (its heading before the first rule, the iceberg image, the sentence that it is about complexity not importance, the parallel frontend/backend sentence) like the existing tests on the 'Two levels' opening
   Why: Every earlier practice ticket pinned its content with readme.test.ts assertions
   If wrong: Remove the added assertions
-- A3 [unseen] 'What lies under the waterline' lists at least business rules, validation and errors, concurrency, transactions that fail halfway, effects after commit, and determinism, each pointing to the existing rules by their new numbers
+  Confirmed by owner, 2026-11-20
+- A3 [confirmed] 'What lies under the waterline' lists at least business rules, validation and errors, concurrency, transactions that fail halfway, effects after commit, and determinism, each pointing to the existing rules by their new numbers
   Why: The Background names these, and the existing sections cover them
   If wrong: Rewrite the list
+  Confirmed by owner, 2026-11-20
 
 ## Decisions
 - Lane standard: documentation only, but a renumbering of every B rule across five files and the tests, where a missed citation silently points at the wrong rule

@@ -47,9 +47,10 @@ Add to the conceptual practices two rules that hold for any application:
   → Setuju semua: both rules Mandatory; a scheduler stays allowed as infrastructure that calls use cases (owner, 2026-11-20)
 
 ## Assumptions
-- A1 [unseen] The current time in a derived state comes from the clock gateway once at the start of the use case (today's B18) and is passed to the entity function; the rule says so and cites B18 by its new number
+- A1 [confirmed] The current time in a derived state comes from the clock gateway once at the start of the use case (today's B18) and is passed to the entity function; the rule says so and cites B18 by its new number
   Why: B18 already fixes where unpredictable values come from
   If wrong: Drop the citation
+  Confirmed by owner, 2026-11-20
 
 ## Decisions
 - Lane standard: two new conceptual rules with checklist rows. Waits for 261118134601 (it takes the next free B numbers after the renumbering)

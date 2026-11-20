@@ -99,12 +99,14 @@ Make technical debt a planned part of the core-first process, so that an agent b
   → Opsional di kelas: (a) an optional 'readonly gap?: string', set by an optional third constructor argument (owner, 2026-11-20)
 
 ## Assumptions
-- A1 [unseen] A dummy gateway (261120135802) that is a deliberate stand-in for a later layer carries a Planned marker; one that only exists for development of the Core (Q1: its gateways may stay dummies) carries none
+- A1 [confirmed] A dummy gateway (261120135802) that is a deliberate stand-in for a later layer carries a Planned marker; one that only exists for development of the Core (Q1: its gateways may stay dummies) carries none
   Why: Q1 lets a done Core keep dummy gateways, so not every dummy is a debt
   If wrong: Require a marker on every dummy gateway
-- A2 [unseen] New rules are P11-P14 and T23, appended, and Planned/Shortcut debt is checked by Reviewer; P11 by Process
+  Confirmed by owner, 2026-11-20
+- A2 [confirmed] New rules are P11-P14 and T23, appended, and Planned/Shortcut debt is checked by Reviewer; P11 by Process
   Why: Numbers are never reused, so new rules append; placement follows the owner's answers
   If wrong: Renumber and move rows in REVIEW_CHECKLIST.md and the tests
+  Confirmed by owner, 2026-11-20
 
 ## Decisions
 - Stays in backlog: Request and Done when are not written yet, by the ticket's own word, until the owner answers its questions; it also waits for 261119090501

@@ -56,12 +56,14 @@ Make it possible, by documented practice, for outside tools to rely on any Skele
   → Setuju semua: the observer wrapper Optional, the gap guard Mandatory (owner, 2026-11-20)
 
 ## Assumptions
-- A1 [unseen] The wrapper is named GatewayWrapper (implGatewayWrapper) and reads the @Gateway marker, returning the handler unchanged for actions without it
+- A1 [confirmed] The wrapper is named GatewayWrapper (implGatewayWrapper) and reads the @Gateway marker, returning the handler unchanged for actions without it
   Why: T7 names a wrapper <Marker>Wrapper after the marker it reads, and T11 requires the unchanged-handler first step
   If wrong: Rename the wrapper
-- A2 [unseen] The gap guard test lives in REVIEW_CHECKLIST.md next to the architecture test, and test/readme.test.ts runs it against a fixture map and code, as it does the architecture test
+  Confirmed by owner, 2026-11-20
+- A2 [confirmed] The gap guard test lives in REVIEW_CHECKLIST.md next to the architecture test, and test/readme.test.ts runs it against a fixture map and code, as it does the architecture test
   Why: The Request says copyable like the architecture test, which lives and is proven there
   If wrong: Move it to TECHNICAL_PRACTICES.md
+  Confirmed by owner, 2026-11-20
 
 ## Decisions
 - Lane standard: a new wrapper in the README example, two copyable tests and rules; nothing in src/. Waits for 261118220101 (marker form) and 261120140001 (where gap ids are in a map), which the guard test reads

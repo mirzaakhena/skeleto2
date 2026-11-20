@@ -23,3 +23,4 @@
 {"t":"2026-11-20 14:26:42","event":"verdict","result":"pass","round":1,"commit":"2ac2457","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a7e68fde7bd874084"}
 {"t":"2026-11-20 14:27:09","event":"test","by":"land","exit":0,"seconds":10,"fingerprint":"281832077e8aa4bdedb117ecb908d35e75b8401a","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:27:09","event":"landed","branch":"k2/261120135801-time-dependent-states-are","files":["BEST_PRACTICES.md","REVIEW_CHECKLIST.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:23:13","event":"assumption-confirmed","key":"A1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

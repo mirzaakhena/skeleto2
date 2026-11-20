@@ -86,15 +86,18 @@ Write DEVELOPMENT_PROCESS.md so that an agent starting a new application on Skel
   → Tidak: (a) the README example gets no GLOSSARY.md or AREAS.md; DEVELOPMENT_PROCESS.md shows samples (owner, 2026-11-20)
 
 ## Assumptions
-- A1 [unseen] The README gains its link to DEVELOPMENT_PROCESS.md on the one line that already links BEST_PRACTICES.md, TECHNICAL_PRACTICES.md and REVIEW_CHECKLIST.md
+- A1 [confirmed] The README gains its link to DEVELOPMENT_PROCESS.md on the one line that already links BEST_PRACTICES.md, TECHNICAL_PRACTICES.md and REVIEW_CHECKLIST.md
   Why: test/readme.test.ts requires those links to sit on one line; earlier practice files followed it
   If wrong: Move the link to a line of its own and relax that test
-- A2 [unseen] Where the file meets the open technical-debt questions, it says they are not decided yet and names the subject (technical debt: when a Core area is done, obsolete code, skeleton use cases) without a ticket number
+  Confirmed by owner, 2026-11-20
+- A2 [confirmed] Where the file meets the open technical-debt questions, it says they are not decided yet and names the subject (technical debt: when a Core area is done, obsolete code, skeleton use cases) without a ticket number
   Why: Done when forbids referring to the board tool, and a ticket id is a reference to it
   If wrong: Add the ticket reference
-- A3 [unseen] The REVIEW_CHECKLIST.md rule-row test and numberedRules in test/readme.test.ts are extended to P rules, which are listed in a section of their own after the technical practices, and checked word for word against DEVELOPMENT_PROCESS.md headings
+  Confirmed by owner, 2026-11-20
+- A3 [confirmed] The REVIEW_CHECKLIST.md rule-row test and numberedRules in test/readme.test.ts are extended to P rules, which are listed in a section of their own after the technical practices, and checked word for word against DEVELOPMENT_PROCESS.md headings
   Why: That is how B and T rows are kept in sync today
   If wrong: Check P rows separately
+  Confirmed by owner, 2026-11-20
 
 ## Decisions
 - Lane standard: a new documentation file plus checklist rows and a new rule-format test; nothing that cannot be undone

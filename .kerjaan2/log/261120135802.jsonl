@@ -28,3 +28,4 @@
 {"t":"2026-11-20 14:29:45","event":"verdict","result":"pass","round":2,"commit":"3a42992","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:a38978471b561bc8e"}
 {"t":"2026-11-20 14:30:08","event":"test","by":"land","exit":0,"seconds":10,"fingerprint":"0e2909c2c0da843ed513cfb3e9f14bb39d930b9d","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
 {"t":"2026-11-20 14:30:08","event":"landed","branch":"k2/261120135802-dummy-gateways-use-cases","files":["REVIEW_CHECKLIST.md","TECHNICAL_PRACTICES.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 20:23:13","event":"assumption-confirmed","key":"A1","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

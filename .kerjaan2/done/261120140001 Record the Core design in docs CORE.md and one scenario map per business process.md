@@ -48,9 +48,10 @@ Add to DEVELOPMENT_PROCESS.md the rules for `docs/CORE.md` and for the scenario 
   → Setuju semua: both rules Mandatory (owner, 2026-11-20)
 
 ## Assumptions
-- A1 [unseen] DEVELOPMENT_PROCESS.md shows a short sample of docs/CORE.md and of one scenario map in its own text, neutral or from the warehouse domain, and the README example gets neither file
+- A1 [confirmed] DEVELOPMENT_PROCESS.md shows a short sample of docs/CORE.md and of one scenario map in its own text, neutral or from the warehouse domain, and the README example gets neither file
   Why: The owner chose the same for GLOSSARY.md and AREAS.md (261119090501 Q4)
   If wrong: Add the files to the README example
+  Confirmed by owner, 2026-11-20
 
 ## Decisions
 - Split from 261119090501 (9 Done-when lines): the docs/CORE.md and scenario-map rules are an outcome of their own. Waits for 261119090501, which creates DEVELOPMENT_PROCESS.md and the P numbering

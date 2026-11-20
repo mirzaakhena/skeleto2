@@ -38,9 +38,10 @@ Make the wording in those two places, and in the README sentence just above the 
   → Judul tetap: (a) B21 heading untouched, only its Why paragraph gains 'not decided yet' (owner, 2026-11-20)
 
 ## Assumptions
-- A1 [unseen] The edited README comment stays inside src/entity/error.ts's block and no BEST_PRACTICES excerpt of that file includes the comment line, so excerpts stay verbatim; if one does, the excerpt is updated in the same change
+- A1 [confirmed] The edited README comment stays inside src/entity/error.ts's block and no BEST_PRACTICES excerpt of that file includes the comment line, so excerpts stay verbatim; if one does, the excerpt is updated in the same change
   Why: Lessons: README excerpts must stay verbatim parts of the example file
   If wrong: Revert the excerpt edit
+  Confirmed by owner, 2026-11-20
 
 ## Decisions
 - Lane light: two wording edits in documentation, cheap to undo

@@ -2,7 +2,7 @@
 
 How to divide an application built on Skeleto: what an entity, a use case and a gateway are, what each may know of the others, and how they stay correct when two requests arrive at once. The recommendations here are for the applications you build, not rules of the framework: Skeleto does not check them, and an application laid out differently starts just the same.
 
-This file is the conceptual half of the practices. The technical half, how to use Skeleto's own mechanism (markers, naming of component functions, wrappers, the transaction wrapper, the list of allowed markers, effects queued after commit), is in [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md), and is not repeated here.
+This file is the conceptual half of the practices. The technical half, how to use Skeleto's own mechanism (markers, naming of component functions, wrappers, the transaction wrapper, the list of allowed markers, effects queued after commit), is in [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md), and is not repeated here. In which order a new application is built (the Core first, after its business areas and their words are agreed) is the subject of [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md).
 
 ## Two levels
 
@@ -46,6 +46,8 @@ What lies under the waterline, and the rules that cover each part:
 | Transactions that fail halfway | B33 and B34 |
 | Effects that must wait for the commit | B33 to B35 |
 | Unpredictable values (the clock, generated ids) | B22 |
+
+This principle says what an application is designed from, and holds for every change. Which use cases are built first, when a new application or a large new part of one is started, is decided by the Core-first order of [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md), which depends on this principle: only use cases and business areas can be ordered, and a screen cannot.
 
 A use case is the unit that holds all of this: one business operation, with a Request and a Response, that any caller can ask for. The screen is one caller among others (B27). Building from the use cases therefore builds the whole iceberg and not only its tip, and a second caller, a scheduled job or a test, finds the application already complete.
 

@@ -41,6 +41,8 @@ A second application of the owner, built core-first on Skeleto (2026-11-19 to 20
 3. Where does the debt mechanism live? Proposal: the order of layers and the kinds of debt in BEST_PRACTICES.md; the marker format in code (`// TECH-DEBT: <kind> — <reason>`) and the rule that every stub gateway carries one in TECHNICAL_PRACTICES.md; a list of debts linked to tickets, and a check that a ticket cannot land with an unmarked stub, as a feature of the kerjaan2 board (a separate project).
 4. Are skeleton use cases (whose body only throws "not implemented") removed from the workflow, or allowed only for the area being worked on? Proposal: only for the area being worked on.
 
+Note on rule numbers (2026-11-20): ticket 261118134601 renumbered the conceptual rules once, B(n) becoming B(n+4). Numbers written below before that ticket landed are the old ones: B21 is now B25.
+
 ## Request
 
 Written from the owner's answers of 2026-11-20 (Q1-Q6 below); approved by the owner on 2026-11-20 (Q7).
@@ -58,7 +60,7 @@ Make technical debt a planned part of the core-first process, so that an agent b
 - [ ] The rules name exactly two kinds of debt that are not gaps, Planned (names the layer that pays it) and Shortcut (names its reason), and forbid obsolete code: it is removed in the change that replaces it.
 - [ ] A rule allows skeleton use cases (a body that only throws "not implemented") only in the area being worked on.
 - [ ] TECHNICAL_PRACTICES.md has a rule fixing the marker: `// TechDebt <gap id>: <reason>` for a gap, and a fixed form for Planned and Shortcut debt; no marker refers to a ticket number.
-- [ ] B21 says that a reached gap refuses with `tech_debt` carrying the gap id as its own field, and the README example's `BusinessError` has that field; the README example still runs with its documented output.
+- [ ] B25 (the business error rule) says that a reached gap refuses with `tech_debt` carrying the gap id as its own field, and the README example's `BusinessError` has that field; the README example still runs with its documented output.
 - [ ] REVIEW_CHECKLIST.md lists every new rule word for word as its heading, with its level and who checks it.
 - [ ] No rule refers to a particular application, product or the board tool, and the project's checks pass.
 

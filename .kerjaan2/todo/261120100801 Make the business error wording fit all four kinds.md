@@ -15,6 +15,8 @@ Ticket 261119201201 made "tech debt" a fourth kind of business error, next to va
 
 Two places still speak as if every business error were a broken rule. The comment on the error kind in the README example describes it as the kind of business rule an operation broke. The "Why" paragraph of the rule on business errors still names only three distinctions.
 
+Note on rule numbers (2026-11-20): ticket 261118134601 renumbered the conceptual rules once, B(n) becoming B(n+4). Numbers written below before that ticket landed are the old ones: B21 is now B25.
+
 ## Request
 
 Make the wording in those two places, and in the README sentence just above the example's error type that says the kind tells which rule was broken (owner, 2026-11-20), fit all four kinds, so that a reader is not told that a tech-debt error is a broken rule.

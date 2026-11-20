@@ -17,6 +17,8 @@ Business processes often depend on time: a payment window, an answer window, a d
 
 The rules on business errors and entities are renumbered by ticket 261118134601, so this ticket comes after it and takes the next free numbers.
 
+Note on rule numbers (2026-11-20): ticket 261118134601 renumbered the conceptual rules once, B(n) becoming B(n+4). Numbers written below before that ticket landed are the old ones: B18 is now B22.
+
 ## Request
 
 Add to the conceptual practices two rules that hold for any application:

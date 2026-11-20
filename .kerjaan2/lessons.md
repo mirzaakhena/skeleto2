@@ -26,3 +26,4 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - TECHNICAL_PRACTICES.md T1 excerpts implSaveWarehouses whole and verbatim from README; changing that function means changing the excerpt too
 - The README impl-name check scans the example with scanDirectory; its proving test expects implSaveWarehouses in src/gateway/memory/warehouse.ts
 - A new rule goes where the owner's placement answer puts it, also when that answer is recorded on a sibling ticket the assumption cites; change the numbering test to fit, never the placement to fit the test.
+- Practice-file rules (and their Why) must not cite the evidence of a particular application, even anonymously (e.g. 'a study of one application found 30 of 45 markers'); state the failure generically.

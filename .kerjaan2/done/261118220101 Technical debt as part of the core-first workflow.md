@@ -57,14 +57,14 @@ Make technical debt a planned part of the core-first process, so that an agent b
 
 ## Done when
 
-- [ ] DEVELOPMENT_PROCESS.md has a rule on the order of layers: Core first; Supporting and Generic areas are built only as far as the Core's recorded debts need them, and those debts are the backlog of the next layer.
-- [ ] DEVELOPMENT_PROCESS.md has a rule on when a Core area is done: every main-path step and every branch of its scenario map has a test, and every gap has a marker in its use case or a recorded owner decision; its gateways may stay dummies.
-- [ ] The rules name exactly two kinds of debt that are not gaps, Planned (names the layer that pays it) and Shortcut (names its reason), and forbid obsolete code: it is removed in the change that replaces it.
-- [ ] A rule allows skeleton use cases (a body that only throws "not implemented") only in the area being worked on.
-- [ ] TECHNICAL_PRACTICES.md has a rule fixing the marker: `// TechDebt <gap id>: <reason>` for a gap, and a fixed form for Planned and Shortcut debt; no marker refers to a ticket number.
-- [ ] B25 (the business error rule) says that a reached gap refuses with `tech_debt` carrying the gap id as its own field, and the README example's `BusinessError` has that field; the README example still runs with its documented output.
-- [ ] REVIEW_CHECKLIST.md lists every new rule word for word as its heading, with its level and who checks it.
-- [ ] No rule refers to a particular application, product or the board tool, and the project's checks pass.
+- [x] DEVELOPMENT_PROCESS.md has a rule on the order of layers: Core first; Supporting and Generic areas are built only as far as the Core's recorded debts need them, and those debts are the backlog of the next layer.
+- [x] DEVELOPMENT_PROCESS.md has a rule on when a Core area is done: every main-path step and every branch of its scenario map has a test, and every gap has a marker in its use case or a recorded owner decision; its gateways may stay dummies.
+- [x] The rules name exactly two kinds of debt that are not gaps, Planned (names the layer that pays it) and Shortcut (names its reason), and forbid obsolete code: it is removed in the change that replaces it.
+- [x] A rule allows skeleton use cases (a body that only throws "not implemented") only in the area being worked on.
+- [x] TECHNICAL_PRACTICES.md has a rule fixing the marker: `// TechDebt <gap id>: <reason>` for a gap, and a fixed form for Planned and Shortcut debt; no marker refers to a ticket number.
+- [x] B25 (the business error rule) says that a reached gap refuses with `tech_debt` carrying the gap id as its own field, and the README example's `BusinessError` has that field; the README example still runs with its documented output.
+- [x] REVIEW_CHECKLIST.md lists every new rule word for word as its heading, with its level and who checks it.
+- [x] No rule refers to a particular application, product or the board tool, and the project's checks pass.
 
 ## Out of scope
 
@@ -102,8 +102,35 @@ Make technical debt a planned part of the core-first process, so that an agent b
 - A1 [unseen] A dummy gateway (261120135802) that is a deliberate stand-in for a later layer carries a Planned marker; one that only exists for development of the Core (Q1: its gateways may stay dummies) carries none
   Why: Q1 lets a done Core keep dummy gateways, so not every dummy is a debt
   If wrong: Require a marker on every dummy gateway
+- A2 [unseen] New rules are P11-P14 and T23, appended, and Planned/Shortcut debt is checked by Reviewer; P11 by Process
+  Why: Numbers are never reused, so new rules append; placement follows the owner's answers
+  If wrong: Renumber and move rows in REVIEW_CHECKLIST.md and the tests
 
 ## Decisions
 - Stays in backlog: Request and Done when are not written yet, by the ticket's own word, until the owner answers its questions; it also waits for 261119090501
 - Request and Done when drafted on 2026-11-20 from the owner's answers Q1-Q6; they need the owner's approval before the ticket may move
 - Waits for 261119090501 (it adds P rules to DEVELOPMENT_PROCESS.md) and 261120140001 (its rules lean on scenario maps and gap ids defined there). Lane standard: documentation plus a field on the README example's error type
+
+## Handoff
+Added P11-P14 (layer order, Core done, Planned/Shortcut kinds with obsolete code forbidden, skeleton use cases only in the active area) to DEVELOPMENT_PROCESS.md and replaced the undecided text in P7; T23 in TECHNICAL_PRACTICES.md fixes the TechDebt markers; B25 and the README BusinessError gain an optional gap field set by a third constructor argument. REVIEW_CHECKLIST.md lists the five rules; test/readme.test.ts counts 14 P rules and the reviewer-checked list. Must not break: checklist rows matching headings word for word, README output unchanged.
+
+## Review
+- 2026-11-20 standard, round 1, at 237bda6: sent back.
+  8 (blocking): a rule refers to a particular application. Two instances, both Why paragraphs in DEVELOPMENT_PROCESS.md citing the study-case application by its figures: P13 line 191 'a study of one application found that 30 of its 45 markers were obsolete'; P14 line 197 '(about 151 use cases in 35 areas in one study)'. Shown by: grep -n -i 'study\|one application' BEST_PRACTICES.md TECHNICAL_PRACTICES.md DEVELOPMENT_PROCESS.md (only these two lines; none on main). The banned-word test passes because it bans names only, so it is no evidence here. Fix: state each failure generically, without figures or 'one study/application'; consider a test banning /\bstudy\b|one application/ in DEVELOPMENT_PROCESS.md.
+  1: P11 (Core first, only as far as recorded debts need, backlog of next layer); P-rule test passed in a copy.
+  2: P12 lists main-path steps and branches with tests, gap marker or 'decision' field, dummies allowed; same test passed.
+  3: P13 has exactly Planned (layer) and Shortcut (reason), no third kind, obsolete removed in the replacing change; test asserts no Obsolete row.
+  4: P14 allows skeletons only in the area being worked on; asserted by test.
+  5: T25 (T23/T24 already taken) fixes gap, Planned <layer>, Shortcut forms, no ticket reference; TECHNICAL_PRACTICES test asserts the forms and no TECH-DEBT.
+  6: B25 paragraph and excerpt, README BusinessError gains readonly gap? and third arg; excerpt-verbatim check and 'README examples start and print exactly the output' passed (42/42 test/readme.test.ts in a copy).
+  7: REVIEW_CHECKLIST rows P11-P14 and T25 match headings and levels word for word; checklist test passed.
+  note: full checks recorded passed by k2 on 34bf653433; I re-ran only test/readme.test.ts via k2 test in a copy.
+- 2026-11-20 standard, round 2, at f426498: passed.
+  1: carried from round 1 (P11 untouched by f426498).
+  2: carried (P12 untouched).
+  3: P13 rule text unchanged, only its Why reworded; Planned/Shortcut table and obsolete ban intact; P-rule test passed (42/42 readme.test.ts in a copy).
+  4: P14 rule text unchanged, only its Why reworded; P-rule test passed.
+  5: carried (TECHNICAL_PRACTICES.md untouched).
+  6: carried (BEST_PRACTICES.md, README untouched); README run test passed again in the copy.
+  7: carried (REVIEW_CHECKLIST.md untouched; headings of P13/P14 unchanged); checklist test passed.
+  8: round-1 finding fixed: grep -i 'study|one application|N of N|151|35 areas' over the four practice files finds nothing; scope test now bans /\bstudy\b/ and /one application/ and passes; full checks recorded passed by k2 on c2c1e9895e.

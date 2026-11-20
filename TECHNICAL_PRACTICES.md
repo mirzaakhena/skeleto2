@@ -369,3 +369,23 @@ Why: the tests of T18 never start Skeleto, so a missing dependency, a cycle, a m
 Test files named `*.test.ts`, as T8 places them, are left out by `DEFAULT_EXCLUDE` without further word. A folder of generated code is added to the list, never put in its place: `Skeleto.start("src", { decorators: MARKERS, exclude: [...DEFAULT_EXCLUDE, "generated"] })`. See [Files the scan leaves out](README.md#files-the-scan-leaves-out) in the README.
 
 Why: Skeleto imports every file it scans. A test file imported at startup would run its tests inside the application, and a marked function in a fake or in generated code would become a component, or clash with the real one by name.
+
+## Technical debt
+
+### T25. A debt is marked in code, on the line above what it concerns, in one of three fixed forms, and no marker refers to a ticket number (Mandatory)
+
+The marker is a line comment that starts with `TechDebt`, in one of these forms:
+
+| Debt | Marker |
+| --- | --- |
+| A gap of a scenario map | `// TechDebt <gap id>: <reason>` |
+| Planned | `// TechDebt Planned <layer>: <reason>` |
+| Shortcut | `// TechDebt Shortcut: <reason>` |
+
+- `<gap id>` is the id of the gap in its map ([P10](DEVELOPMENT_PROCESS.md)), such as `stock_transfer-3`, and the marker sits in the use case the gap concerns, at the branch where the gap is reached. The branch refuses with `tech_debt` carrying that id ([B25](BEST_PRACTICES.md)).
+- `<layer>` is the layer that pays the debt, such as `Notifications`. `Planned` and `Shortcut` are reserved words, so that a gap id is never mistaken for a kind.
+- `<reason>` says in one line what is missing or simplified.
+- No marker names a ticket, an issue or any other reference outside the repository; a gap id and a layer are inside it.
+- A marker is removed in the change that pays the debt or replaces the code it marks ([P13](DEVELOPMENT_PROCESS.md)).
+
+Why: a fixed form can be found and counted by a search or a test, which is how a gap on a map is matched to a marker in code and the other way round. A reference to a ticket outlives the ticket and says nothing to a reader of the code, while a gap id or a layer is part of the repository and can be checked there.

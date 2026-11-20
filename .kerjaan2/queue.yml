@@ -1,5 +1,4 @@
 goal: Use-cases-first principle, core-first process and its records, technical debt, and the rules brought in from a second application
 order:
-  - 261120140001   # Record the Core design in docs CORE.md and one scenario map per business process
   - 261118220101   # Technical debt as part of the core-first workflow
   - 261120135803   # Let outside tools read and observe a Skeleto application, and guard gap markers

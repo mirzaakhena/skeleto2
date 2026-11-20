@@ -327,6 +327,18 @@ What the store holds, the current time, a generated id, a random token: the test
 
 Why: a test whose input changes from run to run cannot state its expected output exactly, and a test that cannot state it checks less than it seems to. With every such value fixed, the expected result is written out in full (T20).
 
+### T23. During development a gateway may be a dummy, in memory or hardcoded, behind the same contract as the real one (Optional)
+
+A dummy gateway is a real component: it carries `@Action` and `@Gateway`, returns the type of the contract, and Skeleto starts it like any other. It keeps its data in memory or hardcodes it, and it is replaced by the real implementation when the layer behind it is built. A fake of T18 is another thing: it is written by hand inside a test and Skeleto never starts it.
+
+Why: core-first development builds the use cases before the stores and services they depend on. A dummy behind the final contract lets the application start and run now, and the use cases are written against the contract they will keep, so replacing the dummy changes no use case. Without it the Core would wait for the layers that depend on it.
+
+### T24. Each use case can be run on its own (Mandatory)
+
+A use case gets the data it needs from its test, through the fakes of T18, or from the dummy gateways of T23. It never needs another use case to have run first to put data in place.
+
+Why: a use case that works only after another one has run hides a dependency that no contract states, and it cannot be tried, tested or changed alone. Each use case that runs by itself can be understood from its own gateways, and a failing test points to that use case and not to the one that should have run before it.
+
 ### T20. A test compares whole objects, never picked fields (Mandatory)
 
 Compare the whole response, and everything a fake recorded, with `assert.deepEqual`, as the test above does.
@@ -357,17 +369,3 @@ Why: the tests of T18 never start Skeleto, so a missing dependency, a cycle, a m
 Test files named `*.test.ts`, as T8 places them, are left out by `DEFAULT_EXCLUDE` without further word. A folder of generated code is added to the list, never put in its place: `Skeleto.start("src", { decorators: MARKERS, exclude: [...DEFAULT_EXCLUDE, "generated"] })`. See [Files the scan leaves out](README.md#files-the-scan-leaves-out) in the README.
 
 Why: Skeleto imports every file it scans. A test file imported at startup would run its tests inside the application, and a marked function in a fake or in generated code would become a component, or clash with the real one by name.
-
-## Development
-
-### T23. During development a gateway may be a dummy, in memory or hardcoded, behind the same contract as the real one (Optional)
-
-A dummy gateway is a real component: it carries `@Action` and `@Gateway`, returns the type of the contract, and Skeleto starts it like any other. It keeps its data in memory or hardcodes it, and it is replaced by the real implementation when the layer behind it is built. A fake of T18 is another thing: it is written by hand inside a test and Skeleto never starts it.
-
-Why: core-first development builds the use cases before the stores and services they depend on. A dummy behind the final contract lets the application start and run now, and the use cases are written against the contract they will keep, so replacing the dummy changes no use case. Without it the Core would wait for the layers that depend on it.
-
-### T24. Each use case can be run on its own (Mandatory)
-
-A use case gets the data it needs from its test, through the fakes of T18, or from the dummy gateways of T23. It never needs another use case to have run first to put data in place.
-
-Why: a use case that works only after another one has run hides a dependency that no contract states, and it cannot be tried, tested or changed alone. Each use case that runs by itself can be understood from its own gateways, and a failing test points to that use case and not to the one that should have run before it.

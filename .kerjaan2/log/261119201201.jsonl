@@ -1,0 +1,21 @@
+{"t":"2026-11-19 20:12:55","event":"created","status":"backlog","session":"10fde028-8336-4d6f-9599-f3b79b32c434"}
+{"t":"2026-11-20 10:03:51","event":"moved","to":"todo","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:03:55","event":"started","branch":"k2/261119201201-add-tech-debt-as","base":"bd3aaa0","contract":"1e7c0e531950","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:04:19","event":"agent","role":"worker","agent":"a470007e87935758d","step":"first:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:04:45","event":"test","by":"worker:?","exit":1,"seconds":13,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:04:58","event":"test","by":"worker:?","exit":1,"seconds":11,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:05:12","event":"test","by":"worker:?","exit":1,"seconds":11,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:05:26","event":"test","by":"worker:?","exit":1,"seconds":11,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:05:55","event":"test","by":"worker:?","exit":1,"seconds":11,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:06:11","event":"test","by":"worker:?","exit":0,"seconds":11,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:06:17","event":"check","n":1,"evidence":"B21 heading and body list four kinds; tech_debt defined as undecided possible condition, never a forbidding rule","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:?"}
+{"t":"2026-11-20 10:06:17","event":"check","n":2,"evidence":"B21 gives an example for each of the four kinds","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:?"}
+{"t":"2026-11-20 10:06:17","event":"check","n":3,"evidence":"B21 says a caller answers tech_debt as 'not available yet', apart from the other three","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:?"}
+{"t":"2026-11-20 10:06:17","event":"check","n":4,"evidence":"README and BEST_PRACTICES excerpts include tech_debt in type and answers map; readme tests (incl. output assertions) pass","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:?"}
+{"t":"2026-11-20 10:06:17","event":"check","n":5,"evidence":"REVIEW_CHECKLIST B21 row updated to match the heading; readme test checks it","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:?"}
+{"t":"2026-11-20 10:06:17","event":"check","n":6,"evidence":"k2 test: typecheck, tests, build passed","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:?"}
+{"t":"2026-11-20 10:06:28","event":"test","by":"worker:?","exit":0,"seconds":10,"fingerprint":"8cfcc129ee740b3dfb1a549398a5f312d2125a68","command":"npm run typecheck && npm test && npm run build","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:06:28","event":"submitted","commit":"91af7a0","lane":"standard","to":"review","files":4,"fingerprint":"8cfcc129ee740b3dfb1a549398a5f312d2125a68","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"worker:?"}
+{"t":"2026-11-20 10:06:48","event":"agent","role":"reviewer","agent":"a641019b01b6122a8","step":"review:1:0:0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}
+{"t":"2026-11-20 10:07:40","event":"verdict","result":"pass","round":1,"commit":"91af7a0","session":"e001447b-e162-4bf2-8ca4-244553cb2e1c","by":"reviewer:?"}
+{"t":"2026-11-20 10:07:57","event":"landed","branch":"k2/261119201201-add-tech-debt-as","files":["BEST_PRACTICES.md","README.md","REVIEW_CHECKLIST.md","test/readme.test.ts"],"session":"e001447b-e162-4bf2-8ca4-244553cb2e1c"}

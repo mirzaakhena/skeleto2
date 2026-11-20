@@ -36,11 +36,14 @@ export type BusinessErrorKind = "validation" | "not_found" | "conflict" | "tech_
 /** The one error the business throws: entities, use cases and gateways name its kind and nothing about who called them. */
 export class BusinessError extends Error {
   readonly kind: BusinessErrorKind;
+  /** The id of the gap a `tech_debt` refusal reached, so that the debt can be counted at run time; used with that kind only. */
+  readonly gap?: string;
 
-  constructor(kind: BusinessErrorKind, message: string) {
+  constructor(kind: BusinessErrorKind, message: string, gap?: string) {
     super(message);
     this.name = "BusinessError";
     this.kind = kind;
+    if (gap !== undefined) this.gap = gap;
   }
 }
 ```

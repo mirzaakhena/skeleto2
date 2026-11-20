@@ -338,9 +338,23 @@ There are four kinds:
 
 A caller translates `tech_debt` into its own answer of "not available yet", distinct from the refusals of the other three kinds: those say that a rule was applied and retrying the same call changes nothing until the input or the state changes, while this one says that the operation will exist once the business decides. A caller must not present it as the user's mistake (`validation`), as a missing thing (`not_found`) or as a state to wait out (`conflict`). Because it is a kind and not a message, the debt can be counted without reading messages.
 
+A `tech_debt` refusal that comes from a gap of a scenario map ([P10](DEVELOPMENT_PROCESS.md)) carries the id of that gap, as a field of its own and not inside the message: a reached gap refuses with `tech_debt` and its gap id. The field is optional and is set only with this kind, so there is still one error type and one `instanceof` check. Counted by gap id at run time, and by the marker of the gap in the code ([T23](TECHNICAL_PRACTICES.md)), the debt is counted in both places.
+
 ```ts
 // src/entity/error.ts (excerpt)
 export type BusinessErrorKind = "validation" | "not_found" | "conflict" | "tech_debt";
+```
+
+```ts
+// src/entity/error.ts (excerpt)
+  readonly gap?: string;
+
+  constructor(kind: BusinessErrorKind, message: string, gap?: string) {
+    super(message);
+    this.name = "BusinessError";
+    this.kind = kind;
+    if (gap !== undefined) this.gap = gap;
+  }
 ```
 
 ### B26. The caller translates business errors; entities and use cases never mention a transport (Mandatory)

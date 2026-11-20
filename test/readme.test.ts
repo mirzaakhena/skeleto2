@@ -548,6 +548,9 @@ test("TECHNICAL_PRACTICES.md covers every agreed topic, and names no product or 
     return section;
   };
   rule(/takes its dependencies and returns/);
+  const marker = rule(/A debt is marked in code/);
+  for (const form of ["// TechDebt <gap id>: <reason>", "// TechDebt Planned <layer>: <reason>", "// TechDebt Shortcut: <reason>"]) assert.ok(marker.includes(`\`${form}\``), `T23 lacks ${form}`);
+  assert.doesNotMatch(technicalPractices, /TECH-DEBT/);
   assert.match(rule(/named `impl` followed by/), /implConnection/);
   rule(/named type alias/);
   rule(/never an inline or generic type/);
@@ -640,7 +643,7 @@ test("REVIEW_CHECKLIST.md lists every rule of the three practice files exactly o
   // A machine checks only what the architecture test checks; everything else is left to the reviewer.
   assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B5", "B8"]);
   // Of the process rules, only those that leave a file in the repository can be read by a reviewer; the rest are checked with the owner.
-  assert.deepEqual(rows.filter(({ number }) => number.startsWith("P") && checkerOf(number) === "Reviewer").map(({ number }) => number), ["P4", "P5", "P9", "P10"]);
+  assert.deepEqual(rows.filter(({ number }) => number.startsWith("P") && checkerOf(number) === "Reviewer").map(({ number }) => number), ["P4", "P5", "P9", "P10", "P12", "P13", "P14"]);
   assert.deepEqual(rows.filter(({ number }) => !number.startsWith("P")).filter(({ checker }) => checker === "Process"), []);
 });
 
@@ -759,7 +762,7 @@ test("the architecture test fails when an action carries neither marker, and whe
 
 test("every rule of DEVELOPMENT_PROCESS.md is a numbered heading with a level, followed by its reason, and the steps come in order", () => {
   const sections = developmentProcess.split(/^(?=#{1,3} )/m).filter((section) => section.startsWith("### "));
-  assert.equal(sections.length, 10);
+  assert.equal(sections.length, 14);
   sections.forEach((section, index) => {
     const heading = section.slice(0, section.indexOf("\n"));
     assert.match(heading, new RegExp(`^### P${index + 1}\\. \\S.* \\((Mandatory|Optional)\\)$`), `rule ${index + 1} is not numbered P${index + 1} with a level: ${heading}`);
@@ -779,6 +782,11 @@ test("every rule of DEVELOPMENT_PROCESS.md is a numbered heading with a level, f
   assert.match(rule("P8"), /Core first/);
   assert.match(rule("P9"), /`docs\/CORE\.md`[\s\S]*use cases[\s\S]*basic entities[\s\S]*gateways[\s\S]*owner's decisions[\s\S]*stub, assumption and simplification/);
   assert.match(rule("P10"), /`docs\/scenarios\/<process>\.json`[\s\S]*states[\s\S]*choices[\s\S]*time limits[\s\S]*`gaps`[\s\S]*`<process>-<n>`[\s\S]*never reused/);
+  assert.match(rule("P11"), /Core first[\s\S]*only as far as[\s\S]*backlog of the next layer/);
+  assert.match(rule("P12"), /every step of the main path and every branch[\s\S]*test[\s\S]*every gap[\s\S]*marker[\s\S]*`decision` field[\s\S]*dummies/);
+  assert.match(rule("P13"), /\| \*\*Planned\*\* \|.*layer.*\|[\s\S]*\| \*\*Shortcut\*\* \|.*reason.*\|[\s\S]*obsolete code is forbidden/);
+  assert.doesNotMatch(rule("P13"), /\| \*\*Obsolete\*\* \|/);
+  assert.match(rule("P14"), /may exist only in the business area that is being worked on/);
 });
 
 test("DEVELOPMENT_PROCESS.md states its scope, relates to BEST_PRACTICES.md, and names no application, product or tool", () => {

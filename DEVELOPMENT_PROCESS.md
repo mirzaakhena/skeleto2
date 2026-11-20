@@ -20,7 +20,7 @@ Every rule has a number (`P1`, `P2`, ...), a level and a reason, in the same for
 - **Mandatory**: follow it. Breaking it gives a design that is wrong, or that will be wrong after the next change.
 - **Optional**: follow it unless you have a reason not to.
 
-The rules below follow the five steps of the process, in order (steps 2 and 4 take more than one rule). Every one of them is Mandatory, within the scope given at the top: a new application, or a large new part of one.
+The rules below follow the five steps of the process, in order (steps 2, 4 and 5 take more than one rule). Every one of them is Mandatory, within the scope given at the top: a new application, or a large new part of one.
 
 ## The steps
 
@@ -100,7 +100,7 @@ Step 4, continued. When a Core use case needs something from a Supporting or Gen
 
 In every case the owner's decision is recorded with it.
 
-When a stub leaves a debt behind, how that debt is marked and when a Core area is called done are not decided yet; they belong to the practices on technical debt, which are still to be written (they cover when a Core area is done, obsolete code and skeleton use cases). Until then, a stub is recorded as above and nothing more is assumed.
+When a stub leaves a debt behind, it is marked as P13 and T23 say.
 
 Why: a Core use case that quietly depends on something unbuilt is either wrong or stuck. Naming the way makes the dependency visible, and writing it down is what lets a later reader tell a stub that is waiting for its layer from a part that was forgotten.
 
@@ -160,6 +160,42 @@ How states, choices and time limits are written is left free: it is the map's au
 
 Why: a flow written as prose hides its holes: a state with no way out, a choice with no rule, a wait with no limit. Writing each state, choice and limit separately makes the missing ones visible, and giving each missing rule an id that never changes lets code and review point at it exactly.
 
+### P11. Build the Core first; build Supporting and Generic areas only as far as the Core's recorded debts need them (Mandatory)
+
+Step 5, continued. The layers are built in this order: the Core first, then the Supporting and Generic areas. A Supporting or Generic area is built only as far as the debts recorded by the Core need it (P13), and no further. Once the Core is done (P12), the list of its debts is the backlog of the next layer.
+
+Why: whatever a Core use case needs from another area becomes a stub, an assumption or a simplified version, so the debt is planned and not a failure: it is how this order works. Building a Supporting or Generic area beyond what the Core uses writes code before it is needed, and that code is the first to be replaced when the Core becomes known.
+
+### P12. A Core area is done when every main-path step and every branch of its scenario map has a test, and every gap has a marker or a recorded decision (Mandatory)
+
+Step 5, continued. A Core area is done when all of these hold:
+
+- every step of the main path and every branch of its scenario maps (P10) has a test;
+- every gap on those maps has a marker (T23) in the use case it concerns, or a recorded decision of the owner: a `decision` field on the gap in its map.
+
+Whether its own gateways are real is not part of it: during development they may stay in-memory dummies. A dummy that stands in for a later layer is a Planned debt and carries its marker (P13); a dummy that only exists so that the Core can be developed and tested carries none.
+
+Why: "done" has to be something a reviewer can check against files. A map with a test for each of its branches shows that the flow works, and a marker or a decision for each gap shows that every open question was either left as a visible debt or answered, so none is forgotten. Asking for real gateways would stop the Core on a layer that is built after it.
+
+### P13. Debt that is not a gap is either Planned or Shortcut, and obsolete code is forbidden: it is removed in the change that replaces it (Mandatory)
+
+Step 5, continued. Besides a gap (an open question of a scenario map, marked as T23 says), there are exactly two kinds of debt:
+
+| Kind | Meaning | What it names |
+| --- | --- | --- |
+| **Planned** | A stub that waits for a later layer | The layer that pays it |
+| **Shortcut** | A deliberate shortcut or simplified version | Its reason |
+
+There is no third kind. Code that a later decision has replaced is **obsolete**, and obsolete code is forbidden: the change that replaces it removes it, together with its marker. It is neither kept with a deadline nor marked.
+
+Why: a debt marker that is never removed becomes a false promise, and a study of one application found that 30 of its 45 markers were obsolete: written before a later decision replaced them, and never removed. Two kinds with a rule each keep the markers few and true, and removing replaced code at once needs no tracking that nobody does.
+
+### P14. Skeleton use cases are allowed only in the area being worked on (Mandatory)
+
+Step 5, continued. A skeleton use case, whose body only throws "not implemented", may exist only in the business area that is being worked on at the moment. No area that is not being worked on holds one. A gap is not a skeleton: it lives inside the branches of a use case, as a marker (T23) and a refusal of kind `tech_debt` that carries the gap's id ([B25](BEST_PRACTICES.md)), not in an empty body.
+
+Why: writing the skeleton of every use case before any of them is finished buries the work in a list that is longer than anyone can hold in mind (about 151 use cases in 35 areas in one study), and most of it is rewritten once the Core is known. Allowing a skeleton in the one area being worked on still lets that area be sketched.
+
 ## What a reviewer can check
 
 Most of this file is agreed in conversation and cannot be seen in a repository. Some of it can, and a reviewer should check it by reading ([REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md) says which):
@@ -168,6 +204,8 @@ Most of this file is agreed in conversation and cannot be seen in a repository. 
 - every row of `docs/AREAS.md` has one of the three classes, a reason and a decision (P4);
 - every entity name and every business-area name appears in `docs/GLOSSARY.md` (P5);
 - `docs/CORE.md` exists, and holds use cases, entities, gateways, decisions and every stub, assumption and simplification of the Core areas (P9);
-- every business process has a file under `docs/scenarios/`, and each has a `gaps` array whose ids are `<process>-<n>` and unique across the files (P10).
+- every business process has a file under `docs/scenarios/`, and each has a `gaps` array whose ids are `<process>-<n>` and unique across the files (P10);
+- every gap of a map has a marker in the code or a `decision` field, and no marker names a gap that is not on a map (P12, T23);
+- no obsolete code is left, and no area that is not being worked on holds a skeleton use case (P13, P14).
 
-The other rules are checked with the owner, not in the code: the interview, the classification being the owner's decision, the handling of what Core needs, and the order of the work.
+The other rules are checked with the owner, not in the code: the interview, the classification being the owner's decision, the handling of what Core needs, and the order of the work, including the order of the layers (P11).

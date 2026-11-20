@@ -91,6 +91,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | T20 | A test compares whole objects, never picked fields | Mandatory | Reviewer |
 | T21 | One integration test starts Skeleto, and proves that the application starts | Mandatory | Reviewer |
 | T22 | Test files and generated files are left out of the scan | Mandatory | Reviewer |
+| T23 | A debt is marked in code, on the line above what it concerns, in one of three fixed forms, and no marker refers to a ticket number | Mandatory | Reviewer: every marker has one of the three forms, and names no ticket |
 
 ## Development process
 
@@ -106,6 +107,10 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | P8 | Write code only after P1 to P7, and write the Core first, in depth, before any other layer | Mandatory | Process |
 | P9 | Record the result of step 4 in `docs/CORE.md`, in the application's repository | Mandatory | Reviewer: `docs/CORE.md` exists, and holds the use cases, entities, gateways, decisions, stubs, assumptions and simplifications of the Core areas |
 | P10 | Write the flow of every business process as one scenario map, in `docs/scenarios/<process>.json` | Mandatory | Reviewer: one file for each business process, each with a `gaps` array of `{id, question}` whose ids are `<process>-<n>` and unique across files |
+| P11 | Build the Core first; build Supporting and Generic areas only as far as the Core's recorded debts need them | Mandatory | Process |
+| P12 | A Core area is done when every main-path step and every branch of its scenario map has a test, and every gap has a marker or a recorded decision | Mandatory | Reviewer: every gap of a map has a marker in the code or a `decision` field, and every branch has a test |
+| P13 | Debt that is not a gap is either Planned or Shortcut, and obsolete code is forbidden: it is removed in the change that replaces it | Mandatory | Reviewer: every such marker has one of the two kinds, and no replaced code is left |
+| P14 | Skeleton use cases are allowed only in the area being worked on | Mandatory | Reviewer: no area outside the one being worked on holds a use case that only throws "not implemented" |
 
 ## The architecture test
 

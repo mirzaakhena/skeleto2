@@ -23,7 +23,8 @@ Dimulai: 2026-11-21.
 | 15 | Celah di praktik transaksi dan locking, dan urusan lintas-use-case lain yang belum diatur | dicatat; dibahas lain waktu |
 | 16 | Proses pengembangan ditulis berurutan, padahal penemuan berjalan bersamaan | disetujui; ditulis di `pengembangan.md`; bounded context belum diputuskan |
 | 17 | Definisi Core, Supporting, Generic menurut pemilik berbeda dari yang tertulis | diputuskan; ditulis di DEV-3 dan DEV-14 |
-| 18 | Aturan dependency use case dan gateway lebih ketat: use case → gateway saja, gateway → config saja | diputuskan 2026-11-22; `@Action` polos tetap bebas; tiket 261122113801 |
+| 18 | Aturan dependency use case dan gateway lebih ketat: use case → gateway saja, gateway → config saja | selesai: main `78d4ab8` (tiket 261122113801) |
+| 19 | Hasil review independen kode dan aturan (main `78d4ab8`) | belum dibahas |
 
 ---
 
@@ -281,3 +282,29 @@ Semua aturan bernomor sudah ada di `docs/`. Yang hilang terutama penjelasan "ken
   4. **Gateway tak langsung di penjejak scenario-explorer** (contoh: gateway outbox yang memanggil gateway pembayaran setelah commit) tidak lagi mungkin; fiturnya menjadi usang. Pengirim outbox adalah proses lain (controller → use case → gateway), jadi kebutuhannya tetap terpenuhi.
   5. **`@Action` polos** tetap boleh bergantung pada semua jenis action. Belum jelas apakah ia juga boleh bergantung pada config saja (sekarang boleh).
 - **Dampak:** `CLAUDE.md` 4.6, README (kalimat aturan dan contoh; contoh sekarang sudah patuh: use case hanya ke gateway, gateway hanya ke config), dokumen GW-12, UC, dan tabel di `docs/teknis/use-case-gateway-bawaan.md`, serta tesnya.
+
+## 19. Hasil review independen kode dan aturan (main `78d4ab8`), 2026-11-22
+
+Reviewer independen (tidak membaca `TEMUAN.md` dan papan) memeriksa `src/`, tes, `CLAUDE.md`, README, `docs/`, dokumen lama, dan `REVIEW_CHECKLIST.md`. Dasar: 354 tes lulus, typecheck bersih. Temuan 1 dan 3 juga dicek ulang dengan membaca kode.
+
+**Bug (semua direproduksi reviewer):**
+1. Entri huruf kecil di `decorators` (misalnya `"logging"`) tidak pernah bisa dipenuhi: `@logging` ditolak dengan saran "write @logging", dan `@Logging` ditolak karena tidak ada di daftar. Isi daftar tidak divalidasi (`src/scanner.ts` sekitar baris 112, `src/skeleto.ts` `listOption`).
+2. `export declare function` lolos pemindaian, lalu gagal setelah impor ("create is not a function"), padahal terlihat dari teks sumber (melanggar `CLAUDE.md` 4.8).
+3. Fungsi yang diekspor lewat `export { implX }` ditolak sebagai "not exported by name" (`src/scanner.ts` sekitar baris 136); dengan `export { implX as other }` nama impornya juga salah.
+4. Parameter `this:` dihitung sebagai dependency, sehingga urutan argumen bergeser.
+
+**Celah kontrak:**
+5. "Config asinkron ditunggu satu per satu, tidak berbarengan" (`CLAUDE.md` 4.7) tidak punya tes; `Promise.all` atas config yang saling bebas akan tetap lulus.
+
+**Kontradiksi:**
+6. `CLAUDE.md` 4.2 menyebut method sebagai tempat salah yang dilaporkan bila `decorators` diberikan, tetapi 4.5 dan kode hanya memeriksa konstanta yang diekspor dan fungsi di namespace. Penanda di method statis dan di blok JSDoc yang lebih atas dilewati diam-diam.
+7. B10/UC-7 ("query tanpa `@Transaction`") bertentangan dengan T13/GW-5 (`Database` melempar error tanpa transaksi): menurut contoh, setiap query juga harus ber-`@Transaction`.
+8. Dokumen mana yang berlaku ambigu: `CLAUDE.md` menyebut `docs/` lebih dulu, `docs/README.md` menyatakan dokumen lama masih berlaku; tingkat B1 (Opsional) dan DEV-2 (Wajib) berbeda; `REVIEW_CHECKLIST.md` hanya memakai nomor lama dan belum memuat aturan gateway → config saja.
+9. Status WRP-5 tidak konsisten: "rencana" di `docs/README.md`, "terealisasi" di `docs/teknis/wrapper.md`, dan diletakkan di aturan opsional padahal ia perilaku mesin.
+10. `GatewayWrapper` melanggar T7/T11 (wrapper dinamai menurut penanda tambahan yang dibacanya), karena kini ia membaca nama penanda utama.
+
+**Concern desain:**
+11. Lapisan wrapper bergantung pada urutan path berkas. Memindah atau mengganti nama berkas wrapper bisa diam-diam menukar transaksi dan audit. Di Windows pemisah path `\` mengurutkan berbeda dari `/` (belum dijalankan di Windows).
+12. B5 ("tidak ada `@Action` polos") masih dijaga tes salinan yang menyalakan seluruh aplikasi, membaca container (bertentangan dengan T17), dan menjadi tes start kedua (bertentangan dengan T21). Belum dijaga mesin.
+
+**Kesimpulan reviewer:** inti kode kecil, koheren, dan teruji untuk sebagian besar `CLAUDE.md` bagian 4; aturan dependency use case/gateway konsisten di semua dokumen. Bagian yang lemah adalah dokumen aturan: dua set aturan hidup bersamaan, checklist belum memuat aturan baru, dan beberapa aturan "mesin" masih bergantung pada tes salinan.

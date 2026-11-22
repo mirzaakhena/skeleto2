@@ -78,5 +78,5 @@ Wrapper layering now follows the scan order (files in sorted path order, functio
   note: only targeted tests run via k2 test; full typecheck/test/build already recorded on dfdb52a278
 
 ## Follow-ups
-- F1 [open] Overturned A1: Wrappers are still created in dependency order; only the layering follows the written order (source order within the one file), and the one-file rule holds with or without SkeletoOptions.decorators
-- F2 [open] Overturned A2: An application with zero or one wrapper, or with all wrappers in one file, passes the one-file rule; the message for wrappers in several files names every such file (paths relative to the scanned directory) and the wrappers in them
+- F1 [declined] Overturned A1: Wrappers are still created in dependency order; only the layering follows the written order (source order within the one file), and the one-file rule holds with or without SkeletoOptions.decorators
+- F2 [declined] Overturned A2: An application with zero or one wrapper, or with all wrappers in one file, passes the one-file rule; the message for wrappers in several files names every such file (paths relative to the scanned directory) and the wrappers in them

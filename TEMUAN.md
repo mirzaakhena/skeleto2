@@ -24,7 +24,7 @@ Dimulai: 2026-11-21.
 | 16 | Proses pengembangan ditulis berurutan, padahal penemuan berjalan bersamaan | disetujui; ditulis di `pengembangan.md`; bounded context belum diputuskan |
 | 17 | Definisi Core, Supporting, Generic menurut pemilik berbeda dari yang tertulis | diputuskan; ditulis di DEV-3 dan DEV-14 |
 | 18 | Aturan dependency use case dan gateway lebih ketat: use case → gateway saja, gateway → config saja | selesai: main `78d4ab8` (tiket 261122113801) |
-| 19 | Hasil review independen kode dan aturan (main `78d4ab8`) | belum dibahas |
+| 19 | Hasil review independen kode dan aturan (main `78d4ab8`) | diputuskan; tiket 261122135601, 261122135602, 261122135603 |
 
 ---
 
@@ -308,3 +308,9 @@ Reviewer independen (tidak membaca `TEMUAN.md` dan papan) memeriksa `src/`, tes,
 12. B5 ("tidak ada `@Action` polos") masih dijaga tes salinan yang menyalakan seluruh aplikasi, membaca container (bertentangan dengan T17), dan menjadi tes start kedua (bertentangan dengan T21). Belum dijaga mesin.
 
 **Kesimpulan reviewer:** inti kode kecil, koheren, dan teruji untuk sebagian besar `CLAUDE.md` bagian 4; aturan dependency use case/gateway konsisten di semua dokumen. Bagian yang lemah adalah dokumen aturan: dua set aturan hidup bersamaan, checklist belum memuat aturan baru, dan beberapa aturan "mesin" masih bergantung pada tes salinan.
+
+**Keputusan pemilik atas temuan 19 (2026-11-22):**
+- Bug 1–4 dan celah tes 5 diperbaiki dalam satu tiket (261122135601), beserta penanda di method (kontradiksi 6) dan pemisah path `/` di semua OS (dari concern 11). Hanya `export function implX` yang dihitung diekspor; daftar export ditolak dengan pesan jelas.
+- Concern 12: `@Action` polos ditolak mesin lewat opsi `Skeleto.start`, dan tes arsitektur salinan dihapus (261122135602).
+- Kontradiksi 8: `docs/` menjadi satu-satunya sumber aturan, dan tiga dokumen lama dipensiunkan (261122135603), bersama kontradiksi 7 (semua use case ber-`@Transaction`, termasuk query), 9 (status WRP-5), 10 (aturan nama wrapper), dan penegasan concern 11 di dokumen (wrapper yang urutannya penting ditaruh di satu berkas).
+- Urutan kerja: 261122135601, lalu 261122135602, lalu 261122135603.

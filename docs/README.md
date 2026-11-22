@@ -16,16 +16,16 @@ Skeleto memberi kode buatan AI satu struktur standar yang dijaga mesin, supaya m
 
 | Lapis | Isi | Siapa yang menjaga |
 | --- | --- | --- |
-| **Konsep** (arsitektur) | entity, use case, gateway, controller | dokumen, reviewer, tes salinan; sebagian kelak Skeleto (jenis bawaan `@UseCase`, `@Gateway`) |
-| **Mekanisme** (Skeleto) | `@Action`, `@Wrapper`, `@Config`, container | kode Skeleto, saat startup |
+| **Konsep** (arsitektur) | entity, use case, gateway, controller | dokumen, reviewer, tes salinan; dua aturan antara use case dan gateway dijaga Skeleto lewat jenis bawaan `@UseCase`, `@Gateway` |
+| **Mekanisme** (Skeleto) | `@UseCase`, `@Gateway`, `@Action`, `@Wrapper`, `@Config`, container | kode Skeleto, saat startup |
 
 Hubungan keduanya:
 
 | Konsep | Ditulis sebagai |
 | --- | --- |
 | Entity | tipe biasa dan fungsi murni; bukan komponen |
-| Use case | `@Action` + `@UseCase` (kelak `@UseCase` sebagai jenis bawaan) |
-| Gateway | `@Action` + `@Gateway` (kelak `@Gateway` sebagai jenis bawaan) |
+| Use case | `@UseCase` |
+| Gateway | `@Gateway` |
 | Controller | kode biasa di luar container; bukan komponen |
 | Urusan lintas-use-case (transaksi, audit) | `@Wrapper`, dipilih per action lewat penanda tambahan |
 | Sumber daya (koneksi, pengaturan, logger) | `@Config` |
@@ -63,10 +63,10 @@ Aturan dibaca **per lingkup**: reviewer yang sedang membaca use case cukup mener
 | [konsep/gateway.md](konsep/gateway.md) | jalan keluar; perubahan bersamaan; efek di luar penyimpanan |
 | [konsep/controller.md](konsep/controller.md) | jalan masuk; penerjemahan error; container |
 | [teknis/komponen.md](teknis/komponen.md) | aturan yang berlaku untuk semua komponen: dua tahap, nama, berkas, penanda, tes integrasi |
-| [teknis/action.md](teknis/action.md) | `@Action` dan context |
+| [teknis/action.md](teknis/action.md) | `@Action`, `@UseCase`, `@Gateway` dan context |
 | [teknis/wrapper.md](teknis/wrapper.md) | `@Wrapper`; transaksi; pengamat gateway |
 | [teknis/config.md](teknis/config.md) | `@Config`; config asinkron |
-| [teknis/use-case-gateway-bawaan.md](teknis/use-case-gateway-bawaan.md) | rencana `@UseCase` dan `@Gateway` sebagai jenis bawaan Skeleto (belum terealisasi) |
+| [teknis/use-case-gateway-bawaan.md](teknis/use-case-gateway-bawaan.md) | `@UseCase` dan `@Gateway` sebagai jenis bawaan Skeleto |
 | [proses/pengembangan.md](proses/pengembangan.md) | urutan membangun aplikasi baru, Core lebih dulu |
 | [proses/utang-teknis.md](proses/utang-teknis.md) | celah, stub, jalan pintas, dan kode usang |
 

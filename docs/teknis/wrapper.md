@@ -51,7 +51,7 @@ export function implAuditWrapper(logger: Logger): AuditWrapper {
 
 Skeleto menawarkan setiap action ke setiap wrapper. Mengembalikan handler itu sendiri tidak menambahkan apa pun ke action yang tidak berpenanda, bahkan satu panggilan fungsi pun tidak. Dengan satu wrapper per penanda, arti sebuah penanda ditulis di satu tempat, dan menghapus penanda dari sebuah action menghapus tepat perilaku itu.
 
-Penanda yang hanya membedakan use case dari gateway (`@UseCase`, `@Gateway`) tidak butuh wrapper.
+Penanda utama (`@UseCase`, `@Gateway`) bukan penanda tambahan: wrapper yang perlu membedakan keduanya membaca `metadata.mainDecorator.name`, tanpa penanda tambahan.
 
 ### WRP-2. Wrapper transaksi membuka transaksi dan menyimpannya di context
 
@@ -133,7 +133,7 @@ export type GatewayObserver = (call: { gateway: string; input: unknown; proceed:
  */
 export function implGatewayWrapper(): GatewayWrapper {
   return (handler, metadata) => {
-    if (!marked(metadata, "Gateway")) return handler;
+    if (metadata.mainDecorator.name !== "Gateway") return handler;
     return (ctx, input) => {
       const observer: GatewayObserver | undefined = ctx.data.gatewayObserver;
       // Nobody observes: the call goes through untouched.
@@ -146,18 +146,18 @@ export function implGatewayWrapper(): GatewayWrapper {
 
 Wrapper ini hanya dibutuhkan aplikasi yang membiarkan alat luar (misalnya penjejak scenario-explorer) mengamati sebuah jalan. Pengamat dibaca di `ctx.data.gatewayObserver`, satu-satunya kunci yang dilihat alat seperti itu. Pengamat menerima nama gateway, input-nya, dan `proceed`, lalu mengembalikan apa yang diterima pemanggil gateway. Ia memanggil `proceed()` paling banyak sekali dan mengembalikan hasilnya, atau menjawab panggilan itu sendiri tanpa memanggil `proceed()`. Yang kedua hanya boleh dilakukan alat yang menjalankan aplikasi untuk dilihat, tidak pernah di produksi. Pengamat boleh mengukur waktu panggilan atau melihat apa yang kembali. Wrapper ini memakai `ordinal` terendah, sehingga menjadi lapisan terdalam dan melaporkan panggilan gateway itu sendiri, tanpa transaksi atau audit di sekitarnya.
 
-Alat yang menggambar atau mengukur sebuah jalan perlu melihat setiap panggilan yang keluar dari use case, dan gateway-lah panggilan-panggilan itu. Satu wrapper pada penandanya menemukan semuanya tanpa mengubah gateway atau use case mana pun. Kesepakatan tentang kunci, signature, dan letaknya di antara wrapper membuat satu alat bisa membaca aplikasi mana pun.
+Alat yang menggambar atau mengukur sebuah jalan perlu melihat setiap panggilan yang keluar dari use case, dan gateway-lah panggilan-panggilan itu. Satu wrapper pada nama penanda utamanya (`Gateway`) menemukan semuanya tanpa mengubah gateway atau use case mana pun. Kesepakatan tentang kunci, signature, dan letaknya di antara wrapper membuat satu alat bisa membaca aplikasi mana pun.
 
 ## Yang bukan tugas wrapper
 
-> **Catatan.** `REVIEW_CHECKLIST.md` memuat `implUseCaseWrapper`, wrapper opsional yang menghentikan startup kalau use case bergantung pada use case lain. Ini memakai wrapper sebagai alat validasi, sehingga pelanggarannya baru ketahuan **setelah** berkas aplikasi diimpor dan config dibuat, dan caranya bergantung pada urutan pembuatan internal Skeleto. Dengan jenis bawaan `@UseCase` dan `@Gateway` (rencana), pemeriksaan ini pindah ke inti dan wrapper penjaga itu tidak dibutuhkan lagi.
+Wrapper bukan alat validasi struktur. Aturan antara use case dan gateway dijaga Skeleto sendiri saat startup, sebelum berkas aplikasi diimpor (lihat [use-case-gateway-bawaan.md](use-case-gateway-bawaan.md)), jadi tidak ada wrapper penjaga.
 
 ## Hubungan dengan komponen lain
 
 | Dengan | Hubungannya |
 | --- | --- |
 | Config | satu-satunya dependency yang boleh |
-| Action | membungkus semuanya; memilih yang dibungkus lewat penanda tambahan di `metadata.additionalDecorators` |
+| Action | membungkus semua jenis action (use case, gateway, action polos); memilih yang dibungkus lewat penanda tambahan di `metadata.additionalDecorators`, atau lewat jenisnya di `metadata.mainDecorator.name` |
 | Wrapper lain | tidak bergantung padanya; urutan antarwrapper ditentukan `ordinal` |
 | Context | menambah dan menghapus yang dikelolanya |
 

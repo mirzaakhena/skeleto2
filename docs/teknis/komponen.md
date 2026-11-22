@@ -1,10 +1,10 @@
 # Dasar komponen
 
-Aturan yang berlaku untuk ketiga jenis komponen Skeleto: `@Config`, `@Wrapper`, dan `@Action`. Hal yang khusus satu jenis ada di [action.md](action.md), [wrapper.md](wrapper.md), dan [config.md](config.md).
+Aturan yang berlaku untuk kelima jenis komponen Skeleto: `@Config`, `@Wrapper`, `@UseCase`, `@Gateway`, dan `@Action`. Hal yang khusus satu jenis ada di [action.md](action.md), [wrapper.md](wrapper.md), dan [config.md](config.md).
 
 ## Definisi
 
-**Komponen** adalah deklarasi fungsi tingkat atas yang di-`export` dan JSDoc-nya memuat tepat satu penanda utama: `@Config`, `@Wrapper`, atau `@Action`.
+**Komponen** adalah deklarasi fungsi tingkat atas yang di-`export` dan JSDoc-nya memuat tepat satu penanda utama: `@Config`, `@Wrapper`, `@UseCase`, `@Gateway`, atau `@Action`.
 
 Skeleto hanya membaca dua hal dari setiap komponen:
 - **Nama komponen:** teks return type-nya, persis seperti tertulis.
@@ -16,15 +16,17 @@ Skeleto tidak pernah membuka definisi tipe. Dependency dicocokkan dengan nama ko
 
 1. **Pindai** semua berkas `.ts` di direktori sumber sebagai teks, tanpa menjalankannya.
 2. **Periksa**: dependency yang tidak ada, jenis dependency yang dilarang, dependency melingkar, penanda yang salah tulis. Semua kesalahan dilaporkan sekaligus dalam satu `Error`, **sebelum** satu pun berkas aplikasi diimpor.
-3. **Buat**: impor berkas, lalu panggil setiap fungsi tepat sekali dengan dependency-nya. Urutannya semua config, lalu semua wrapper, lalu semua action.
-4. **Bungkus**: setiap action dibungkus semua wrapper.
+3. **Buat**: impor berkas, lalu panggil setiap fungsi tepat sekali dengan dependency-nya. Urutannya semua config, lalu semua wrapper, lalu semua gateway, lalu semua use case, lalu semua action polos.
+4. **Bungkus**: setiap action (use case, gateway, dan action polos) dibungkus semua wrapper.
 5. **Simpan** semuanya di container, dengan kunci nama komponen.
 
 | Jenis | Boleh bergantung pada |
 | --- | --- |
 | `@Config` | `@Config` |
 | `@Wrapper` | `@Config` |
-| `@Action` | `@Config`, `@Action` |
+| `@Gateway` | `@Config`, `@Gateway` |
+| `@UseCase` | `@Config`, `@Gateway` |
+| `@Action` | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
 Kontrak lengkap perilaku Skeleto ada di `CLAUDE.md` bagian 4 dan di `README.md`.
 
@@ -122,23 +124,22 @@ Skeleto mengabaikan path, jadi hanya aturan ini yang membuatnya bisa ditebak. De
 /**
  * Moves units of stock from one warehouse to another.
  *
- * @Action
  * @UseCase
  * @Transaction
  * @Audit {"level": "info"}
  */
 ```
 
-Data penanda berjalan sampai penanda berikutnya, sehingga kalimat setelah penanda menjadi datanya. Setelah `@Action`, itu menghentikan startup. Setelah penanda tambahan, itu diam-diam mengubah apa yang dibaca wrapper.
+Data penanda berjalan sampai penanda berikutnya, sehingga kalimat setelah penanda menjadi datanya. Setelah penanda utama, itu menghentikan startup. Setelah penanda tambahan, itu diam-diam mengubah apa yang dibaca wrapper.
 
 ### KOM-10. Penanda yang sah disimpan di satu konstanta yang diekspor, dan selalu diberikan ke `Skeleto.start`
 
-Daftarnya memuat setidaknya `UseCase`, `Gateway`, dan `Transaction`, ditambah setiap penanda lain yang dibaca aplikasi.
+Daftarnya memuat setiap penanda tambahan yang dibaca aplikasi, misalnya `Transaction`. `UseCase` dan `Gateway` adalah penanda utama dan tidak ikut di daftar.
 
 ```ts
 // src/markers.ts (excerpt)
 /** The additional markers this application allows. Startup refuses any other, so a misspelt marker cannot pass unnoticed. */
-export const MARKERS = ["UseCase", "Gateway", "Transaction", "Audit"];
+export const MARKERS = ["Transaction", "Audit"];
 ```
 
 ```ts
@@ -147,8 +148,6 @@ const skeleto = await Skeleto.start("src", { decorators: MARKERS });
 ```
 
 Tanpa `decorators`, `@Transction` yang salah tulis diterima dan use case diam-diam berjalan tanpa transaksi, dan penanda utama yang salah tulis diam-diam membuang komponennya. Dengan daftar, keduanya menghentikan startup. Satu konstanta berarti awal aplikasi, tesnya, dan wrapper-nya membaca daftar yang sama.
-
-> **Rencana, belum terealisasi di kode.** Dengan jenis bawaan, `UseCase` dan `Gateway` tidak lagi menjadi penanda tambahan di `MARKERS`.
 
 ### KOM-11. Satu tes integrasi menyalakan Skeleto dan membuktikan aplikasinya bisa menyala
 
@@ -177,10 +176,10 @@ Skeleto mengimpor setiap berkas yang dipindainya. Berkas tes yang diimpor saat s
 
 Alat yang membaca atau memeriksa aplikasi dari luar (tes arsitektur, tes celah, penjejak scenario-explorer) boleh mengandalkan hal berikut, setelah `Skeleto.start` dengan `MARKERS` aplikasi:
 
-- `getContainer()` mendaftar setiap komponen dengan namanya.
+- `getContainer()` mendaftar setiap komponen, dari kelima jenis, dengan namanya.
 - `getMetadata()` sebuah komponen memberi `dependencies` (nama komponen yang dimintanya, menurut urutan parameter) dan `additionalDecorators` (penanda tambahan beserta datanya).
 - Nama komponen adalah nama tipenya, sehingga alat menemukan tipe sebuah komponen dari namanya.
-- Use case dibedakan dari gateway lewat penandanya, dan wrapper dinamai menurut penanda yang dibacanya.
+- Use case dibedakan dari gateway lewat nama penanda utamanya (`mainDecorator.name`), dan wrapper dinamai menurut penanda yang dibacanya.
 - Alat yang mengamati sebuah jalan menemukan pengamatnya di `ctx.data.gatewayObserver`, kalau aplikasi punya wrapper pengamat gateway ([wrapper.md](wrapper.md), WRP-6).
 
 Alat tidak mengambil apa pun selain itu dari aplikasi, dan container dibaca sekali, saat alat itu mulai (CTL-5). Tes arsitektur dan tes celah di `REVIEW_CHECKLIST.md` adalah alat seperti itu.

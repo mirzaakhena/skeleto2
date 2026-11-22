@@ -8,23 +8,23 @@
 export type ActionHandler<REQUEST = any, RESPONSE = any> = (ctx: Context, request: REQUEST) => Promise<RESPONSE>;
 ```
 
-Action ditandai `@Action`. Ia adalah satu-satunya jenis komponen yang dibungkus wrapper.
+Action ditandai `@UseCase`, `@Gateway`, atau `@Action` (action polos). Ketiganya adalah jenis action, dan hanya action yang dibungkus wrapper.
 
 ## Kenapa ada
 
-Action adalah mekanisme umum untuk "sesuatu yang dipanggil per permintaan". Sekarang Skeleto tidak tahu apakah sebuah action itu use case, gateway, atau hal lain; pembedanya hanya penanda tambahan. Pemilik memutuskan `@UseCase` dan `@Gateway` kelak menjadi jenis bawaan ([use-case-gateway-bawaan.md](use-case-gateway-bawaan.md)):
+Action adalah mekanisme umum untuk "sesuatu yang dipanggil per permintaan". Skeleto mengenal tiga jenis action, dan jenisnya dibaca dari nama penanda utama di metadata ([use-case-gateway-bawaan.md](use-case-gateway-bawaan.md)):
 
-| Konsep | Ditulis sekarang | Dengan jenis bawaan (rencana) |
-| --- | --- | --- |
-| Use case | `@Action` + `@UseCase` | `@UseCase` |
-| Gateway | `@Action` + `@Gateway` | `@Gateway` |
-| Action polos, tanpa konsep clean architecture | `@Action` | `@Action` |
+| Konsep | Ditulis sebagai |
+| --- | --- |
+| Use case | `@UseCase` |
+| Gateway | `@Gateway` |
+| Action polos, tanpa konsep clean architecture | `@Action` |
 
 `@Action` polos tetap ada dan boleh dipakai, dengan aturan yang bebas (keputusan pemilik, 2026-11-22).
 
 ## Use case dan gateway: struktur sama, konsep berbeda
 
-Kode use case dan kode gateway hampir tidak bisa dibedakan dari bentuknya. Keduanya action, jadi keduanya ditulis dengan cara yang sama:
+Kode use case dan kode gateway hampir tidak bisa dibedakan dari bentuknya. Keduanya action, jadi bentuknya sama; hanya penanda utamanya yang berbeda:
 
 ```ts
 // Use case
@@ -62,12 +62,13 @@ export function implLockWarehouses(database: Database): LockWarehouses {
 | Transaksi | menyatakannya dengan `@Transaction` | bekerja di dalam transaksi yang dibawa context |
 | Dites dengan | fake gateway buatan tangan | tes teknologinya sendiri, atau digantikan dummy |
 
-**Akibatnya:** karena bentuknya sama, baik Skeleto maupun reviewer tidak bisa membedakan keduanya dari strukturnya. Satu-satunya pembeda yang bisa diandalkan adalah **penandanya**, bukan nama atau folder (UC-1, GW-1). Ini juga alasan utama rencana jenis bawaan ([use-case-gateway-bawaan.md](use-case-gateway-bawaan.md)): kalau Skeleto mengenal `@UseCase` dan `@Gateway` sebagai jenis, perbedaan konsep di tabel di atas bisa dijaga mesin, bukan hanya oleh mata reviewer.
+**Akibatnya:** karena bentuknya sama, baik Skeleto maupun reviewer tidak bisa membedakan keduanya dari strukturnya. Satu-satunya pembeda yang bisa diandalkan adalah **penanda utamanya**, bukan nama atau folder (UC-1, GW-1). Itu alasan `@UseCase` dan `@Gateway` menjadi jenis bawaan ([use-case-gateway-bawaan.md](use-case-gateway-bawaan.md)): perbedaan konsep di tabel di atas dijaga mesin, bukan hanya oleh mata reviewer.
 
 ## Perilaku yang dijamin Skeleto
 
-- Action boleh bergantung pada `@Config` dan `@Action`. Dependency lain menghentikan startup.
-- Action selalu sinkron di tahap luarnya: return type `Promise<...>` pada fungsi `@Action` adalah kesalahan.
+- `@UseCase` dan `@Gateway` boleh bergantung pada `@Config` dan `@Gateway`. `@Action` polos boleh bergantung pada `@Config`, `@Gateway`, `@UseCase`, dan `@Action`. Dependency lain menghentikan startup, dengan pesan yang menyebut kedua komponen.
+- Urutan pembuatan: semua gateway, lalu semua use case, lalu semua action polos.
+- Action selalu sinkron di tahap luarnya: return type `Promise<...>` pada fungsi `@UseCase`, `@Gateway`, dan `@Action` adalah kesalahan.
 - Fungsi action harus mengembalikan fungsi. Hasil lain (`undefined`, objek, promise) menghentikan startup dengan pesan yang menyebut action dan fungsinya.
 - Hasil action dibungkus **semua** wrapper. Action yang disuntikkan ke action lain adalah versi yang **sudah** dibungkus.
 
@@ -105,9 +106,7 @@ Action mengikuti aturan umum di [komponen.md](komponen.md). Nama dan berkas use 
 
 `@Action` polos boleh dipakai, dan aturan konsep (UC-, GW-) tidak berlaku untuknya: hanya aturan mekanisme Skeleto dan aturan umum di [komponen.md](komponen.md). Tetapi sesuatu yang sebenarnya operasi bisnis atau jalan keluar tetap ditandai sebagai use case atau gateway. Action yang keduanya sekaligus melanggar UC-4 atau GW-12.
 
-> **Usulan, belum diputuskan pemilik.** Kalimat "tetap ditandai sebagai use case atau gateway" adalah tambahan. Tanpanya, use case bisa ditulis sebagai `@Action` polos untuk menghindari aturan use case, dan hanya reviewer yang bisa melihatnya.
->
-> **Yang berlaku sekarang:** tes arsitektur di `REVIEW_CHECKLIST.md` (dulu B5) masih menolak action yang tidak bertanda `@UseCase` atau `@Gateway`. Dengan keputusan pemilik ini, tes itu perlu dilonggarkan.
+Aplikasi yang memakai use case dan gateway tidak punya `@Action` polos (keputusan pemilik, 2026-11-22). Skeleto sendiri membolehkannya, jadi tes arsitektur di `REVIEW_CHECKLIST.md` (B5) yang menolaknya. Alasannya: `@Action` polos boleh bergantung pada use case, sehingga ia bisa menjadi jembatan diam-diam dari satu use case ke use case lain.
 
 ### ACT-2. Handler hanya menerima context dan input; semua yang lain datang sebagai dependency
 
@@ -126,7 +125,7 @@ Data bisnis di context adalah input yang tidak dinyatakan tipe mana pun. Ia memb
 | Dengan | Hubungannya |
 | --- | --- |
 | Config | boleh menjadi dependency |
-| Action lain | boleh menjadi dependency; yang disuntikkan versi yang sudah dibungkus. Batasnya diatur konsep: use case tidak bergantung pada use case, gateway tidak bergantung pada use case |
+| Action lain | boleh menjadi dependency menurut tabel di atas; yang disuntikkan versi yang sudah dibungkus. Skeleto menolak use case yang bergantung pada use case, gateway yang bergantung pada use case, dan use case atau gateway yang bergantung pada `@Action` polos |
 | Wrapper | membungkus setiap action; tidak boleh menjadi dependency action |
 
 ## Status implementasi
@@ -134,4 +133,4 @@ Data bisnis di context adalah input yang tidak dinyatakan tipe mana pun. Ia memb
 | Bagian | Status |
 | --- | --- |
 | `@Action`, perilaku dan pemeriksaannya | terealisasi |
-| `@UseCase` dan `@Gateway` sebagai jenis bawaan | rencana, belum terealisasi |
+| `@UseCase` dan `@Gateway` sebagai jenis bawaan, dan aturan dependency antar jenis action | terealisasi |

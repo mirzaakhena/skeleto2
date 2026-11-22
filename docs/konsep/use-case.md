@@ -46,7 +46,6 @@ import type { LockWarehouses, NotifyWarehouses, SaveWarehouses } from "../../gat
 /**
  * Moves units of stock from one warehouse to another.
  *
- * @Action
  * @UseCase
  * @Transaction
  * @Audit {"level": "info"}
@@ -92,11 +91,9 @@ Aturan nama umum (alias tipe, nama parameter) ada di [komponen.md](../teknis/kom
 
 ### UC-1. Setiap use case ditandai sebagai use case
 
-> **Rencana, belum terealisasi di kode.** `@UseCase` akan menjadi jenis bawaan Skeleto ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)), sehingga use case cukup ditulis `@UseCase`.
->
-> **Yang berlaku sekarang:** tulis `@Action` lalu `@UseCase` sebagai penanda tambahan, daftarkan `UseCase` di `MARKERS`, dan pasang tes arsitektur dari `REVIEW_CHECKLIST.md`.
+Use case ditulis dengan penanda utama `@UseCase`, tanpa `@Action` di sampingnya, dan tidak didaftarkan di `MARKERS`: ia penanda utama, bukan penanda tambahan ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)). Aplikasi yang memakai use case dan gateway tidak punya `@Action` polos; tes arsitektur dari `REVIEW_CHECKLIST.md` memeriksanya.
 
-Use case dan gateway jangan pernah dibedakan dari namanya (`...Gateway`, `Find...`) atau dari letak berkasnya. Nama dan folder adalah kebiasaan yang bisa bergeser, sedangkan penanda adalah data yang bisa dibaca wrapper dan dihitung tes.
+Use case dan gateway jangan pernah dibedakan dari namanya (`...Gateway`, `Find...`) atau dari letak berkasnya. Nama dan folder adalah kebiasaan yang bisa bergeser, sedangkan penanda utama adalah data yang diperiksa Skeleto dan dibaca wrapper.
 
 ### UC-2. Setiap use case berada di berkasnya sendiri, dinamai menurut use case itu
 
@@ -110,7 +107,7 @@ Aturan bisnis yang ditulis di use case hanya dipatuhi use case itu (lihat [entit
 
 Use case adalah satu operasi bisnis dengan transaksinya sendiri, audit-nya sendiri, dan error-nya sendiri. Memanggil use case lain menyeret semua itu, menyatukan dua operasi yang berubah karena alasan berbeda, dan lama-lama membentuk rantai yang tidak bisa diikuti. Kalau dua use case berbagi satu langkah, aturan bersamanya masuk fungsi entity dan akses bersamanya masuk gateway.
 
-> **Rencana, belum terealisasi di kode.** Dengan jenis bawaan, Skeleto akan menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor. **Sekarang** hanya tes arsitektur salinan dari `REVIEW_CHECKLIST.md` yang memeriksanya, ditambah wrapper penjaga opsional `implUseCaseWrapper` yang baru menangkapnya setelah impor.
+Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor, bersama kesalahan lain dan dengan pesan yang menyebut kedua use case. Use case juga tidak boleh bergantung pada `@Action` polos, yang bisa menjadi jembatan ke use case lain.
 
 ### UC-5. Use case punya tipe Request dan Response sendiri dan tidak mengembalikan entity
 
@@ -215,6 +212,6 @@ Use case mendapat data yang dibutuhkannya dari tesnya (lewat fake) atau dari gat
 
 | Bagian | Status |
 | --- | --- |
-| `@UseCase` sebagai jenis bawaan | rencana, belum terealisasi |
-| Penolakan use case yang bergantung pada use case, saat startup | rencana, belum terealisasi; sekarang lewat tes arsitektur salinan |
+| `@UseCase` sebagai jenis bawaan | terealisasi |
+| Penolakan use case yang bergantung pada use case, saat startup | terealisasi, dijaga Skeleto |
 | Aturan lain di dokumen ini | dijaga reviewer |

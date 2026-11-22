@@ -17,7 +17,7 @@ Dimulai: 2026-11-21.
 | 9 | Jumlah aturan sangat besar dibanding kodenya | dijawab pemilik: aturan dibaca per lingkup dokumen |
 | 10 | Pemisahan kode infrastruktur dan kode logika tidak dinyatakan sebagai prinsip | lima poin diterima pemilik |
 | 11 | B1: screen adalah petunjuk, bukan larangan | arahan pemilik; ditulis sebagai DEV-2 di `docs/` |
-| 12 | `@UseCase` dan `@Gateway` sebagai jenis khusus `@Action` | diputuskan: jenis bawaan di inti; `@Action` polos tetap boleh, aturannya bebas; belum diimplementasi |
+| 12 | `@UseCase` dan `@Gateway` sebagai jenis khusus `@Action` | selesai: diimplementasi lewat tiket 261122101201 (main `bcdb4e0`) |
 | 13 | Satu dokumen per komponen, dibuat baru | kekurangan hasil pemeriksaan sudah diisi (2026-11-22); penggantian resmi belum diputuskan |
 | 14 | Kontrak tak tertulis antara Skeleto dan penjejak scenario-explorer | pemilik ingin diteliti lebih dalam |
 | 15 | Celah di praktik transaksi dan locking, dan urusan lintas-use-case lain yang belum diatur | dicatat; dibahas lain waktu |
@@ -260,3 +260,10 @@ Semua aturan bernomor sudah ada di `docs/`. Yang hilang terutama penjelasan "ken
 - **Dampak di luar repo:** penjejak scenario-explorer mencari use case dengan `mainDecorator.name === "Action"` dan wrapper contohnya memakai `{"ordinal": -10}`; keduanya rusak setelah perubahan ini.
 - **Jawaban lanjutan (2026-11-22):** use case dan gateway tidak boleh bergantung pada `@Action` polos. Jenis dibaca dari nama penanda utama di metadata. Action dibuat dalam tiga kelompok: gateway, lalu use case, lalu `@Action` polos. Tidak ada pemakai lama, jadi tidak perlu kompatibilitas mundur. Tes arsitektur salinan diciutkan menjadi satu pemeriksaan (tidak ada `@Action` polos), dan wrapper penjaga dihapus.
 - **Aturan satu berkas dibatalkan:** pemilik: "Tidak ada aturan khusus secara teknis untuk meletakkan disatu berkas baik itu untuk wrapper, config, action bahkan usecase dan gateway. semua tergantung oleh scanner." Urutan wrapper mengikuti urutan pemindai (berkas menurut path, fungsi menurut tulisan). Satu berkas wrapper hanya default opsional di dokumen praktik. `@Wrapper` tidak menerima data apa pun, dengan pesan yang sama seperti `@Config` dan `@Action`.
+
+## Hasil implementasi, 2026-11-22
+
+- **Tiket 261122101201** (`@UseCase`/`@Gateway` bawaan) digabung di `bcdb4e0`, lulus di putaran 2. Putaran 1 dikembalikan karena `docs/` masih mengajarkan cara lama.
+- **Tiket 261122101202** (urutan wrapper menurut tulisan, tanpa `ordinal`) digabung di `6c05558`, lulus di putaran 1. Ini menutup WRP-5: arah "ditulis pertama = terdalam" kini berlaku, tanpa aturan satu berkas.
+- **Pengingat #1:** `src/` sekarang 479 baris.
+- **Tindak lanjut untuk temuan 14 (penjejak scenario-explorer):** penjejak kini rusak. Ia mencari use case dengan `mainDecorator.name === "Action"` ditambah penanda `UseCase` (seharusnya `mainDecorator.name === "UseCase"`), dan wrapper contohnya memakai `{"ordinal": -10}` yang kini menghentikan startup ("takes no data"); wrapper pengamat harus ditulis pertama supaya menjadi lapisan terdalam. Dikerjakan di repo scenario-explorer nanti (keputusan pemilik).

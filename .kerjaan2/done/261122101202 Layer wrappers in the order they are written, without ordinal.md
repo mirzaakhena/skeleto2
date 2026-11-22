@@ -44,15 +44,18 @@ The layering of wrappers follows the order in which they are written, first writ
   → (b) One message for all data, like @Config and @Action: @Wrapper takes no data; no special message for ordinal (owner chose 'Satu pesan untuk semua'; no backward compatibility needed). (owner, 2026-11-22)
 
 ## Assumptions
-- A1 [unseen] Wrappers are still created in dependency order; only the layering follows the written order (source order within the one file), and the one-file rule holds with or without SkeletoOptions.decorators
+- A1 [overturned] Wrappers are still created in dependency order; only the layering follows the written order (source order within the one file), and the one-file rule holds with or without SkeletoOptions.decorators
   Why: CLAUDE.md 4.7 keeps 'dependencies first' and 4.2 checks main markers regardless of the list
   If wrong: change the creation loop in src/skeleto.ts or gate the check on the list
-- A2 [unseen] An application with zero or one wrapper, or with all wrappers in one file, passes the one-file rule; the message for wrappers in several files names every such file (paths relative to the scanned directory) and the wrappers in them
+  Overturned by owner, 2026-11-22
+- A2 [overturned] An application with zero or one wrapper, or with all wrappers in one file, passes the one-file rule; the message for wrappers in several files names every such file (paths relative to the scanned directory) and the wrappers in them
   Why: the ticket asks that the message names the files; CLAUDE.md 4.8 asks every line to name the function at fault
   If wrong: shorten the message in src/scanner.ts or src/skeleto.ts
-- A3 [unseen] Wrappers are still created in dependency order; only the layering follows the scan order (files in sorted path order, functions in source order), the first found innermost
+  Overturned by owner, 2026-11-22
+- A3 [confirmed] Wrappers are still created in dependency order; only the layering follows the scan order (files in sorted path order, functions in source order), the first found innermost
   Why: CLAUDE.md 4.7 keeps 'dependencies first'; owner answer Q1 sets the layering by scan order
   If wrong: change the creation and layering loop in src/skeleto.ts
+  Confirmed by owner, 2026-11-22
 
 ## Decisions
 - Lane standard: framework code and docs, contract change of @Wrapper data, cheap to undo
@@ -73,3 +76,7 @@ Wrapper layering now follows the scan order (files in sorted path order, functio
   note: TEMUAN.md:232 still says WRP-5 is 'Belum diputuskan'; a findings record not named in Done when 5, so not blocking
   note: scenario-explorer's wrapper with {"ordinal": -10} will now fail startup; out of scope, ticket says it needs its own follow-up
   note: only targeted tests run via k2 test; full typecheck/test/build already recorded on dfdb52a278
+
+## Follow-ups
+- F1 [open] Overturned A1: Wrappers are still created in dependency order; only the layering follows the written order (source order within the one file), and the one-file rule holds with or without SkeletoOptions.decorators
+- F2 [open] Overturned A2: An application with zero or one wrapper, or with all wrappers in one file, passes the one-file rule; the message for wrappers in several files names every such file (paths relative to the scanned directory) and the wrappers in them

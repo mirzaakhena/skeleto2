@@ -61,12 +61,14 @@ An application can write `@UseCase` or `@Gateway` as the main marker of a functi
   → (a) Keep B5 as 'no plain @Action in an application that uses use cases and gateways' and shrink the architecture test to that one check; remove the implUseCaseWrapper guard and its text (owner chose 'Ciutkan, buang penjaga'). (owner, 2026-11-22)
 
 ## Assumptions
-- A1 [unseen] @UseCase and @Gateway take no data, like @Action (CLAUDE.md 4.4); a @Wrapper still depends on @Config only
+- A1 [confirmed] @UseCase and @Gateway take no data, like @Action (CLAUDE.md 4.4); a @Wrapper still depends on @Config only
   Why: the owner said everything that holds for an action holds for them, and 4.4/4.6 already settle data and wrapper dependencies
   If wrong: allow data or wrapper dependencies in scanner.ts checkMainData and ALLOWED_DEPENDENCIES
-- A2 [unseen] The new main markers join every existing check of main markers: lowercase near-markers (@usecase), main markers on exported constants or namespace functions, the 'no main marker' message, Promise return types, and the empty-directory message, which names all five kinds
+  Confirmed by owner, 2026-11-22
+- A2 [confirmed] The new main markers join every existing check of main markers: lowercase near-markers (@usecase), main markers on exported constants or namespace functions, the 'no main marker' message, Promise return types, and the empty-directory message, which names all five kinds
   Why: CLAUDE.md 4.1, 4.2, 4.3 and 4.5 state these checks for main markers in general
   If wrong: keep the new names out of MAIN_DECORATORS for the checks concerned
+  Confirmed by owner, 2026-11-22
 
 ## Decisions
 - Lane standard: framework code and docs, public metadata changes but nothing unrecoverable

@@ -22,3 +22,6 @@
 {"t":"2026-11-22 10:54:49","event":"agent","role":"reviewer","agent":"a85b31518d6f821f5","step":"review:1:0:0","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
 {"t":"2026-11-22 10:55:48","event":"verdict","result":"pass","round":1,"commit":"f51235f","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"reviewer:a85b31518d6f821f5"}
 {"t":"2026-11-22 10:55:59","event":"landed","branch":"k2/261122101202-layer-wrappers-in-the","files":["CLAUDE.md","README.md","TECHNICAL_PRACTICES.md","docs/teknis/komponen.md","docs/teknis/wrapper.md","src/scanner.ts","src/skeleto.ts","test/readme.test.ts","test/scanner.test.ts","test/skeleto.test.ts"],"session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 11:02:14","event":"assumption-overturned","key":"A1","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 11:02:14","event":"assumption-overturned","key":"A2","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 11:02:15","event":"assumption-confirmed","key":"A3","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}

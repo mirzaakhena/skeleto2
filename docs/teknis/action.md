@@ -5,10 +5,11 @@
 **Action** adalah komponen Skeleto yang menghasilkan sebuah **handler**: fungsi asinkron `(ctx, request) => Promise<response>` yang dipanggil di setiap pemakaian.
 
 ```ts
+// src/type.ts (excerpt)
 export type ActionHandler<REQUEST = any, RESPONSE = any> = (ctx: Context, request: REQUEST) => Promise<RESPONSE>;
 ```
 
-Action ditandai `@UseCase` atau `@Gateway`. Keduanya adalah jenis action, dan hanya action yang dibungkus wrapper. `@Action` bukan penanda: fungsi yang bertanda itu menghentikan startup, dengan saran memakai `@UseCase` atau `@Gateway` (keputusan pemilik, 2026-11-22).
+Action ditandai `@UseCase` atau `@Gateway`. Keduanya adalah jenis action, dan hanya action yang dibungkus wrapper.
 
 ## Kenapa ada
 
@@ -20,22 +21,33 @@ Action adalah mekanisme umum untuk "sesuatu yang dipanggil per permintaan". Skel
 | Gateway | `@Gateway` |
 
 Setiap action aplikasi adalah salah satu dari keduanya, sehingga tidak ada action yang lolos dari aturan dependency use case dan gateway.
+
 ## Use case dan gateway: struktur sama, konsep berbeda
 
 Kode use case dan kode gateway hampir tidak bisa dibedakan dari bentuknya. Keduanya action, jadi bentuknya sama; hanya penanda utamanya yang berbeda:
 
-```ts
-// Use case
-export type StockTransfer = ActionHandler<StockTransferRequest, StockTransferResponse>;
-export function implStockTransfer(lockWarehouses: LockWarehouses, saveWarehouses: SaveWarehouses, notifyWarehouses: NotifyWarehouses): StockTransfer {
-  return async (ctx, { from, to, units }) => { /* ... */ };
-}
+Use case:
 
-// Gateway
+```ts
+// src/usecase/stock/stock_transfer.ts (excerpt)
+export type StockTransfer = ActionHandler<StockTransferRequest, StockTransferResponse>;
+```
+
+```ts
+// src/usecase/stock/stock_transfer.ts (excerpt)
+export function implStockTransfer(lockWarehouses: LockWarehouses, saveWarehouses: SaveWarehouses, notifyWarehouses: NotifyWarehouses): StockTransfer {
+```
+
+Gateway:
+
+```ts
+// src/gateway/warehouse.ts (excerpt)
 export type LockWarehouses = ActionHandler<string[], Warehouse[]>;
+```
+
+```ts
+// src/gateway/memory/warehouse.ts (excerpt)
 export function implLockWarehouses(database: Database): LockWarehouses {
-  return async (ctx, ids) => { /* ... */ };
-}
 ```
 
 **Yang sama (struktur):**
@@ -75,6 +87,7 @@ export function implLockWarehouses(database: Database): LockWarehouses {
 Parameter pertama setiap handler adalah context (`ctx`). Context berjalan bersama satu panggilan melewati setiap action yang dicapainya.
 
 ```ts
+// src/type.ts (excerpt)
 export type Context = {
   data: Record<string, any>;
   traceId: string;
@@ -104,7 +117,7 @@ Action mengikuti aturan umum di [komponen.md](komponen.md). Nama dan berkas use 
 
 Operasi bisnis ditandai `@UseCase` dan jalan keluar ditandai `@Gateway`. Action yang keduanya sekaligus melanggar UC-4 atau GW-12.
 
-Skeleto sendiri yang menjaganya saat startup (keputusan pemilik, 2026-11-22): tidak ada penanda untuk action polos. Alasannya: action polos yang bebas aturan bisa menjadi jembatan diam-diam dari satu use case ke use case lain, dan lolos dari semua aturan use case dan gateway.
+Skeleto sendiri yang menjaganya saat startup (keputusan pemilik, 2026-11-22): hanya ada dua jenis action, sehingga tidak ada action yang bisa menjadi jembatan diam-diam dari satu use case ke use case lain dan lolos dari aturan use case dan gateway.
 
 ### ACT-2. Handler hanya menerima context dan input; semua yang lain datang sebagai dependency
 
@@ -116,13 +129,11 @@ Context membawa apa yang dibutuhkan lapis teknis: transaksi yang terbuka, efek y
 
 Data bisnis di context adalah input yang tidak dinyatakan tipe mana pun. Ia membuat use case bergantung pada wrapper mana yang berjalan, tidak bisa dites hanya dengan Request dan fake, dan tidak terlihat di kontrak oleh reviewer. Yang membaca context hanya wrapper dan gateway, untuk keperluan teknis (UC-11).
 
-> Ditegaskan sesuai keputusan pemilik (2026-11-22). Dokumen lama hanya menyebut bahwa context "carries what the technical level needs, not business input".
-
 ## Hubungan dengan komponen lain
 
 | Dengan | Hubungannya |
 | --- | --- |
-| Config | boleh menjadi dependency |
+| Config | hanya gateway yang bergantung padanya (dan wrapper, serta config lain); use case tidak |
 | Action lain | boleh menjadi dependency menurut tabel di atas; yang disuntikkan versi yang sudah dibungkus. Skeleto menolak use case yang bergantung pada config atau use case, dan gateway yang bergantung pada gateway lain atau use case |
 | Wrapper | membungkus setiap action; tidak boleh menjadi dependency action |
 
@@ -130,5 +141,4 @@ Data bisnis di context adalah input yang tidak dinyatakan tipe mana pun. Ia memb
 
 | Bagian | Status |
 | --- | --- |
-| `@Action` dihapus sebagai penanda; pemakaiannya menghentikan startup | terealisasi |
 | `@UseCase` dan `@Gateway` sebagai jenis bawaan, dan aturan dependency antar jenis action | terealisasi |

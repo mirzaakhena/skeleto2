@@ -4,9 +4,9 @@ Dokumen di folder ini disusun **per komponen**: setiap berkas membahas satu hal,
 
 ## Status
 
-> **Rancangan pengganti.** Folder ini disiapkan untuk menggantikan `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md`, dan `DEVELOPMENT_PROCESS.md` (`TEMUAN.md`, temuan 13). **Sampai pemilik memutuskan penggantiannya, ketiga dokumen lama masih berlaku**, dan tes repo (`test/readme.test.ts`) masih memeriksa contoh kodenya terhadap README. Contoh kode di folder ini disalin dari dokumen lama, tetapi belum diperiksa tes.
+Folder ini adalah **satu-satunya rangkaian aturan** untuk aplikasi yang dibangun di atas Skeleto. Tidak ada dokumen praktik lain. `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md`, dan `DEVELOPMENT_PROCESS.md` di akar repo hanya penunjuk ke sini, dan `REVIEW_CHECKLIST.md` memuat setiap aturan folder ini dalam satu daftar untuk reviewer. Tes repo (`test/readme.test.ts`) memeriksa strukturnya: nomor aturan, setiap kutipan nomor, isi checklist, dan contoh kodenya terhadap contoh di README.
 
-`REVIEW_CHECKLIST.md` tidak digantikan folder ini. Ia masih memakai nomor aturan lama; tabel pemetaan di bawah menghubungkannya.
+Aturan di sini untuk aplikasi yang Anda bangun, bukan aturan framework. Yang dijaga Skeleto sendiri saat startup (jenis komponen dan dependency-nya, urutan lapisan wrapper) ditandai **Mesin** di checklist; selebihnya Skeleto tidak memeriksanya, dan aplikasi yang tersusun lain tetap menyala.
 
 ## Tujuan
 
@@ -50,7 +50,7 @@ Review berjalan dalam dua lapis (keputusan pemilik, 2026-11-22):
 | 1. Kepatuhan konsep | apakah kode mengikuti struktur: jenis komponen, dependency, nama, berkas, penanda | mesin (Skeleto) dan LLM |
 | 2. Logika dan requirement | apakah kode melakukan yang diminta bisnis, dan benar | sebagian LLM, sebagian reviewer manusia |
 
-Lapis pertama dibuat semekanis mungkin, supaya waktu manusia terpakai di lapis kedua.
+Lapis pertama dibuat semekanis mungkin, supaya waktu manusia terpakai di lapis kedua. [REVIEW_CHECKLIST.md](../REVIEW_CHECKLIST.md) memuat setiap aturan di folder ini, tingkatnya, dan siapa yang memeriksanya: mesin, reviewer, atau proses.
 
 Aturan dibaca **per lingkup**: reviewer yang sedang membaca use case cukup menerapkan aturan di [use-case.md](konsep/use-case.md), ditambah aturan umum di [komponen.md](teknis/komponen.md). Itulah alasan dokumen dipecah per komponen.
 
@@ -79,18 +79,17 @@ Setiap aturan punya nomor dengan awalan dokumennya (`ENT-1`, `UC-3`, `GW-6`, ...
 | **Wajib** | kode yang melanggarnya salah, atau akan salah setelah perubahan berikutnya; review meminta perbaikan |
 | **Opsional** | anjuran; kode yang menyimpang menuliskan alasannya |
 
-Selain itu ada dua tanda di dalam teks:
+Selain itu ada satu tanda di dalam teks:
 
 | Tanda | Artinya |
 | --- | --- |
-| **Rencana, belum terealisasi di kode** | menggambarkan bentuk yang dituju; bagian "yang berlaku sekarang" di sebelahnya adalah yang harus dipakai hari ini |
 | **Usulan, belum diputuskan pemilik** | belum berlaku; dicatat supaya bisa diputuskan |
 
 ## Pemetaan nomor lama ke nomor baru
 
 | Lama | Baru | | Lama | Baru | | Lama | Baru |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| B1 | DEV-2 (tingkat berubah, lihat DEV-2) | | T1 | KOM-1 | | P1 | DEV-1 |
+| B1 | DEV-2 | | T1 | KOM-1 | | P1 | DEV-1 |
 | B2 | UC-6 | | T2 | KOM-2, CFG-3 | | P2 | DEV-3 |
 | B3 | CTL-4 | | T3 | KOM-3 | | P3 | DEV-4 |
 | B4 | CTL-6 | | T4 | KOM-4 | | P4 | DEV-5 |
@@ -99,7 +98,7 @@ Selain itu ada dua tanda di dalam teks:
 | B7 | UC-3 | | T7 | KOM-7 | | P7 | DEV-8 |
 | B8 | UC-4, GW-12 | | T8 | KOM-8 | | P8 | DEV-11 |
 | B9 | UC-5 | | T9 | KOM-9 | | P9 | DEV-9 |
-| B10 | UC-7 | | T10 | KOM-10 | | P10 | DEV-10 |
+| B10 | UC-7, UC-16 | | T10 | KOM-10 | | P10 | DEV-10 |
 | B11 | ENT-1 | | T11 | WRP-1 | | P11 | DEV-12 |
 | B12 | ENT-2 | | T12 | WRP-2 | | P12 | DEV-14 |
 | B13 | ENT-3 | | T13 | GW-5, CFG-2 | | P13 | UTG-4 |
@@ -128,4 +127,6 @@ Selain itu ada dua tanda di dalam teks:
 | B36 | ENT-6 | | | | | | |
 | B37 | ENT-7 | | | | | | |
 
-Aturan yang dirumuskan baru dari isi lama: CFG-3 (bagian pengecualian T2), GW-12 (bagian B8, sebelumnya hanya diperiksa tes arsitektur), dan UTG-2 (bagian B25). Aturan yang tidak punya padanan lama: ACT-2, ACT-3 (keputusan pemilik tentang context), dan rencana WRP-5. DEV-13 menuliskan keputusan pemilik tentang urutan kerja di dalam satu area.
+Aturan yang dirumuskan baru dari isi lama: CFG-3 (bagian pengecualian T2), GW-12 (bagian B8), dan UTG-2 (bagian B25). Aturan yang tidak punya padanan lama: ACT-2, ACT-3 (keputusan pemilik tentang context), WRP-5 (urutan lapisan wrapper), WRP-7 (wrapper yang urutannya penting ditulis di satu berkas), dan UC-16 (setiap use case ditandai `@Transaction`). DEV-13 menuliskan keputusan pemilik tentang urutan kerja di dalam satu area.
+
+B10 terbagi dua (keputusan pemilik, 2026-11-22): UC-7 mempertahankan "query tidak pernah menulis", dan UC-16 mewajibkan `@Transaction` di setiap use case, termasuk query. Tingkat B1 berubah dari Opsional menjadi Wajib sebagai DEV-2 (keputusan pemilik, 2026-11-22).

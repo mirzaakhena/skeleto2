@@ -10,10 +10,13 @@ import { withFixture } from "./fixture.js";
 const repo = fileURLToPath(new URL("..", import.meta.url));
 const readme = readFileSync(`${repo}README.md`, "utf8");
 
-const bestPractices = readFileSync(`${repo}BEST_PRACTICES.md`, "utf8");
-const technicalPractices = readFileSync(`${repo}TECHNICAL_PRACTICES.md`, "utf8");
 const checklist = readFileSync(`${repo}REVIEW_CHECKLIST.md`, "utf8");
-const developmentProcess = readFileSync(`${repo}DEVELOPMENT_PROCESS.md`, "utf8");
+const typeSource = readFileSync(`${repo}src/type.ts`, "utf8");
+
+/** Every document of docs/, by path from the repository root; docs/ is the only rule set. */
+const docs: Record<string, string> = {};
+for (const folder of ["konsep", "proses", "teknis"]) for (const name of readdirSync(`${repo}docs/${folder}`)) docs[`docs/${folder}/${name}`] = readFileSync(`${repo}docs/${folder}/${name}`, "utf8");
+docs["docs/README.md"] = readFileSync(`${repo}docs/README.md`, "utf8");
 
 type Blocks = {
   /** Full example files, by the path each block names in its first line. */
@@ -62,14 +65,14 @@ type Example = {
   command: string[];
   /** The output the README promises. */
   output: string;
-  /** Files another document adds to the example at paths of their own, such as its tests; they are type-checked with it, and run when they are `*.test.ts`. */
+  /** Files docs/ adds to the example at paths of their own, such as its tests; they are type-checked with it, and run when they are `*.test.ts`. */
   additions: Record<string, string>;
   /** Files REVIEW_CHECKLIST.md shows for applications to copy: the gap test. */
   checklist: Record<string, string>;
 };
 
-/** The README holds the one runnable example; every other code block of the README and of BEST_PRACTICES.md is an excerpt of it. */
-function readExample(readmeText: string, bestPracticesText: string, technicalText: string, checklistText: string): Example {
+/** The README holds the one runnable example; every other code block of docs/ is an excerpt of it, a copy of Skeleto's own types, or a whole file at a path of its own. */
+function readExample(readmeText: string, documents: Record<string, string>, checklistText: string): Example {
   const blocks = readBlocks("README", readmeText);
   const { files, commands, outputs } = blocks;
   checkExcerpts("README", blocks, files);
@@ -77,24 +80,26 @@ function readExample(readmeText: string, bestPracticesText: string, technicalTex
   assert.equal(outputs.length, 1, "the README shows exactly one output");
   assert.match(commands[0] ?? "", /^npx tsx \S+$/);
 
-  // BEST_PRACTICES.md runs nothing of its own: a full file, a command or an output there would be checked by no test.
-  const practices = readBlocks("BEST_PRACTICES.md", bestPracticesText);
-  assert.deepEqual(Object.keys(practices.files), [], "BEST_PRACTICES.md may show excerpts of the README example only, not whole files");
-  assert.deepEqual([...practices.commands, ...practices.outputs], [], "BEST_PRACTICES.md may show excerpts of the README example only, not commands or output");
-  checkExcerpts("BEST_PRACTICES.md", practices, files);
-
-  // TECHNICAL_PRACTICES.md shows excerpts of the README example, and whole files at new paths that join it; a README path there would be a second, unchecked version of it.
-  const technical = readBlocks("TECHNICAL_PRACTICES.md", technicalText);
-  assert.deepEqual([...technical.commands, ...technical.outputs], [], "TECHNICAL_PRACTICES.md may show code only, not commands or output");
-  checkExcerpts("TECHNICAL_PRACTICES.md", technical, files);
-  for (const path of Object.keys(technical.files)) assert.ok(!(path in files), `TECHNICAL_PRACTICES.md shows ${path} in full, which is a README example file; show an excerpt of it instead`);
+  // docs/ runs nothing of its own: a command or an output there would be checked by no test. An excerpt of src/type.ts is a copy of Skeleto's own types.
+  const additions: Record<string, string> = {};
+  for (const [document, text] of Object.entries(documents)) {
+    const shown = readBlocks(document, text);
+    assert.deepEqual([...shown.commands, ...shown.outputs], [], `${document} may show code only, not commands or output`);
+    checkExcerpts(document, shown, { ...files, "src/type.ts": typeSource });
+    // A whole file there is added to the example at a path of its own; a README path would be a second, unchecked version of it.
+    for (const [path, body] of Object.entries(shown.files)) {
+      assert.ok(!(path in files), `${document} shows ${path} in full, which is a README example file; show an excerpt of it instead`);
+      assert.ok(!(path in additions), `two documents of docs/ show ${path}`);
+      additions[path] = body;
+    }
+  }
 
   // REVIEW_CHECKLIST.md shows whole files to copy, at paths of their own; a path already taken would be a second, unchecked version of that file.
   const review = readBlocks("REVIEW_CHECKLIST.md", checklistText);
   assert.deepEqual([...review.commands, ...review.outputs], [], "REVIEW_CHECKLIST.md may show code only, not commands or output");
   checkExcerpts("REVIEW_CHECKLIST.md", review, files);
-  for (const path of Object.keys(review.files)) assert.ok(!(path in files) && !(path in technical.files), `REVIEW_CHECKLIST.md shows ${path}, which another document already shows`);
-  return { files, command: (commands[0] ?? "").split(" ").slice(2), output: outputs[0] ?? "", additions: technical.files, checklist: review.files };
+  for (const path of Object.keys(review.files)) assert.ok(!(path in files) && !(path in additions), `REVIEW_CHECKLIST.md shows ${path}, which another document already shows`);
+  return { files, command: (commands[0] ?? "").split(" ").slice(2), output: outputs[0] ?? "", additions, checklist: review.files };
 }
 
 /** What a consumer has installed: the package, here served straight from `src/`, and a compiler configuration. */
@@ -124,7 +129,7 @@ function run(tool: string, args: string[], cwd: string): Promise<Run> {
   });
 }
 
-const example = readExample(readme, bestPractices, technicalPractices, checklist);
+const example = readExample(readme, docs, checklist);
 
 test("the README covers the kinds, the start and the container", () => {
   const sources = Object.values(example.files).join("\n");
@@ -245,178 +250,21 @@ test("the README example keeps business rules in plain entity functions, and no 
   });
 });
 
-/** The rules of BEST_PRACTICES.md: every `### ` heading, with the text up to the next heading. */
-function practiceRules(text: string): { heading: string; body: string }[] {
-  return [...text.matchAll(/^### (.*)\n([\s\S]*?)(?=^##+ |(?![\s\S]))/gm)].map((match) => ({ heading: match[1] ?? "", body: match[2] ?? "" }));
-}
-
-test("every rule of BEST_PRACTICES.md is numbered once, has a level, and gives its reason first", () => {
-  const rules = practiceRules(bestPractices);
-  assert.ok(rules.length >= 16, "BEST_PRACTICES.md has too few rules");
-  // A rule takes the next free number and sits under its topic, so numbers need not rise down the file; each must appear exactly once.
-  const numbers: number[] = [];
-  rules.forEach(({ heading, body }) => {
-    const match = /^B(\d+)\. \S.* \((Mandatory|Optional)\)$/.exec(heading);
-    assert.ok(match, `rule heading is not '### B<n>. <rule> (Mandatory|Optional)':\n${heading}`);
-    numbers.push(Number(match[1]));
-    assert.match(body, /^\nWhy: \S/, `${heading} is not followed by a 'Why:' paragraph`);
-  });
-  assert.deepEqual([...numbers].sort((a, b) => a - b), numbers.map((_, index) => index + 1), "rule numbers are not 1..n, each once");
-  // A rule is cited by its number; after a renumbering, a citation of a number that no longer exists is caught here.
-  for (const [, cited] of bestPractices.matchAll(/\bB(\d+)\b/g)) assert.ok(Number(cited) >= 1 && Number(cited) <= rules.length, `BEST_PRACTICES.md cites B${cited}, which does not exist`);
-});
-
-test("BEST_PRACTICES.md has a rule for every agreed topic", () => {
-  const headings = practiceRules(bestPractices).map(({ heading }) => heading);
-  const topics: [string, RegExp][] = [
-    ["use cases and gateways told apart by markers", /`@UseCase`.*`@Gateway`/],
-    ["one use case per file", /one use case|use case in a file of its own/i],
-    ["entities are plain types and pure functions", /plain type with pure functions that return new copies/],
-    ["an entity comes into being only by new<Entity>", /brought into being only by `new<Entity>`.*\(Mandatory\)/],
-    ["an entity changes only through entity functions", /changed only by entity functions.*invariants.*\(Mandatory\)/],
-    ["a use case writes no entity literal", /never writes an entity literal \(Mandatory\)/],
-    ["validate on write, not on read", /validate on write, not on read \(Mandatory\)/],
-    ["storage constraints are optional", /store enforce.*invariants.*\(Optional\)/],
-    ["a use case only orchestrates", /only orchestrates/],
-    ["no use case depends on another", /never depends on another use case/],
-    ["entities import nothing outside entities", /Entities import nothing outside entities/],
-    ["use cases know only gateway contracts", /knows gateways only by their contract types/],
-    ["contracts apart from implementations", /contract apart from its implementation/],
-    ["standard shapes", /insert, save, find one and find many/],
-    ["gateways are not only stores", /outside the process.*gateway/],
-    ["determinism", /unpredictable value comes from a gateway.*once, at the start/],
-    ["the context is passed on, never read", /passes the context on and never reads it/],
-    ["two levels of validation", /shape of the input in the caller and the business rules in the entities/],
-    ["typed business errors", /typed by kind: validation, not found, conflict/],
-    ["the caller translates; no transport", /caller translates.*never mention a transport/],
-    ["own Request and Response", /own Request and Response/],
-    ["the boundary with callers", /caller makes the context and calls use cases only, never a gateway/],
-    ["a query never writes", /query never writes.*without `@Transaction`/],
-    ["concurrency", /reads, decides and then writes is protected.*\(Mandatory\)/],
-    ["the mechanism belongs to the gateway", /mechanism.*belongs to the gateway.*contract/],
-    ["locked once, by one gateway, in a fixed order", /locked once, by one gateway.*fixed order/],
-    ["uniqueness guarded by the store", /Uniqueness is guarded by the store, not by checking first/],
-    ["atomic updates need a reason", /atomic update.*written reason \(Optional\)/],
-    ["no effect before commit", /No effect outside the transaction's store happens before the commit \(Mandatory\)/],
-    ["after commit or outbox, per effect", /after commit.*outbox/],
-  ];
-  for (const [topic, pattern] of topics) assert.ok(headings.some((heading) => pattern.test(heading)), `no rule of BEST_PRACTICES.md covers: ${topic}`);
-  // Relocking is forbidden for every store, with the reason for a lock that is re-entrant and for one that is not.
-  const lockedOnce = practiceRules(bestPractices).find(({ heading }) => /locked once, by one gateway/.test(heading))?.body ?? "";
-  assert.match(lockedOnce, /Locking again what the same transaction already holds is not allowed, whatever the store/);
-  assert.match(lockedOnce, /not re-entrant.*waits for itself/);
-  assert.match(lockedOnce, /re-entrant.*hides a second fetch/);
-  assert.match(bestPractices, /\| Who \| Uses the context to \|/, "BEST_PRACTICES.md has no table of who may use the context");
-});
-
-test("BEST_PRACTICES.md explains with two timelines why a transaction alone does not protect a decision, and stays generic", () => {
-  const section = bestPractices.slice(bestPractices.indexOf("## Concurrency"), bestPractices.indexOf("## Technical rules"));
-  assert.match(section, /A transaction alone does not give this protection/);
-  for (const shape of ["Check-then-insert", "Read-change-save"]) {
-    assert.ok(section.includes(`**${shape}.**`), `no ${shape} timeline`);
-    // Its own part only: up to the next bold paragraph or heading, so that one shape's table cannot stand in for the other's.
-    const timeline = section.slice(section.indexOf(`**${shape}.**`) + 1).split(/^\*\*|^###/m)[0] ?? "";
-    // A step-by-step table: the steps of two requests side by side.
-    assert.match(timeline, /^\| Step \| [^|]+ \| [^|]+ \|$(\n^\| .*\|$){7,}/m, `the ${shape} timeline is not a table of steps`);
-  }
-  // The outbox is told as numbered steps, and stores other than a database are named.
-  assert.match(section, /^1\. .*same store, in the same transaction[\s\S]*^4\. /m);
-  for (const store of ["A third-party service", "A cache", "A queue"]) assert.match(section, new RegExp(`^\\| ${store} \\|`, "m"));
-  // Conceptual and portable: no database product, query language or web framework is named.
-  for (const product of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /oracle/i, /mongo/i, /redis/i, /kafka/i, /rabbit/i, /dynamo/i, /\bExpress\b/, /express\.?js/i, /fastify/i, /nestjs/i, /\bkoa\b/i, /\bhono\b/i, /FOR UPDATE/, /\bReact\b/, /\bVue\b/, /\bAngular\b/, /svelte/i, /next\.?js/i, /\bNuxt\b/, /solid\.?js/i, /\bRemix\b/, /\bastro\b/i, /jquery/i]) {
-    assert.doesNotMatch(bestPractices, product);
-  }
-});
-
-test("BEST_PRACTICES.md resolves how an entity comes into being apart from how stored data is read", () => {
-  assert.doesNotMatch(bestPractices, /made only through its creating function/);
-  assert.match(bestPractices, /Reading a warehouse that is already stored does not bring it into being, and does not go through `newWarehouse`/);
-  assert.match(bestPractices, /```ts\n\/\/ src\/entity\/warehouse\.ts \(excerpt\)\nexport function transfer/);
-  assert.match(bestPractices, /```ts\n\/\/ src\/gateway\/memory\/warehouse\.ts \(excerpt\)\n(?:(?!\n```\n)[\s\S])*Stored data is mapped to the type and nothing more/);
-});
-
-test("BEST_PRACTICES.md says Skeleto does not check it and leaves the technical rules to TECHNICAL_PRACTICES.md", () => {
-  assert.match(bestPractices, /Skeleto does not check them/);
-  assert.match(bestPractices, /a use case depends on gateways only, never on a config, and a gateway depends on configs only, never on another gateway/);
-  assert.doesNotMatch(bestPractices, /a gateway may still be built from other gateways/i);
-  assert.ok(bestPractices.split("](TECHNICAL_PRACTICES.md)").length > 2, "BEST_PRACTICES.md does not point to TECHNICAL_PRACTICES.md");
-  for (const reason of [/already a plain object/, /leaves the old state intact/, /inputs and outputs alone/, /`import \* as Warehouse from /]) assert.match(bestPractices, reason);
-});
-
-test("BEST_PRACTICES.md opens with the two levels and maps every architectural concept to what expresses it and what Skeleto checks", () => {
-  const opening = bestPractices.slice(0, bestPractices.indexOf("### B1."));
-  assert.match(opening, /^## Two levels$/m);
-  assert.match(opening, /\*\*The technical level\*\* is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper`, `@UseCase` and `@Gateway`,/);
-  assert.match(opening, /\*\*The architectural level\*\*[^\n]*entities, use cases, gateways\. Skeleto knows use cases and gateways as kinds of action/);
-  assert.match(opening, /one standard structure of actions/);
-  const rows = new Map(
-    [...opening.matchAll(/^\| ([^|]+?) \| ([^|]+?) \| ([^|]+?) \|$/gm)].slice(2).map((match) => [match[1] ?? "", { expressed: match[2] ?? "", checked: match[3] ?? "" }]),
-  );
-  assert.deepEqual([...rows.keys()], ["Entity", "Use case", "Gateway", "Resource, such as a database or settings", "Cross-cutting concern, such as logging or transactions"]);
-  assert.match(rows.get("Entity")?.expressed ?? "", /no marker, not a component/);
-  assert.equal(rows.get("Entity")?.checked, "nothing");
-  for (const role of ["use case", "gateway"]) {
-    const row = rows.get(role[0]?.toUpperCase() + role.slice(1));
-    assert.equal(row?.expressed, `\`@${role === "use case" ? "UseCase" : "Gateway"}\``);
-    assert.match(row?.checked ?? "", new RegExp(`the rules of an action, and that it depends on ${role === "use case" ? "gateways" : "configs"} only`));
-  }
-  assert.equal(rows.get("Resource, such as a database or settings")?.expressed, "`@Config`");
-  assert.match(rows.get("Cross-cutting concern, such as logging or transactions")?.expressed ?? "", /^`@Wrapper`, chosen per action by additional markers/);
-  // The opening comes first, before any rule.
-  assert.ok(bestPractices.indexOf("## Two levels") >= 0 && bestPractices.indexOf("## Two levels") < bestPractices.indexOf("### B1."));
-});
-
-test("BEST_PRACTICES.md states the principle of building from use cases before any rule, with the iceberg and the parallel work it allows", () => {
-  const start = bestPractices.indexOf("## Built from use cases");
-  assert.ok(start > bestPractices.indexOf("## Two levels") && start < bestPractices.indexOf("### B1."));
-  const section = bestPractices.slice(start, bestPractices.indexOf("## Use cases and gateways"));
-  assert.match(section, /tip of an iceberg/);
-  assert.match(section, /where the complexity lies, not about what matters/);
-  assert.match(section, /The frontend is as important as the rest/);
-  for (const part of ["business rules", "validation", "concurrent", "fail halfway", "commit", "unpredictable"]) assert.match(section, new RegExp(part, "i"));
-  assert.match(section, /the frontend and the backend can be built at the same time/);
-  const levels = [...section.matchAll(/^### (B\d+)\. .* \((Mandatory|Optional)\)$/gm)].map((match) => `${match[1]} ${match[2]}`);
-  assert.deepEqual(levels, ["B1 Optional", "B2 Mandatory", "B3 Mandatory", "B4 Optional"]);
-  assert.equal([...section.matchAll(/^Why: /gm)].length, 4);
-});
-
-test("every B citation in the repository points to a rule that exists, and every number is used once", () => {
-  const numbers = [...bestPractices.matchAll(/^### B(\d+)\. /gm)].map((match) => Number(match[1]));
-  assert.deepEqual([...numbers].sort((a, b) => a - b), numbers.map((_, index) => index + 1));
-  for (const text of [bestPractices, technicalPractices, checklist, readme]) {
-    for (const match of text.matchAll(/\bB(\d+)\b/g)) assert.ok(Number(match[1]) >= 1 && Number(match[1]) <= numbers.length, `B${match[1]} does not exist`);
-  }
-});
-
-test("the README leaves the recommendations to BEST_PRACTICES.md and links to it on one line", () => {
-  assert.doesNotMatch(readme, /^## One use case per file$/m);
-  assert.doesNotMatch(readme, /^## Entities hold the rules/m);
-  assert.doesNotMatch(readme, /Skeleto does not check (it|them)/);
-  assert.equal(readme.split("\n").filter((line) => line.includes("(BEST_PRACTICES.md")).length, 1);
-});
-
-test("the README points to TECHNICAL_PRACTICES.md on the line that points to BEST_PRACTICES.md", () => {
-  const lines = readme.split("\n").filter((line) => line.includes("(TECHNICAL_PRACTICES.md"));
-  assert.equal(lines.length, 1);
-  assert.ok(lines[0]?.includes("(BEST_PRACTICES.md"));
-});
-
 test("the README and CLAUDE.md name the exclude option, the constant and every default entry", () => {
   for (const text of [readme, readFileSync(`${repo}CLAUDE.md`, "utf8")]) {
     for (const needed of ["exclude", "DEFAULT_EXCLUDE", ...DEFAULT_EXCLUDE]) assert.ok(text.includes(`\`${needed}\``), `${needed} is not documented`);
   }
 });
 
-test("the README and the practice files stay clear of what Skeleto dropped", () => {
-  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /plain `?@Action/i, /plain action/i]) {
-    assert.doesNotMatch(readme, banned);
-    assert.doesNotMatch(bestPractices, banned);
-    assert.doesNotMatch(technicalPractices, banned);
-    assert.doesNotMatch(checklist, banned);
+test("the README, the checklist and docs/ stay clear of what Skeleto dropped, and of a plain action", () => {
+  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /plain `?@Action/i, /plain action/i, /plainActions/i, /action polos/i, /@Action/, /tes arsitektur/i]) {
+    for (const [document, text] of Object.entries({ ...docs, "REVIEW_CHECKLIST.md": checklist })) assert.doesNotMatch(text, banned, `${document} mentions what Skeleto dropped: ${banned}`);
   }
+  assert.doesNotMatch(readme, /readTypeArguments|@Controller|@RequestPart|payload|plainActions/i);
   // CLAUDE.md says "action polos" for the dropped kind; its table of dropped features is the one place that names it.
   const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
   assert.doesNotMatch(guide.replace(/^\| `@Action` polos.*$/m, ""), /tiga jenis action|action polos \(|, action polos/);
+  assert.doesNotMatch(guide, /plainActions/);
 });
 
 /**
@@ -580,62 +428,125 @@ test("with an observer in the context, every gateway call of a use case run reac
   });
 });
 
-test("every rule of TECHNICAL_PRACTICES.md is a numbered heading with a level, followed by its reason", () => {
-  const sections = technicalPractices.split(/^(?=#{1,3} )/m).filter((section) => section.startsWith("### "));
-  assert.ok(sections.length >= 13, "TECHNICAL_PRACTICES.md has fewer rules than topics");
-  // A rule takes the next free number and sits under its topic, so numbers need not rise down the file; each must appear exactly once.
-  const numbers: number[] = [];
-  sections.forEach((section) => {
-    const heading = section.slice(0, section.indexOf("\n"));
-    const match = /^### T(\d+)\. \S.* \((Mandatory|Optional)\)$/.exec(heading);
-    assert.ok(match, `rule heading is not '### T<n>. <rule> (Mandatory|Optional)': ${heading}`);
-    numbers.push(Number(match[1]));
-    assert.match(section, /^Why: \S/m, `${heading} gives no Why: paragraph`);
-  });
-  assert.deepEqual([...numbers].sort((a, b) => a - b), numbers.map((_, index) => index + 1), "rule numbers are not 1..n, each once");
-  // No deeper heading hides a rule from the numbering.
-  assert.doesNotMatch(technicalPractices, /^#{4,} /m);
-});
+/** The prefix of the rule numbers of each document of docs/ that holds rules, in the order the checklist lists them. */
+const RULE_FILES: [string, string][] = [
+  ["docs/konsep/entity.md", "ENT"],
+  ["docs/konsep/use-case.md", "UC"],
+  ["docs/konsep/gateway.md", "GW"],
+  ["docs/konsep/controller.md", "CTL"],
+  ["docs/teknis/komponen.md", "KOM"],
+  ["docs/teknis/action.md", "ACT"],
+  ["docs/teknis/wrapper.md", "WRP"],
+  ["docs/teknis/config.md", "CFG"],
+  ["docs/proses/pengembangan.md", "DEV"],
+  ["docs/proses/utang-teknis.md", "UTG"],
+];
 
-test("TECHNICAL_PRACTICES.md covers every agreed topic, and names no product or framework", () => {
-  const rule = (pattern: RegExp): string => {
-    const section = technicalPractices.split(/^(?=#{1,3} )/m).find((part) => part.startsWith("### T") && pattern.test(part.slice(0, part.indexOf("\n"))));
-    assert.ok(section, `no rule heading matches ${pattern}`);
-    return section;
-  };
-  rule(/takes its dependencies and returns/);
-  const marker = rule(/A debt is marked in code/);
-  for (const form of ["// TechDebt <gap id>: <reason>", "// TechDebt Planned <layer>: <reason>", "// TechDebt Shortcut: <reason>"]) assert.ok(marker.includes(`\`${form}\``), `T25 lacks ${form}`);
-  assert.doesNotMatch(technicalPractices, /TECH-DEBT/);
-  assert.match(rule(/named `impl` followed by/), /implConnection/);
-  rule(/named type alias/);
-  rule(/never an inline or generic type/);
-  rule(/parameter is named after its type/);
-  rule(/path follows from the name/);
-  assert.match(rule(/description first/), /README\.md#rules-worth-knowing/);
-  assert.match(rule(/allowed markers are kept in one exported constant/), /`Transaction`.*`UseCase` and `Gateway` are main markers/);
-  rule(/One wrapper per marker/);
-  rule(/opens the transaction and keeps it in the context/);
-  assert.match(rule(/only through a function of the context \(Mandatory\)/), /implDatabase/);
-  assert.match(rule(/joined, never doubled \(Mandatory\)/), /ctx\.data\.transaction/);
-  const afterCommit = rule(/only after commit \(Mandatory\)/);
-  assert.match(afterCommit, /ctx\.data\.afterCommit\.push/);
-  assert.match(afterCommit, /for \(const effect of afterCommit\) await effect\(\);/);
-  assert.match(afterCommit, /\*\*This form can lose the effect\.\*\* If the process stops after the commit/);
-  assert.match(afterCommit, /outbox[^\n]*\(BEST_PRACTICES\.md\)/);
-  assert.match(rule(/sets its own timeout/), /README\.md#asynchronous-configs/);
-  rule(/taken from the container once, at startup/);
-  rule(/hand-written fakes typed by the gateway contracts, without starting Skeleto and without a mock library/);
-  rule(/fix every unpredictable value/);
-  rule(/compares whole objects/);
-  rule(/One integration test starts Skeleto/);
-  assert.match(rule(/generated files are left out of the scan/), /README\.md#files-the-scan-leaves-out/);
-  for (const banned of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /mongo/i, /redis/i, /kafka/i, /express/i, /fastify/i, /\bnest/i, /\bkoa\b/i, /\bhono\b/i, /next\.js/i, /\bhttp\b/i]) {
-    assert.doesNotMatch(technicalPractices, banned);
+type Rule = { number: string; text: string; level: "Wajib" | "Opsional" };
+
+/** The rules of a document of docs/: every `### <PREFIX>-<n>. <text>` heading, which must sit under 'Aturan wajib' or 'Aturan opsional' and have a body. */
+function docsRules(path: string, prefix: string): Rule[] {
+  const rules: Rule[] = [];
+  let level: Rule["level"] | undefined;
+  const lines = (docs[path] ?? "").split("\n");
+  lines.forEach((line, index) => {
+    if (/^## /.test(line)) level = line === "## Aturan wajib" ? "Wajib" : line === "## Aturan opsional" ? "Opsional" : undefined;
+    if (!/^###+ /.test(line)) return;
+    const match = new RegExp(`^### (${prefix}-\\d+)\\. (\\S.*)$`).exec(line);
+    assert.ok(match, `${path} has a heading that is not '### ${prefix}-<n>. <rule>': ${line}`);
+    assert.ok(level, `${path}: ${match[1]} is under neither 'Aturan wajib' nor 'Aturan opsional'`);
+    const next = lines.findIndex((text, at) => at > index && /^##+ /.test(text));
+    const body = lines.slice(index + 1, next === -1 ? undefined : next);
+    assert.ok(body.some((text) => text.trim() !== ""), `${path}: ${match[1]} has no body`);
+    rules.push({ number: match[1] ?? "", text: match[2] ?? "", level });
+  });
+  return rules;
+}
+
+const allRules = RULE_FILES.flatMap(([path, prefix]) => docsRules(path, prefix));
+
+test("every rule of docs/ is '### <PREFIX>-<n>. ...' under 'Aturan wajib' or 'Aturan opsional', with a body, and each number is used once", () => {
+  assert.ok(allRules.length >= 80, "docs/ has fewer rules than expected");
+  assert.deepEqual([...new Set(allRules.map(({ number }) => number))].length, allRules.length, "a rule number is used twice");
+  for (const [path, prefix] of RULE_FILES) {
+    const numbers = docsRules(path, prefix).map(({ number }) => Number(number.split("-")[1]));
+    assert.ok(numbers.length > 0, `${path} has no rule`);
+    assert.equal(new Set(numbers).size, numbers.length, `${path} repeats a number`);
+  }
+  // No other document holds a rule, and no deeper heading hides one from the numbering.
+  for (const [path, text] of Object.entries(docs)) {
+    if (!RULE_FILES.some(([ruleFile]) => ruleFile === path)) assert.doesNotMatch(text, /^### [A-Z]+-\d+\. /m, `${path} holds a rule but is not listed as a rule document`);
+    assert.doesNotMatch(text, /^#{4,} /m, `${path} has a heading deeper than ###`);
   }
 });
 
-test("the files TECHNICAL_PRACTICES.md adds type-check with the README example, and its tests pass", async () => {
+test("every rule number cited in docs/, the README, CLAUDE.md and the checklist points to a rule that exists", () => {
+  const known = new Set(allRules.map(({ number }) => number));
+  const citing = { ...docs, "README.md": readme, "CLAUDE.md": readFileSync(`${repo}CLAUDE.md`, "utf8"), "REVIEW_CHECKLIST.md": checklist };
+  for (const [document, text] of Object.entries(citing)) {
+    for (const [cited] of text.matchAll(/\b(?:ENT|UC|GW|CTL|KOM|ACT|WRP|CFG|DEV|UTG)-\d+\b/g)) assert.ok(known.has(cited), `${document} cites ${cited}, which does not exist`);
+  }
+});
+
+test("every old rule number in the table of docs/README.md maps to rules that exist", () => {
+  const known = new Set(allRules.map(({ number }) => number));
+  const rows = [...(docs["docs/README.md"] ?? "").matchAll(/\| ([BTP]\d+) \| ([^|]+) \|/g)];
+  assert.ok(rows.length >= 78, "the table of old numbers is incomplete");
+  for (const [, old, replacement] of rows) for (const [number] of (replacement ?? "").matchAll(/[A-Z]+-\d+/g)) assert.ok(known.has(number), `${old} maps to ${number}, which does not exist`);
+});
+
+test("docs/ is the only rule set: the old documents are pointers, and nothing says they still apply", () => {
+  for (const [file, prefix] of [["BEST_PRACTICES.md", "B"], ["TECHNICAL_PRACTICES.md", "T"], ["DEVELOPMENT_PROCESS.md", "P"]]) {
+    const text = readFileSync(`${repo}${file}`, "utf8");
+    const paragraphs = text.split("\n").filter((line) => line.trim() !== "" && !line.startsWith("# "));
+    assert.equal(paragraphs.length, 1, `${file} is not a one-paragraph pointer`);
+    assert.match(text, /\]\(docs\/README\.md\)/, `${file} does not point to docs/README.md`);
+    assert.doesNotMatch(text, new RegExp(`^### ${prefix}\\d+\\.`, "m"), `${file} still holds rules`);
+  }
+  const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
+  for (const [document, text] of Object.entries({ ...docs, "README.md": readme, "CLAUDE.md": guide, "REVIEW_CHECKLIST.md": checklist })) {
+    assert.doesNotMatch(text, /masih berlaku|untuk sementara|rancangan pengganti|dokumen lama|Rencana, belum terealisasi|still apply|until the owner decides/i, `${document} suggests that the old documents still apply`);
+  }
+  assert.match(guide, /`docs\/`, satu-satunya rangkaian aturan/);
+  assert.match(docs["docs/README.md"] ?? "", /satu-satunya rangkaian aturan/);
+  const lines = readme.split("\n").filter((line) => line.includes("(docs/README.md)"));
+  assert.equal(lines.length, 1, "the README links docs/README.md on exactly one line");
+  assert.match(lines[0] ?? "", /only rule set/);
+  assert.match(lines[0] ?? "", /Indonesian/);
+  assert.match(lines[0] ?? "", /\(REVIEW_CHECKLIST\.md\)/);
+  assert.doesNotMatch(readme, /BEST_PRACTICES|TECHNICAL_PRACTICES|DEVELOPMENT_PROCESS/);
+});
+
+test("docs/ names no product or framework, no application, and no ordinal", () => {
+  for (const [document, text] of Object.entries(docs)) {
+    for (const product of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /oracle/i, /mongo/i, /redis/i, /kafka/i, /rabbit/i, /dynamo/i, /\bExpress\b/, /express\.?js/i, /fastify/i, /nestjs/i, /\bkoa\b/i, /\bhono\b/i, /FOR UPDATE/, /\bReact\b/, /\bVue\b/, /\bAngular\b/, /svelte/i, /next\.?js/i, /\bNuxt\b/, /\bRemix\b/, /\bastro\b/i, /jquery/i, /\bjest\b/i]) {
+      assert.doesNotMatch(text, product, `${document} names a product or framework: ${product}`);
+    }
+    assert.doesNotMatch(text, /ordinal/i, `${document} mentions ordinal`);
+  }
+});
+
+test("docs/ states the decisions of 2026-11-22: every use case carries @Transaction, WRP-5 is built and mandatory, wrappers whose order matters share a file", () => {
+  const rule = (number: string): Rule => allRules.find((candidate) => candidate.number === number) ?? assert.fail(`${number} does not exist`);
+  assert.match(rule("UC-16").text, /Setiap use case ditandai `@Transaction`, termasuk query/);
+  assert.match(rule("UC-7").text, /^Query tidak pernah menulis: ia hanya bergantung pada gateway yang kontraknya membaca$/);
+  for (const { number, text } of allRules) assert.doesNotMatch(text, /tanpa `@Transaction`/, `${number} says that a use case may go without @Transaction`);
+  assert.equal(rule("WRP-5").level, "Wajib");
+  assert.equal(rule("WRP-7").level, "Wajib");
+  assert.match(rule("WRP-7").text, /urutannya penting ditulis di satu berkas/);
+  const wrapper = docs["docs/teknis/wrapper.md"] ?? "";
+  assert.match(wrapper, /memindah atau mengganti nama berkas wrapper (?:dapat|bisa) mengubah lapisan/);
+  assert.match(wrapper.slice(wrapper.indexOf("### WRP-7.")), /mengganti nama sebuah berkas wrapper dapat diam-diam menukar lapisannya/);
+  // One status for WRP-5 everywhere: built.
+  assert.match(wrapper, /\| `@Wrapper`, urutan penulisan sebagai urutan lapisan \(WRP-5\), dan pembungkusan \| terealisasi \|/);
+  assert.match(rule("WRP-1").text, /Satu wrapper per penanda yang dibacanya/);
+  assert.match(wrapper, /`GatewayWrapper` membaca `Gateway`/);
+  assert.equal(rule("DEV-2").level, "Wajib");
+  assert.doesNotMatch(docs["docs/proses/pengembangan.md"] ?? "", /belum diputuskan pemilik\.\*\* Dirumuskan|perubahan tingkat ini belum diputuskan/);
+  assert.match(rule("GW-12").text, /^Gateway hanya bergantung pada config$/);
+});
+
+test("every code block of docs/ is a verbatim excerpt of the README example or of src/type.ts, or a whole file that type-checks and passes with the example", async () => {
   const tests = Object.keys(example.additions).filter((path) => path.endsWith(".test.ts"));
   assert.deepEqual(tests.sort(), ["main.test.ts", "src/usecase/stock/stock_transfer.test.ts"]);
   await withFixture({ ...installation(), ...example.files, ...example.additions }, async (directory) => {
@@ -652,7 +563,20 @@ test("the files TECHNICAL_PRACTICES.md adds type-check with the README example, 
   });
 });
 
-test("the tests TECHNICAL_PRACTICES.md adds catch a broken use case and an application that does not start", async () => {
+test("a block of docs/ that no test checks is refused, in any fence form, and an excerpt that is not part of its file is caught", () => {
+  const checkable = (text: string): void => {
+    const shown = readBlocks("a document", text);
+    checkExcerpts("a document", shown, { ...example.files, "src/type.ts": typeSource });
+  };
+  checkable("```ts\n// src/type.ts (excerpt)\nexport type Context = {\n  data: Record<string, any>;\n  traceId: string;\n  date: Date;\n};\n```\n");
+  assert.throws(() => checkable("```ts\n// src/type.ts (excerpt)\nexport type Context = { other: number };\n```\n"), /not part of that README example file/);
+  assert.throws(() => checkable("```\nplain\n```\n"), /no test runs/);
+  assert.throws(() => checkable("~~~ts\nplain\n~~~\n"), /no test checks/);
+  assert.throws(() => checkable("1. item\n\n   ```ts\n   plain\n   ```\n"), /no test checks/);
+  assert.throws(() => checkable("```ts extra\nplain\n```\n"), /no test checks/);
+});
+
+test("the tests the docs add catch a broken use case and an application that does not start", async () => {
   const useCase = "src/usecase/stock/stock_transfer.ts";
   const broken = {
     // The use case forgets to report what it changed.
@@ -670,50 +594,37 @@ test("the tests TECHNICAL_PRACTICES.md adds catch a broken use case and an appli
   });
 });
 
-/** The numbered rules of a practice file, by number, with their text and level. */
-function numberedRules(text: string): Map<string, { text: string; level: string }> {
-  return new Map([...text.matchAll(/^### ([BTP]\d+)\. (.*) \((Mandatory|Optional)\)$/gm)].map((match) => [match[1] ?? "", { text: match[2] ?? "", level: match[3] ?? "" }]));
-}
-
-function checkerOf(number: string): string {
-  return new RegExp(`^\\| ${number} \\| .* \\| (Machine|Reviewer|Process)\\b`, "m").exec(checklist)?.[1] ?? "";
-}
-
-test("REVIEW_CHECKLIST.md lists every rule of the three practice files exactly once, with its text, its level and who checks it", () => {
-  const rules = new Map([...numberedRules(bestPractices), ...numberedRules(technicalPractices), ...numberedRules(developmentProcess)]);
-  assert.ok(rules.size >= 50, "the practice files have fewer rules than expected");
-  const rows = [...checklist.matchAll(/^\| ([BTP]\d+) \| (.*) \| (Mandatory|Optional) \| (Machine|Reviewer|Process)\b[^|]* \|$/gm)].map((match) => ({
+/** The rows of the checklist: `| <number> | <text> | <level> | <checker>[: <detail>] |`. */
+function checklistRows(): { number: string; text: string; level: string; checker: string }[] {
+  const rows = [...checklist.matchAll(/^\| ([A-Z]+-\d+) \| (.*) \| (Wajib|Opsional) \| (Mesin|Reviewer|Proses)\b[^|]* \|$/gm)].map((match) => ({
     number: match[1] ?? "",
     text: match[2] ?? "",
     level: match[3] ?? "",
     checker: match[4] ?? "",
   }));
   // Every table row of a rule is one of the rows read above, so no row escapes the check by a different form.
-  assert.equal(rows.length, [...checklist.matchAll(/^\| [BTP]\d+ \|/gm)].length, "a rule row of REVIEW_CHECKLIST.md is not '| <number> | <text> | <level> | Machine|Reviewer|Process |'");
-  assert.deepEqual(
-    rows.map(({ number }) => number),
-    [...rules.keys()],
-    "REVIEW_CHECKLIST.md does not list every rule exactly once, in order",
-  );
-  for (const { number, text, level } of rows) assert.deepEqual({ text, level }, rules.get(number), `REVIEW_CHECKLIST.md states ${number} differently from its practice file`);
-  // A machine checks only what Skeleto at startup and the gap test check; everything else is left to the reviewer.
-  assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B5", "B8", "T27"]);
-  // Of the process rules, only those that leave a file in the repository can be read by a reviewer; the rest are checked with the owner.
-  assert.deepEqual(rows.filter(({ number }) => number.startsWith("P") && checkerOf(number) === "Reviewer").map(({ number }) => number), ["P4", "P5", "P9", "P10", "P12", "P13", "P14"]);
-  assert.deepEqual(rows.filter(({ number }) => !number.startsWith("P")).filter(({ checker }) => checker === "Process"), []);
-});
+  assert.equal(rows.length, [...checklist.matchAll(/^\| [A-Z]+-\d+ \|/gm)].length, "a rule row of REVIEW_CHECKLIST.md is not '| <number> | <text> | Wajib|Opsional | Mesin|Reviewer|Proses |'");
+  return rows;
+}
 
-test("the README links to REVIEW_CHECKLIST.md on the line that links to the two practice files", () => {
-  const lines = readme.split("\n").filter((line) => line.includes("(REVIEW_CHECKLIST.md)"));
-  assert.equal(lines.length, 1);
-  assert.ok(lines[0]?.includes("(BEST_PRACTICES.md)") && lines[0]?.includes("(TECHNICAL_PRACTICES.md)"));
+test("REVIEW_CHECKLIST.md lists every rule of docs/ exactly once, with its heading word for word, its level and who checks it", () => {
+  const rows = checklistRows();
+  assert.deepEqual(rows.map(({ number }) => number), allRules.map(({ number }) => number), "REVIEW_CHECKLIST.md does not list every rule of docs/ exactly once, in the order of docs/");
+  for (const { number, text, level } of rows) assert.deepEqual({ text, level }, { text: allRules.find((rule) => rule.number === number)?.text, level: allRules.find((rule) => rule.number === number)?.level }, `REVIEW_CHECKLIST.md states ${number} differently from docs/`);
+  // One table for each rule document of docs/.
+  for (const [path] of RULE_FILES) assert.ok(checklist.includes(`](${path})`), `REVIEW_CHECKLIST.md has no table for ${path}`);
+  // A machine checks only what Skeleto at startup and the gap test check; everything else is left to the reviewer, or, for the process, to the owner.
+  assert.deepEqual(rows.filter(({ checker }) => checker === "Mesin").map(({ number }) => number), ["UC-1", "UC-4", "GW-1", "GW-12", "ACT-1", "WRP-5", "UTG-3"]);
+  assert.deepEqual(rows.filter(({ checker }) => checker === "Proses").map(({ number }) => number).filter((number) => !number.startsWith("DEV-")), []);
+  // The rule that a gateway depends on configs only is listed, and so are the rules of 2026-11-22.
+  for (const number of ["GW-12", "UC-16", "WRP-7"]) assert.ok(rows.some((row) => row.number === number), `REVIEW_CHECKLIST.md lacks ${number}`);
 });
 
 test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a real rule at the real line", () => {
   assert.match(checklist, /^> `<rule> <file>:<line>: <what breaks the rule>\. Fix: <the change asked for>\.`$/m);
-  const [, rule, path, line] = /^> ([BTP]\d+) (\S+\.ts):(\d+): .*\. Fix: \S.*\.$/m.exec(checklist) ?? [];
+  const [, rule, path, line] = /^> ([A-Z]+-\d+) (\S+\.ts):(\d+): .*\. Fix: \S.*\.$/m.exec(checklist) ?? [];
   assert.ok(rule && path && line, "REVIEW_CHECKLIST.md gives no example finding in the form it asks for");
-  assert.ok(new Map([...numberedRules(bestPractices), ...numberedRules(technicalPractices), ...numberedRules(developmentProcess)]).has(rule), `the example finding cites ${rule}, which does not exist`);
+  assert.ok(allRules.some((candidate) => candidate.number === rule), `the example finding cites ${rule}, which does not exist`);
   assert.match(example.files[path]?.split("\n")[Number(line) - 1] ?? "", /^export function implStockTransfer\(/, `${path}:${line} is not the line the example finding is about`);
 });
 
@@ -807,9 +718,9 @@ test("the gap test passes when every gap has a marker or a decision and every ma
 
 test("the gap test fails, naming it, for a gap without a marker or a decision, and for a marker that names an unknown id", async () => {
   const cases: [string, Record<string, string>, RegExp, RegExp][] = [
-    ["a gap with neither marker nor decision", { "docs/scenarios/stock_transfer.json": closedMap }, /T27: every gap has a marker or a recorded decision/, /stock_transfer-1/],
-    ["a marker for an id on no map", { "docs/scenarios/stock_transfer.json": closedMap, ...withMarkers("stock_transfer-1: x", "stock_transfer-9: x") }, /T27: every marker names a gap that is on a map/, /stock_transfer-9 in src\/usecase\/stock\/stock_transfer\.ts/],
-    ["a marker with no map at all", withMarkers("stock_transfer-3: x"), /T27: every marker names a gap that is on a map/, /stock_transfer-3/],
+    ["a gap with neither marker nor decision", { "docs/scenarios/stock_transfer.json": closedMap }, /UTG-3: every gap has a marker or a recorded decision/, /stock_transfer-1/],
+    ["a marker for an id on no map", { "docs/scenarios/stock_transfer.json": closedMap, ...withMarkers("stock_transfer-1: x", "stock_transfer-9: x") }, /UTG-3: every marker names a gap that is on a map/, /stock_transfer-9 in src\/usecase\/stock\/stock_transfer\.ts/],
+    ["a marker with no map at all", withMarkers("stock_transfer-3: x"), /UTG-3: every marker names a gap that is on a map/, /stock_transfer-3/],
   ];
   for (const [name, changes, failing, offender] of cases) {
     await withFixture(application(changes), async (directory) => {
@@ -820,51 +731,4 @@ test("the gap test fails, naming it, for a gap without a marker or a decision, a
       assert.match(tested.stdout, offender, name);
     });
   }
-});
-
-test("the practices state what a tool may rely on, the gateway observer rule and the gap test rule, and name no application or tool", () => {
-  assert.match(technicalPractices, /^## What a tool outside the application may rely on$/m);
-  const section = technicalPractices.slice(technicalPractices.indexOf("## What a tool outside"));
-  for (const needed of ["getContainer()", "getMetadata()", "`dependencies`", "`additionalDecorators`", "ctx.data.gatewayObserver"]) assert.ok(section.includes(needed), `the section lacks ${needed}`);
-  assert.match(technicalPractices, /^### T26\. A gateway observer wrapper .* \(Optional\)$/m);
-  assert.match(technicalPractices, /^### T27\. A test fails when a gap .* \(Mandatory\)$/m);
-  for (const text of [technicalPractices, checklist]) assert.doesNotMatch(text, /sequence diagram|diagram tool/i);
-});
-
-test("every rule of DEVELOPMENT_PROCESS.md is a numbered heading with a level, followed by its reason, and the steps come in order", () => {
-  const sections = developmentProcess.split(/^(?=#{1,3} )/m).filter((section) => section.startsWith("### "));
-  assert.equal(sections.length, 14);
-  sections.forEach((section, index) => {
-    const heading = section.slice(0, section.indexOf("\n"));
-    assert.match(heading, new RegExp(`^### P${index + 1}\\. \\S.* \\((Mandatory|Optional)\\)$`), `rule ${index + 1} is not numbered P${index + 1} with a level: ${heading}`);
-    assert.match(section, /^Why: \S/m, `${heading} gives no Why: paragraph`);
-  });
-  assert.doesNotMatch(developmentProcess, /^#{4,} /m);
-  // The samples of the two files are tables in the text; a code block would be checked by no test.
-  assert.doesNotMatch(developmentProcess, /^\s*(`{3,}|~{3,})/m);
-  const rule = (number: string): string => sections.find((section) => section.startsWith(`### ${number}.`)) ?? "";
-  assert.match(rule("P1"), /interview/);
-  assert.match(rule("P2"), /business area[\s\S]*never a use case/);
-  assert.ok(rule("P2").indexOf("**Core**") < rule("P2").indexOf("**Supporting**") && rule("P2").indexOf("**Supporting**") < rule("P2").indexOf("**Generic**"));
-  assert.match(rule("P3"), /owner decides[\s\S]*only proposes/);
-  assert.match(rule("P4"), /`docs\/AREAS\.md`[\s\S]*\| Area \| Class \| Reason \| Decision \|/);
-  assert.match(rule("P5"), /`docs\/GLOSSARY\.md`[\s\S]*\| Term \| Meaning \|[\s\S]*Every entity name and every business-area name appears in the glossary/);
-  for (const way of ["Stub", "Assumed to exist", "Simplified"]) assert.match(rule("P7"), new RegExp(`\\| \\*\\*${way}\\*\\* \\|.*\\|.*\\|`));
-  assert.match(rule("P8"), /Core first/);
-  assert.match(rule("P9"), /`docs\/CORE\.md`[\s\S]*use cases[\s\S]*basic entities[\s\S]*gateways[\s\S]*owner's decisions[\s\S]*stub, assumption and simplification/);
-  assert.match(rule("P10"), /`docs\/scenarios\/<process>\.json`[\s\S]*states[\s\S]*choices[\s\S]*time limits[\s\S]*`gaps`[\s\S]*`<process>-<n>`[\s\S]*never reused/);
-  assert.match(rule("P11"), /Core first[\s\S]*only as far as[\s\S]*backlog of the next layer/);
-  assert.match(rule("P12"), /every step of the main path and every branch[\s\S]*test[\s\S]*every gap[\s\S]*marker[\s\S]*`decision` field[\s\S]*dummies/);
-  assert.match(rule("P13"), /\| \*\*Planned\*\* \|.*layer.*\|[\s\S]*\| \*\*Shortcut\*\* \|.*reason.*\|[\s\S]*obsolete code is forbidden/);
-  assert.doesNotMatch(rule("P13"), /\| \*\*Obsolete\*\* \|/);
-  assert.match(rule("P14"), /may exist only in the business area that is being worked on/);
-});
-
-test("DEVELOPMENT_PROCESS.md states its scope, relates to BEST_PRACTICES.md, and names no application, product or tool", () => {
-  assert.match(developmentProcess, /new application, or a large new part of one/);
-  assert.match(developmentProcess, /^## How it relates to BEST_PRACTICES\.md$/m);
-  assert.match(developmentProcess, /\(BEST_PRACTICES\.md#built-from-use-cases\)/);
-  assert.ok(bestPractices.includes("](DEVELOPMENT_PROCESS.md)"), "BEST_PRACTICES.md does not point to DEVELOPMENT_PROCESS.md");
-  assert.ok(readme.includes("](DEVELOPMENT_PROCESS.md)"), "the README does not point to DEVELOPMENT_PROCESS.md");
-  for (const banned of [/kerjaan/i, /\bk2\b/i, /\bticket/i, /\bstudy\b/i, /one application/i, /\bboard\b/i, /\bSQL\b/, /postgres/i, /mongo/i, /redis/i, /\bReact\b/]) assert.doesNotMatch(developmentProcess, banned);
 });

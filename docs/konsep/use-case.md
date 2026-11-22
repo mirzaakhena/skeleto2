@@ -91,7 +91,7 @@ Aturan nama umum (alias tipe, nama parameter) ada di [komponen.md](../teknis/kom
 
 ### UC-1. Setiap use case ditandai sebagai use case
 
-Use case ditulis dengan penanda utama `@UseCase`, tanpa penanda utama lain di sampingnya, dan tidak didaftarkan di `MARKERS`: ia penanda utama, bukan penanda tambahan ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)). Tidak ada penanda untuk action polos, jadi setiap action aplikasi adalah use case atau gateway.
+Use case ditulis dengan penanda utama `@UseCase`, tanpa penanda utama lain di sampingnya, dan tidak didaftarkan di `MARKERS`: ia penanda utama, bukan penanda tambahan ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)). Hanya ada dua jenis action, jadi setiap action aplikasi adalah use case atau gateway.
 
 Use case dan gateway jangan pernah dibedakan dari namanya (`...Gateway`, `Find...`) atau dari letak berkasnya. Nama dan folder adalah kebiasaan yang bisa bergeser, sedangkan penanda utama adalah data yang diperiksa Skeleto dan dibaca wrapper.
 
@@ -117,9 +117,13 @@ Entity adalah bentuk internal bisnis dan berubah ketika aturan berubah. Use case
 
 Request atau Response yang dibentuk menurut screen berubah ketika screen berubah, dan setiap pemanggil lain ikut menanggungnya. Field yang ada hanya karena satu screen menampilkannya (label, kolom yang sudah diformat, penanda bagian halaman yang dibuka) adalah urusan screen dan berada di sisi controller. Request berisi apa yang dibutuhkan operasi, dan Response berisi apa yang diputuskan operasi.
 
-### UC-7. Query tidak pernah menulis: use case tanpa `@Transaction` hanya bergantung pada gateway pembaca
+### UC-7. Query tidak pernah menulis: ia hanya bergantung pada gateway yang kontraknya membaca
 
-Use case yang menulis di luar transaksi bisa meninggalkan setengah perubahannya tersimpan ketika gagal. Dengan menulis hanya di use case bertanda `@Transaction`, penanda itu menjadi pernyataan yang benar tentang operasi mana yang mengubah keadaan, dan pembaca bisa yakin bahwa query tidak berefek. Kontrak gateway menyatakan apakah ia membaca atau menulis (GW-3). Dalam contoh, setiap gateway bekerja di dalam transaksi yang dibuka use case-nya; penyimpanan yang mengizinkan baca di luar transaksi memberi gateway pembacanya cara untuk itu.
+Query adalah use case yang tidak mengubah keadaan. Use case yang menulis lewat gateway penulis bukan query, dan yang menyebut dirinya query tidak boleh bergantung pada gateway yang kontraknya menulis. Kontrak gateway menyatakan apakah ia membaca atau menulis (GW-3), jadi reviewer cukup membaca parameter dan kontraknya untuk yakin bahwa query tidak berefek. Pembaca bisa mempercayai bahwa memanggil query aman diulang dan tidak meninggalkan perubahan setengah jalan.
+
+### UC-16. Setiap use case ditandai `@Transaction`, termasuk query
+
+Gateway menjangkau sumber dayanya hanya lewat transaksi yang dibawa context, dan gagal kalau tidak ada (GW-5, CFG-2). Use case tanpa `@Transaction` gagal di panggilan gateway pertamanya, query sekalipun. Satu aturan tanpa pengecualian juga menghindarkan reviewer dari menimbang "apakah use case ini cukup sederhana untuk tanpa transaksi". Bahwa query tidak menulis dijaga UC-7 lewat kontrak gateway-nya, bukan lewat ada tidaknya `@Transaction`.
 
 ### UC-8. Use case tidak pernah menulis literal entity
 

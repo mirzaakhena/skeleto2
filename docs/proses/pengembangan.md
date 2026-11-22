@@ -10,7 +10,7 @@ Skeleto tidak memeriksa aturan apa pun di sini. Aturannya disepakati antara agen
 
 ## Kenapa urutannya menurut area, bukan menurut screen
 
-Aplikasi dirancang dari use case-nya, bukan dari screen-nya (UC-6 di [use-case.md](../konsep/use-case.md)). Dokumen ini menjawab pertanyaan lain: use case mana yang dibangun lebih dulu. Satu screen mencampur bagian yang sangat penting dengan bagian yang dimiliki setiap aplikasi, sehingga screen tidak bisa diurutkan. Yang bisa diurutkan hanya use case, dan area bisnis tempat use case itu berada. Karena itu urutan di bawah ini menurut area bisnis, dan yang pertama dibangun adalah **Core**.
+Aplikasi dirancang dari use case-nya, bukan dari screen-nya (DEV-2): screen hanya petunjuk, dan use case di baliknya yang digali. Prinsip ini berlaku untuk setiap perubahan. Dokumen ini menjawab pertanyaan lain: use case mana yang dibangun lebih dulu. Satu screen mencampur bagian yang sangat penting dengan bagian yang dimiliki setiap aplikasi, sehingga screen tidak bisa diurutkan. Yang bisa diurutkan hanya use case, dan area bisnis tempat use case itu berada. Karena itu urutan di bawah ini menurut area bisnis, dan yang pertama dibangun adalah **Core**.
 
 ## Gunung es
 
@@ -31,19 +31,11 @@ Ini pernyataan tentang **letak kerumitan**, bukan tentang **apa yang penting**. 
 
 Pekerjaan sebelum kode bukan rangkaian tahap yang lurus. Yang terjadi adalah **putaran penemuan** yang diulang, dengan dua **gerbang keputusan** yang tetap berurutan (keputusan pemilik, 2026-11-22).
 
-```
-          ┌──────────────────────── putaran penemuan ─────────────────────────┐
-          │  cerita & wawancara → kandidat istilah, entity, use case            │
-          │        ↑                         ↓                                  │
-          │  pertanyaan baru  ←  mockup dan peta skenario (alur, state, celah)  │
-          └─────────────────────────────────────────────────────────────────────┘
-                     ↓ area bisnis terlihat
-          Gerbang 1: klasifikasi area (Core / Supporting / Generic), diputuskan pemilik
-                     ↓
-          Gerbang 2: istilah area Core disepakati di glosarium
-                     ↓
-          Rancangan Core dicatat → kode Core, satu area satu sesi AI → lapis berikutnya
-```
+1. **Putaran penemuan** (diulang): cerita dan wawancara menghasilkan kandidat istilah, entity, dan use case; mockup dan peta skenario (alur, state, celah) menghasilkan pertanyaan baru, yang kembali ke wawancara.
+2. Setelah area bisnis terlihat, **gerbang 1**: klasifikasi area (Core, Supporting, Generic), diputuskan pemilik.
+3. **Gerbang 2**: istilah area Core disepakati di glosarium.
+4. Rancangan Core dicatat.
+5. Kode Core, satu area satu sesi AI, lalu lapis berikutnya.
 
 | Bagian | Hasil | Aturan |
 | --- | --- | --- |
@@ -75,9 +67,7 @@ Klasifikasi (DEV-3) dan glosarium (DEV-6) hanya sebaik daftar area yang menjadi 
 
 ### DEV-2. Screen adalah petunjuk: terima sebagai bahan, lalu gali use case-nya
 
-> Dirumuskan ulang sesuai arahan pemilik (2026-11-21). Dulu B1, berbunyi "mulai dari daftar use case, bukan dari daftar screen", bertingkat **Opsional**. Di sini diletakkan sebagai **Wajib**; perubahan tingkat ini belum diputuskan pemilik.
-
-Manusia hampir selalu menjelaskan kebutuhannya lewat screen: "saya ingin yang seperti ini". Itu wajar, dan tidak ditolak. Screen hanya puncak gunung es. Dari setiap screen yang ditunjukkan, agent menggali use case di baliknya:
+Manusia hampir selalu menjelaskan kebutuhannya lewat screen: "saya ingin yang seperti ini". Itu wajar, dan tidak ditolak. Daftar screen menyebut apa yang ditampilkan, sedangkan daftar use case menyebut apa yang dilakukan bisnis: backend yang dibangun ke bawah dari satu screen berbentuk screen itu, dan kehilangan aturan yang kebetulan tidak tampil di screen mana pun. Screen hanya puncak gunung es. Dari setiap screen yang ditunjukkan, agent menggali use case di baliknya:
 - apa yang **diputuskan** ketika tombol ditekan;
 - apa yang bisa **gagal**, dan apa jawabannya;
 - **siapa lagi** yang memanggil operasi yang sama (job, sistem lain);

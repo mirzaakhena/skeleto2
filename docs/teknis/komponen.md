@@ -91,7 +91,7 @@ Nama parameter jadi tidak mengatakan apa pun yang tidak dikatakan tipenya, sehin
 | Use case | `<Area><Verb>` | `StockTransfer` |
 | Input dan output-nya | `<UseCase>Request`, `<UseCase>Response` | `StockTransferRequest` |
 | Gateway | `<Verb><Entity>`, entity jamak kalau menangani beberapa | `LockWarehouses` |
-| Wrapper | `<Marker>Wrapper`, menurut satu penanda tambahan yang dibacanya | `AuditWrapper` |
+| Wrapper | `<Marker>Wrapper`, menurut satu penanda yang dibacanya, tambahan atau utama | `AuditWrapper`, `GatewayWrapper` |
 | Config | nama dari apa yang disediakannya | `Connection`, `Database`, `Logger` |
 
 Setiap kata ditulis dengan huruf besar di awal dan disambung tanpa pemisah: `StockTransfer`, tidak pernah `Stock_Transfer` atau `stockTransfer`. Dua orang yang menamai operasi yang sama akan sampai pada nama yang sama, sehingga nama bisa ditebak dari operasinya, dan duplikat terlihat sebagai dua fungsi yang mengembalikan tipe yang sama.
@@ -108,7 +108,7 @@ Setiap kata ditulis dengan huruf besar di awal dan disambung tanpa pemisah: `Sto
 | Kontrak gateway satu entity | `src/gateway/<entity snake>.ts` |
 | Implementasinya dalam satu teknologi | `src/gateway/<technology>/<entity snake>.ts`, dengan nama teknologinya sendiri dalam bentuk `<snake>` |
 | Semua config | `src/config.ts` |
-| Semua wrapper, satu berkas sebagai bawaan opsional; urutan penulisan adalah urutan lapisan (WRP-5) | `src/wrappers.ts` |
+| Semua wrapper, satu berkas sebagai bawaan opsional; urutan penulisan adalah urutan lapisan (WRP-5), dan wrapper yang urutannya penting ditulis di satu berkas (WRP-7) | `src/wrappers.ts` |
 | Daftar penanda yang sah | `src/markers.ts` |
 | Awal aplikasi | `main.ts` di akar proyek |
 | Tes use case | di sebelahnya, `<use case snake>.test.ts` |

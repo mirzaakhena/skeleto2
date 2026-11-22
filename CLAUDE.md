@@ -8,7 +8,7 @@ Dokumen ini adalah panduan dasar untuk setiap sesi AI yang mengerjakan repo ini.
 
 Skeleto adalah framework TypeScript yang mengerjakan **binding otomatis** komponen berbasis fungsi (closure) lewat penanda JSDoc `@Config`, `@Wrapper`, `@UseCase`, dan `@Gateway`.
 
-Skeleto memindai berkas TypeScript, membaca penanda dan tipe parameter setiap fungsi, mengurutkan dependency, memanggil setiap fungsi dengan dependency-nya, memasang wrapper ke setiap action (`@UseCase` dan `@Gateway` adalah dua jenis action; tidak ada action polos), menjaga aturan dependency antar jenisnya, lalu menyimpan hasilnya di sebuah container.
+Skeleto memindai berkas TypeScript, membaca penanda dan tipe parameter setiap fungsi, mengurutkan dependency, memanggil setiap fungsi dengan dependency-nya, memasang wrapper ke setiap action (`@UseCase` dan `@Gateway` adalah dua jenis action), menjaga aturan dependency antar jenisnya, lalu menyimpan hasilnya di sebuah container.
 
 ### 1.1 Untuk apa (keputusan pemilik, 2026-11-22)
 
@@ -28,7 +28,7 @@ Skeleto ada untuk:
 10. Memungkinkan frontend dan backend dikerjakan bersamaan lewat kontrak use case.
 11. Membuat aplikasi bisa dibaca dan diamati alat lain (container, metadata, observer).
 
-Hanya butir 1, 5, dan 11 yang dikerjakan kode `src/`. Sisanya dikerjakan dokumen praktik (`docs/`, dan untuk sementara `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md`, `DEVELOPMENT_PROCESS.md`). Saat menimbang perubahan, ukurannya bukan hanya "apakah ini binding?", tetapi juga "apakah ini membuat struktur lebih seragam dan lebih cepat direview?".
+Hanya butir 1, 5, dan 11 yang dikerjakan kode `src/`. Sisanya dikerjakan dokumen praktik di `docs/`, satu-satunya rangkaian aturan untuk aplikasi (`docs/README.md` mengatur cara membacanya; `REVIEW_CHECKLIST.md` memuat semua aturannya untuk reviewer). Saat menimbang perubahan, ukurannya bukan hanya "apakah ini binding?", tetapi juga "apakah ini membuat struktur lebih seragam dan lebih cepat direview?".
 
 **Lingkup:** Skeleto menangani **low level design**, yaitu struktur di dalam satu aplikasi (komponen, nama, berkas, dependency, transaksi). **High level design** (pembagian sistem, layanan, broker pesan, deployment) di luar lingkupnya.
 
@@ -130,7 +130,7 @@ Data lain adalah kesalahan, satu pesan untuk semua jenis data: `@Wrapper {"order
 | `@Gateway` | `@Config` |
 | `@UseCase` | `@Gateway` |
 
-- Pelanggaran adalah kesalahan, dan pesannya menyebut kedua komponen dan jenisnya. Strukturnya satu garis lurus, controller -> use case -> gateway -> config, yang bisa dicek reviewer sekilas: use case hanya bergantung pada gateway (tidak pernah pada config atau use case), gateway hanya bergantung pada config (tidak pernah pada gateway lain atau use case), dan tidak ada action polos yang bisa menjadi jembatan dari satu use case ke use case lain, karena setiap action adalah use case atau gateway (keputusan pemilik, 2026-11-22). Aturan yang lebih ketat, use case tanpa config dan gateway tanpa gateway lain, juga keputusan pemilik (2026-11-22, `TEMUAN.md` temuan 18); tiap pelanggarannya punya tes di `test/skeleto.test.ts`.
+- Pelanggaran adalah kesalahan, dan pesannya menyebut kedua komponen dan jenisnya. Strukturnya satu garis lurus, controller -> use case -> gateway -> config, yang bisa dicek reviewer sekilas: use case hanya bergantung pada gateway (tidak pernah pada config atau use case), gateway hanya bergantung pada config (tidak pernah pada gateway lain atau use case) (keputusan pemilik, 2026-11-22). Aturan yang lebih ketat, use case tanpa config dan gateway tanpa gateway lain, juga keputusan pemilik (2026-11-22, `TEMUAN.md` temuan 18); tiap pelanggarannya punya tes di `test/skeleto.test.ts`.
 - Jenis ditentukan oleh nama penanda utama di metadata (`mainDecorator.name`: `Config`, `Wrapper`, `UseCase`, `Gateway`); tidak ada field baru. Wrapper membedakan use case dari gateway lewat nama itu, tanpa penanda tambahan.
 - Dependency melingkar adalah kesalahan, dan pesannya menampilkan jalur siklusnya (`A -> B -> A`).
 

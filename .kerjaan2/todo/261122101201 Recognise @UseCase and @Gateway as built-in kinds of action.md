@@ -72,3 +72,4 @@ An application can write `@UseCase` or `@Gateway` as the main marker of a functi
 - Lane standard: framework code and docs, public metadata changes but nothing unrecoverable
 - Not solo and not blocked: it shares files with 261122101202 (README example wrappers, CLAUDE.md 4.4/4.7, src/skeleto.ts) but neither reads what the other builds; the merge queue settles the overlap
 - Order: run after nothing; 261122101202 waits for this ticket (owner chose sequential work)
+- Supersedes the earlier 'not blocked' note: it runs first and alone in this batch; 261122101202 waits for it by the owner's choice

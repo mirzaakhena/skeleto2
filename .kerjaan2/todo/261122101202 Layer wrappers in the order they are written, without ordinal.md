@@ -50,7 +50,12 @@ The layering of wrappers follows the order in which they are written, first writ
 - A2 [unseen] An application with zero or one wrapper, or with all wrappers in one file, passes the one-file rule; the message for wrappers in several files names every such file (paths relative to the scanned directory) and the wrappers in them
   Why: the ticket asks that the message names the files; CLAUDE.md 4.8 asks every line to name the function at fault
   If wrong: shorten the message in src/scanner.ts or src/skeleto.ts
+- A3 [unseen] Wrappers are still created in dependency order; only the layering follows the scan order (files in sorted path order, functions in source order), the first found innermost
+  Why: CLAUDE.md 4.7 keeps 'dependencies first'; owner answer Q1 sets the layering by scan order
+  If wrong: change the creation and layering loop in src/skeleto.ts
 
 ## Decisions
 - Lane standard: framework code and docs, contract change of @Wrapper data, cheap to undo
 - Not solo and not blocked: shares files with 261122101201 only; the layering rule does not depend on the new action kinds
+- Waits for 261122101201 (owner chose sequential work): both rewrite the README example wrappers, CLAUDE.md 4.4/4.7 and the creation loop in src/skeleto.ts
+- A1 and A2 speak of a one-file rule that the owner dropped in Q1; there is no such rule and no such message. A3 replaces them

@@ -20,12 +20,12 @@ function assertOneError(result: ScanResult, ...patterns: RegExp[]): void {
 // ---- valid cases (4.2, 4.3, 4.5) ----
 
 test("a component is named after its return type exactly as written, and knows where it lives", async () => {
-  await withFixture({ "user.ts": `/** @Action */\nexport function implSaveUser(): SaveUser { return null as any; }\n` }, (directory) => {
+  await withFixture({ "user.ts": `/** @UseCase */\nexport function implSaveUser(): SaveUser { return null as any; }\n` }, (directory) => {
     const result = scanDirectory(directory);
     assert.deepEqual(result.errors, []);
     assert.deepEqual(result.functions, [
       {
-        metadata: { name: "SaveUser", dependencies: [], mainDecorator: { name: "Action", data: undefined }, additionalDecorators: [] },
+        metadata: { name: "SaveUser", dependencies: [], mainDecorator: { name: "UseCase", data: undefined }, additionalDecorators: [] },
         filePath: join(directory, "user.ts"),
         functionName: "implSaveUser",
         awaited: false,
@@ -92,7 +92,7 @@ test("two configs both returning Promise<X> are two functions returning the same
   assertOneError(result, /^Database: returned by both/, /one \(a\.ts\)/, /two \(a\.ts\)/);
 });
 
-for (const marker of ["Wrapper", "Action", "UseCase", "Gateway"]) {
+for (const marker of ["Wrapper", "UseCase", "Gateway"]) {
   test(`a @${marker} declared Promise<X> is a mistake naming the function, and is not marked as one to wait for`, async () => {
     const result = await scan({ "a.ts": `/** @${marker} */\nexport async function implLate(): Promise<Late> { return null as any; }\n` });
     assertOneError(result, /^implLate \(a\.ts\): /, new RegExp(`is marked @${marker} but returns Promise<Late>`), /only a @Config may be asynchronous/);
@@ -109,7 +109,7 @@ for (const marker of ["Wrapper", "Action", "UseCase", "Gateway"]) {
 
 test("dependencies are the parameter types in parameter order", async () => {
   const result = await scan({
-    "a.ts": `/** @Action */\nexport function implSaveUser(logger: winston.Logger, db: Database, find: FindUser): SaveUser { return null as any; }\n`,
+    "a.ts": `/** @UseCase */\nexport function implSaveUser(logger: winston.Logger, db: Database, find: FindUser): SaveUser { return null as any; }\n`,
   });
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.functions[0]?.metadata.dependencies, ["winston.Logger", "Database", "FindUser"]);
@@ -117,10 +117,10 @@ test("dependencies are the parameter types in parameter order", async () => {
 
 test("additional markers are kept with their data in the order written", async () => {
   const result = await scan({
-    "a.ts": `/**\n * Saves a user.\n * @Action\n * @Transaction\n * @Logging {"level": "debug"}\n * @Role admin only\n * @param db the database\n */\nexport function implSaveUser(db: Database): SaveUser { return null as any; }\n`,
+    "a.ts": `/**\n * Saves a user.\n * @UseCase\n * @Transaction\n * @Logging {"level": "debug"}\n * @Role admin only\n * @param db the database\n */\nexport function implSaveUser(db: Database): SaveUser { return null as any; }\n`,
   });
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(result.functions[0]?.metadata.mainDecorator, { name: "Action", data: undefined });
+  assert.deepEqual(result.functions[0]?.metadata.mainDecorator, { name: "UseCase", data: undefined });
   assert.deepEqual(result.functions[0]?.metadata.additionalDecorators, [
     { name: "Transaction", data: undefined },
     { name: "Logging", data: { level: "debug" } },
@@ -132,7 +132,7 @@ test("files in nested folders are found, in sorted path order, and non-.ts files
   await withFixture(
     {
       "z.ts": `/** @Config */\nexport function implZ(): Z { return null as any; }\n`,
-      "app/usecase/deep/b.ts": `/** @Action */\nexport function implB(): B { return null as any; }\n`,
+      "app/usecase/deep/b.ts": `/** @UseCase */\nexport function implB(): B { return null as any; }\n`,
       "app/a.ts": `/** @Wrapper */\nexport function implA(): A { return null as any; }\n`,
       "notes.txt": `/** @Config */\nexport function implNote(): Note {}\n`,
       "script.js": `/** @Config */\nexport function implScript() {}\n`,
@@ -148,27 +148,27 @@ test("files in nested folders are found, in sorted path order, and non-.ts files
 
 test("all three main markers make a component", async () => {
   const result = await scan({
-    "a.ts": `/** @Config */\nexport function c(): C { return null as any; }\n/** @Wrapper */\nexport function w(): W { return null as any; }\n/** @Action */\nexport function a(): A { return null as any; }\n`,
+    "a.ts": `/** @Config */\nexport function c(): C { return null as any; }\n/** @Wrapper */\nexport function w(): W { return null as any; }\n/** @UseCase */\nexport function a(): A { return null as any; }\n`,
   });
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(result.functions.map((found) => found.metadata.mainDecorator.name), ["Config", "Wrapper", "Action"]);
+  assert.deepEqual(result.functions.map((found) => found.metadata.mainDecorator.name), ["Config", "Wrapper", "UseCase"]);
 });
 
 test("only names are read: a type that is defined nowhere is not a mistake", async () => {
-  const result = await scan({ "a.ts": `import { Missing } from "./does-not-exist.js";\n/** @Action */\nexport function a(m: Missing, n: NowhereDefined): AlsoNowhere { return null as any; }\n` });
+  const result = await scan({ "a.ts": `import { Missing } from "./does-not-exist.js";\n/** @UseCase */\nexport function a(m: Missing, n: NowhereDefined): AlsoNowhere { return null as any; }\n` });
   assert.deepEqual(result.errors, []);
-  assert.deepEqual(result.functions[0]?.metadata, { name: "AlsoNowhere", dependencies: ["Missing", "NowhereDefined"], mainDecorator: { name: "Action", data: undefined }, additionalDecorators: [] });
+  assert.deepEqual(result.functions[0]?.metadata, { name: "AlsoNowhere", dependencies: ["Missing", "NowhereDefined"], mainDecorator: { name: "UseCase", data: undefined }, additionalDecorators: [] });
 });
 
 // ---- mistakes of 4.2 ----
 
 test("a marked function that is not exported is a mistake naming the function", async () => {
-  const result = await scan({ "a.ts": `/** @Action */\nfunction implHidden(): Hidden { return null as any; }\n` });
+  const result = await scan({ "a.ts": `/** @UseCase */\nfunction implHidden(): Hidden { return null as any; }\n` });
   assertOneError(result, /implHidden/, /not exported/);
 });
 
 test("a marked function exported as default is a mistake naming the function", async () => {
-  const result = await scan({ "a.ts": `/** @Action */\nexport default function implDefault(): D { return null as any; }\n` });
+  const result = await scan({ "a.ts": `/** @UseCase */\nexport default function implDefault(): D { return null as any; }\n` });
   assertOneError(result, /implDefault/, /not exported by name/);
 });
 
@@ -178,24 +178,24 @@ test("a marked function without a return type is a mistake naming the function",
 });
 
 test("more than one main marker is a mistake naming the function", async () => {
-  const result = await scan({ "a.ts": `/**\n * @Action\n * @Config\n */\nexport function implBoth(): Both { return null as any; }\n` });
-  assertOneError(result, /implBoth/, /more than one main marker/, /@Action, @Config/);
+  const result = await scan({ "a.ts": `/**\n * @UseCase\n * @Config\n */\nexport function implBoth(): Both { return null as any; }\n` });
+  assertOneError(result, /implBoth/, /more than one main marker/, /@UseCase, @Config/);
 });
 
 test("the same main marker written twice is more than one main marker", async () => {
-  const result = await scan({ "a.ts": `/**\n * @Action\n * @Action\n */\nexport function implTwice(): Twice { return null as any; }\n` });
+  const result = await scan({ "a.ts": `/**\n * @UseCase\n * @UseCase\n */\nexport function implTwice(): Twice { return null as any; }\n` });
   assertOneError(result, /implTwice/, /more than one main marker/);
 });
 
 test("a parameter without a type is a mistake naming the function and the parameter", async () => {
-  const result = await scan({ "a.ts": `/** @Action */\nexport function implLoose(db: Database, untyped, other: Other): Loose { return null as any; }\n` });
+  const result = await scan({ "a.ts": `/** @UseCase */\nexport function implLoose(db: Database, untyped, other: Other): Loose { return null as any; }\n` });
   assertOneError(result, /implLoose/, /parameter untyped/, /no type annotation/);
   assert.deepEqual(result.functions[0]?.metadata.dependencies, ["Database", "Other"]);
 });
 
 test("two functions returning the same type name is a mistake naming the type and both functions", async () => {
   const result = await scan({
-    "a.ts": `/** @Action */\nexport function implFirst(): SaveUser { return null as any; }\n`,
+    "a.ts": `/** @UseCase */\nexport function implFirst(): SaveUser { return null as any; }\n`,
     "sub/b.ts": `/** @Config */\nexport function implSecond(): SaveUser { return null as any; }\n`,
   });
   assertOneError(result, /^SaveUser:/, /implFirst/, /implSecond/);
@@ -212,7 +212,7 @@ test("three functions returning the same type name give one mistake per extra fu
 
 // ---- 4.4: data of the main marker ----
 
-for (const marker of ["Config", "Wrapper", "Action", "UseCase", "Gateway"]) {
+for (const marker of ["Config", "Wrapper", "UseCase", "Gateway"]) {
   for (const data of [`{"readTypeArguments": true}`, `{}`, `some text`, `{"ordinal": 1}`, `{"ordinal": 10}`, `{"ordinal": -10}`, `1`]) {
     test(`@${marker} with data ${data} is a mistake naming the function`, async () => {
       const result = await scan({ "a.ts": `/** @${marker} ${data} */\nexport function implWithData(): WithData { return null as any; }\n` });
@@ -227,9 +227,9 @@ test("@UseCase and @Gateway alone are main markers, and the scan keeps each name
   assert.deepEqual(result.functions.map((found) => [found.metadata.name, found.metadata.mainDecorator.name, found.metadata.additionalDecorators]), [["U", "UseCase", []], ["G", "Gateway", []]]);
 });
 
-test("@Action followed by another marker on the same line is a mistake, because that marker became its data", async () => {
-  const result = await scan({ "a.ts": `/** @Action @Transaction */\nexport function implInline(): Inline { return null as any; }\n` });
-  assertOneError(result, /implInline/, /@Action takes no data/, /@Transaction/);
+test("@UseCase followed by another marker on the same line is a mistake, because that marker became its data", async () => {
+  const result = await scan({ "a.ts": `/** @UseCase @Transaction */\nexport function implInline(): Inline { return null as any; }\n` });
+  assertOneError(result, /implInline/, /@UseCase takes no data/, /@Transaction/);
 });
 
 test("@Wrapper alone is a main marker without data", async () => {
@@ -240,7 +240,7 @@ test("@Wrapper alone is a main marker without data", async () => {
 
 // ---- 4.5: additional markers and the allowed list; invalid JSON ----
 
-const withTypo = { "a.ts": `/**\n * @Action\n * @Logging\n * @Transction\n */\nexport function implSaveUser(): SaveUser { return null as any; }\n` };
+const withTypo = { "a.ts": `/**\n * @UseCase\n * @Logging\n * @Transction\n */\nexport function implSaveUser(): SaveUser { return null as any; }\n` };
 
 test("with a list of allowed names, an additional marker outside it is a mistake naming the marker and the function", async () => {
   const result = await scan(withTypo, ["Logging", "Transaction"]);
@@ -248,7 +248,7 @@ test("with a list of allowed names, an additional marker outside it is a mistake
 });
 
 test("with a list of allowed names, markers inside it and standard tags are accepted", async () => {
-  const result = await scan({ "a.ts": `/**\n * @Action\n * @Logging\n * @Transaction\n * @param db x\n * @returns y\n */\nexport function a(db: Db): A { return null as any; }\n` }, ["Logging", "Transaction"]);
+  const result = await scan({ "a.ts": `/**\n * @UseCase\n * @Logging\n * @Transaction\n * @param db x\n * @returns y\n */\nexport function a(db: Db): A { return null as any; }\n` }, ["Logging", "Transaction"]);
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.functions[0]?.metadata.additionalDecorators.map((decorator) => decorator.name), ["Logging", "Transaction"]);
 });
@@ -271,7 +271,7 @@ test("without a list, every additional marker is accepted", async () => {
 
 for (const [label, allowed] of [["without a list", undefined], ["with a list", ["Logging"]]] as const) {
   test(`invalid JSON in an additional marker is a mistake naming the marker and the function, ${label}`, async () => {
-    const result = await scan({ "a.ts": `/**\n * @Action\n * @Logging {"level": }\n */\nexport function implBadJson(): BadJson { return null as any; }\n` }, allowed ? [...allowed] : undefined);
+    const result = await scan({ "a.ts": `/**\n * @UseCase\n * @Logging {"level": }\n */\nexport function implBadJson(): BadJson { return null as any; }\n` }, allowed ? [...allowed] : undefined);
     assertOneError(result, /implBadJson/, /@Logging/, /invalid JSON/);
   });
 
@@ -289,12 +289,12 @@ const notComponents: Record<string, string> = {
   "a function whose JSDoc has no marker at all": `/** Just a description, mail me@Action.example. */\nexport function described(x): Described { return null as any; }\n`,
   "a function with only an additional marker": `/** @Transaction {"broken": } */\nfunction onlyAdditional(x) { return x; }\n`,
   "a function with only standard tags": `/**\n * @param x a thing\n * @returns the thing\n */\nfunction standard(x) { return x; }\n`,
-  "a marker in a plain comment instead of JSDoc": `// @Action\n/* @Action */\nfunction commented(x) { return x; }\n`,
-  "a nested function": `export function outer(): Outer {\n  /** @Action */\n  function inner(x) { return x; }\n  return inner as any;\n}\n`,
-  "an arrow function": `/** @Action */\nexport const arrow = (x) => x;\n`,
+  "a marker in a plain comment instead of JSDoc": `// @UseCase\n/* @UseCase */\nfunction commented(x) { return x; }\n`,
+  "a nested function": `export function outer(): Outer {\n  /** @UseCase */\n  function inner(x) { return x; }\n  return inner as any;\n}\n`,
+  "an arrow function": `/** @UseCase */\nexport const arrow = (x) => x;\n`,
   "a function expression": `/** @Config */\nconst expression = function named(x) { return x; };\n`,
-  "a class method": `export class Service {\n  /** @Action */\n  run(x) { return x; }\n  /** @Config */\n  static make(x) { return x; }\n}\n`,
-  "a function inside a namespace": `namespace Inner {\n  /** @Action */\n  function hidden(x) { return x; }\n}\n`,
+  "a class method": `export class Service {\n  /** @UseCase */\n  run(x) { return x; }\n  /** @Config */\n  static make(x) { return x; }\n}\n`,
+  "a function inside a namespace": `namespace Inner {\n  /** @UseCase */\n  function hidden(x) { return x; }\n}\n`,
   "an object method": `export const holder = {\n  /** @Wrapper {"bad": 1} */\n  wrap(x) { return x; },\n};\n`,
 };
 for (const [label, source] of Object.entries(notComponents)) {
@@ -307,7 +307,7 @@ for (const [label, source] of Object.entries(notComponents)) {
 }
 
 test("a JSDoc block that is not right above the function does not mark it", async () => {
-  const result = await scan({ "a.ts": `/** @Action */\n\n/** Only a description. */\nfunction notMarked(x) { return x; }\n` });
+  const result = await scan({ "a.ts": `/** @UseCase */\n\n/** Only a description. */\nfunction notMarked(x) { return x; }\n` });
   assert.deepEqual(result, { functions: [], errors: [] });
 });
 
@@ -317,16 +317,16 @@ test("one scan returns every mistake of a fixture with several different ones", 
   const result = await scan(
     {
       "a.ts": [
-        `/** @Action */\nfunction implHidden(): Hidden { return null as any; }`,
+        `/** @UseCase */\nfunction implHidden(): Hidden { return null as any; }`,
         `/** @Config */\nexport function implNoReturn() { return 1; }`,
-        `/**\n * @Action\n * @Wrapper\n */\nexport function implBoth(): Both { return null as any; }`,
-        `/** @Action */\nexport function implLoose(untyped): Loose { return null as any; }`,
-        `/** @Action {"readTypeArguments": true} */\nexport function implLegacy(): Legacy { return null as any; }`,
+        `/**\n * @UseCase\n * @Wrapper\n */\nexport function implBoth(): Both { return null as any; }`,
+        `/** @UseCase */\nexport function implLoose(untyped): Loose { return null as any; }`,
+        `/** @UseCase {"readTypeArguments": true} */\nexport function implLegacy(): Legacy { return null as any; }`,
         `/** @Wrapper {"ordinal": 10} */\nexport function implWrap(): Wrap { return null as any; }`,
-        `/**\n * @Action\n * @Transction\n */\nexport function implTypo(): Typo { return null as any; }`,
-        `/**\n * @Action\n * @Logging {"level": }\n */\nexport function implBadJson(): BadJson { return null as any; }`,
+        `/**\n * @UseCase\n * @Transction\n */\nexport function implTypo(): Typo { return null as any; }`,
+        `/**\n * @UseCase\n * @Logging {"level": }\n */\nexport function implBadJson(): BadJson { return null as any; }`,
         `/** @Config */\nexport function implDup(): Dup { return null as any; }`,
-        `/** @Action */\nexport async function implLateAction(): Promise<LateAction> { return null as any; }`,
+        `/** @UseCase */\nexport async function implLateAction(): Promise<LateAction> { return null as any; }`,
         `/** @Wrapper */\nexport async function implLateWrapper(): Promise<LateWrapper> { return null as any; }`,
         // Everything wrong at once on one function: each of its mistakes is still reported.
         `/**\n * @Config oops\n * @Nope\n */\nfunction implWorst(a, b) { return 1; }`,
@@ -340,11 +340,11 @@ test("one scan returns every mistake of a fixture with several different ones", 
     [/implNoReturn/, /no return type/],
     [/implBoth/, /more than one main marker/],
     [/implLoose/, /parameter untyped/],
-    [/implLegacy/, /@Action takes no data/],
+    [/implLegacy/, /@UseCase takes no data/],
     [/implWrap/, /@Wrapper takes no data, but has \{"ordinal":10\}/],
     [/implTypo/, /@Transction is not an allowed marker/],
     [/implBadJson/, /@Logging has invalid JSON/],
-    [/implLateAction/, /is marked @Action but returns Promise<LateAction>/],
+    [/implLateAction/, /is marked @UseCase but returns Promise<LateAction>/],
     [/implLateWrapper/, /is marked @Wrapper but returns Promise<LateWrapper>/],
     [/implWorst/, /@Config takes no data/],
     [/implWorst/, /@Nope is not an allowed marker/],
@@ -402,7 +402,7 @@ test("an empty folder named like a .ts file is skipped", async () => {
 });
 
 test("a dangling link named like a .ts file is skipped and the other files are still scanned", async () => {
-  await withFixture({ "a.ts": validA, "z.ts": `/** @Action */\nfunction implHidden(): Hidden { return null as any; }\n` }, (directory) => {
+  await withFixture({ "a.ts": validA, "z.ts": `/** @UseCase */\nfunction implHidden(): Hidden { return null as any; }\n` }, (directory) => {
     symlinkSync(join(directory, "does-not-exist"), join(directory, "gone.ts"));
     symlinkSync("user@host.1234:5678", join(directory, ".#lock.ts"));
     const result = scanDirectory(directory);
@@ -448,7 +448,7 @@ test("a folder that cannot be read is a mistake naming the folder, and the other
 });
 
 test("a file that cannot be read is a mistake naming the file, and the other files are still scanned", { skip: process.getuid?.() === 0 || process.platform === "win32" }, async () => {
-  await withFixture({ "a.ts": validA, "locked.ts": validA, "z.ts": `/** @Action */\nfunction implHidden(): Hidden { return null as any; }\n` }, (directory) => {
+  await withFixture({ "a.ts": validA, "locked.ts": validA, "z.ts": `/** @UseCase */\nfunction implHidden(): Hidden { return null as any; }\n` }, (directory) => {
     chmodSync(join(directory, "locked.ts"), 0o000);
     const result = scanDirectory(directory);
     assert.deepEqual(result.functions.map((found) => found.metadata.name), ["A", "Hidden"]);
@@ -637,17 +637,17 @@ const body = `: Thing { return null as any; }\n`;
 /** Each case is one file that is a mistake with the list given: the name the message must mention, and what else it must say. */
 const MISTAKES: [string, string, string, RegExp[]][] = [
   ["@Wraper on an exported function", `/** @Wraper */\nexport function makeAudit()${body}`, "makeAudit", [/@Wraper/, /no main marker/]],
-  ["@Actions on an exported function", `/** @Actions */\nexport function makeSave()${body}`, "makeSave", [/@Actions/, /no main marker/]],
+  ["@UseCases on an exported function", `/** @UseCases */\nexport function makeSave()${body}`, "makeSave", [/@UseCases/, /no main marker/]],
   ["only @Transaction on an exported function", `/** @Transaction */\nexport function makeSave()${body}`, "makeSave", [/@Transaction/, /no main marker/]],
   ["a marker outside the list and no main marker, not exported", `/**\n * Text.\n * @Cache {"ttl": 1}\n */\nfunction helper()${body}`, "helper", [/@Cache/, /no main marker/]],
-  ["@transaction on an action", `/**\n * @Action\n * @transaction\n */\nexport function makeSave()${body}`, "makeSave", [/@transaction\b/, /write @Transaction/]],
-  ["@action alone", `/** @action */\nexport function makeSave()${body}`, "makeSave", [/@action\b/, /write @Action/]],
+  ["@transaction on an action", `/**\n * @UseCase\n * @transaction\n */\nexport function makeSave()${body}`, "makeSave", [/@transaction\b/, /write @Transaction/]],
+  ["@usecase alone", `/** @usecase */\nexport function makeSave()${body}`, "makeSave", [/@usecase\b/, /write @UseCase/]],
   ["@wrapper alone", `/** @wrapper */\nexport function makeAudit()${body}`, "makeAudit", [/@wrapper\b/, /write @Wrapper/]],
   ["@config alone, not exported", `/** @config */\nfunction makeSettings()${body}`, "makeSettings", [/@config\b/, /write @Config/]],
   ["@lOGGING among ordinary tags", `/**\n * @param a x\n * @lOGGING\n * @returns y\n */\nexport function helper(a: string)${body}`, "helper", [/@lOGGING/, /write @Logging/]],
-  ["a main marker on an exported constant", `/** @Action */\nexport const makeSave = (): Thing => null as any;\n`, "makeSave", [/@Action/, /exported constant/, /only top-level function declarations can be components/]],
+  ["a main marker on an exported constant", `/** @UseCase */\nexport const makeSave = (): Thing => null as any;\n`, "makeSave", [/@UseCase/, /exported constant/, /only top-level function declarations can be components/]],
   ["a main marker on an exported constant holding a function expression", `/** @Wrapper */\nexport const makeAudit = function ()${body}`, "makeAudit", [/@Wrapper/, /only top-level function declarations can be components/]],
-  ["a main marker on a function inside a namespace", `export namespace users {\n  /** @Action */\n  export function makeSave()${body}}\n`, "makeSave", [/@Action/, /namespace users/, /only top-level function declarations can be components/]],
+  ["a main marker on a function inside a namespace", `export namespace users {\n  /** @UseCase */\n  export function makeSave()${body}}\n`, "makeSave", [/@UseCase/, /namespace users/, /only top-level function declarations can be components/]],
   ["a main marker on a function inside a nested namespace", `namespace a.b {\n  namespace c {\n    /** @Config */\n    function makeSettings()${body}  }\n}\n`, "makeSettings", [/@Config/, /namespace c/, /only top-level function declarations can be components/]],
 ];
 
@@ -660,8 +660,8 @@ for (const [title, source, name, patterns] of MISTAKES) {
   test(`without the list, ${title} is silent as before`, async () => {
     const result = await scan({ "sub/a.ts": source });
     assert.deepEqual(result.errors, []);
-    // The one case that is a component either way: the lowercase tag is dropped and the action has no additional marker.
-    assert.deepEqual(result.functions.map((found) => [found.metadata.mainDecorator.name, found.metadata.additionalDecorators]), title === "@transaction on an action" ? [["Action", []]] : []);
+    // The one case that is a component either way: the lowercase tag is dropped and the use case has no additional marker.
+    assert.deepEqual(result.functions.map((found) => [found.metadata.mainDecorator.name, found.metadata.additionalDecorators]), title === "@transaction on an action" ? [["UseCase", []]] : []);
   });
 }
 
@@ -679,7 +679,7 @@ test("with the list given, functions without JSDoc or with ordinary tags only ar
     `/**\n * @param a the thing\n * @returns it\n * @defaultValue 4\n * @deprecated\n * @internal\n */\nexport function tagged(a: string)${body}`,
     // Only the block right above counts, and constants or namespace functions without a main marker are nobody's business.
     `/** @Wraper */\n/** Text. */\nexport function twoBlocks()${body}`,
-    `/** @Transaction */\nexport const value = 1;\n/** @action */\nexport const other = () => 1;\n/** @Action */\nconst local = () => 1;\n`,
+    `/** @Transaction */\nexport const value = 1;\n/** @usecase */\nexport const other = () => 1;\n/** @UseCase */\nconst local = () => 1;\n`,
     `namespace n {\n  /** @Transaction */\n  export function inner()${body}  /** @wrapper */\n  export function lower()${body}}\ndeclare module "bodyless";\n`,
   ];
   for (const source of sources) {
@@ -689,16 +689,16 @@ test("with the list given, functions without JSDoc or with ordinary tags only ar
 });
 
 test("with the list given, a correct component next to ordinary lowercase tags is read as before", async () => {
-  const result = await scan({ "a.ts": `/**\n * @Action\n * @Transaction\n * @param settings x\n * @returns y\n * @defaultValue z\n */\nexport function makeSave(settings: Settings): SaveUser { return null as any; }\n` }, LIST);
+  const result = await scan({ "a.ts": `/**\n * @UseCase\n * @Transaction\n * @param settings x\n * @returns y\n * @defaultValue z\n */\nexport function makeSave(settings: Settings): SaveUser { return null as any; }\n` }, LIST);
   assert.deepEqual(result.errors, []);
   assert.deepEqual(result.functions[0]?.metadata.additionalDecorators, [{ name: "Transaction", data: undefined }]);
 });
 
 test("a component with a lowercase near-marker is still a component, and all its mistakes are reported together", async () => {
-  const result = await scan({ "a.ts": `/**\n * @Action\n * @logging\n * @Cache\n * @action\n */\nfunction makeSave(): SaveUser { return null as any; }\n` }, LIST);
+  const result = await scan({ "a.ts": `/**\n * @UseCase\n * @logging\n * @Cache\n * @usecase\n */\nfunction makeSave(): SaveUser { return null as any; }\n` }, LIST);
   assert.equal(result.functions.length, 1);
   assert.equal(result.errors.length, 4, JSON.stringify(result.errors));
-  for (const pattern of [/@logging\b.*write @Logging/, /@action\b.*write @Action/, /@Cache is not an allowed marker/, /not exported/]) {
+  for (const pattern of [/@logging\b.*write @Logging/, /@usecase\b.*write @UseCase/, /@Cache is not an allowed marker/, /not exported/]) {
     assert.ok(result.errors.some((line) => line.startsWith("makeSave (a.ts): ") && pattern.test(line)), String(pattern));
   }
 });
@@ -725,14 +725,41 @@ test("a this parameter is no dependency and does not shift the others", async ()
 });
 
 test("a main marker on a class method is a mistake naming class and method when a list of markers is given, and left alone without it", async () => {
-  const files = { "a.ts": `export class Holder {\n  /** @Action */\n  static makeIt(): Item { return {} as Item; }\n}\n/** @Config */\nexport function implOk(): Ok { return {} as Ok; }\n` };
+  const files = { "a.ts": `export class Holder {\n  /** @UseCase */\n  static makeIt(): Item { return {} as Item; }\n}\n/** @Config */\nexport function implOk(): Ok { return {} as Ok; }\n` };
   const flagged = await scan(files, []);
   assert.equal(flagged.errors.length, 1, flagged.errors.join("\n"));
-  assert.match(flagged.errors[0] ?? "", /Holder\.makeIt \(a\.ts\): is marked @Action .*a method.*only top-level function declarations can be components/);
+  assert.match(flagged.errors[0] ?? "", /Holder\.makeIt \(a\.ts\): is marked @UseCase .*a method.*only top-level function declarations can be components/);
   assert.deepEqual((await scan(files)).errors, []);
 });
 
 test("files are listed with / as separator on every system, so that a/b.ts sorts before a0.ts", async () => {
   const result = await scan({ "a0.ts": `/** @Config */\nexport function implLate(): Late { return {} as Late; }\n`, "a/b.ts": `/** @Config */\nexport function implEarly(): Early { return {} as Early; }\n` });
   assert.deepEqual(result.functions.map((found) => found.metadata.name), ["Early", "Late"]);
+});
+
+// ---- the removed @Action marker ----
+
+const ACTION_ADVICE = /@Action, but that is not a marker any more; mark it @UseCase or @Gateway/;
+
+test("a function marked @Action is a mistake naming it, its file and the advice, with or without the list, and is not a component", async () => {
+  for (const list of [undefined, LIST, ["Action"]]) {
+    const result = await scan({ "sub/a.ts": `/** @Action */\nexport function makeSave(): SaveUser { return null as any; }\n` }, list);
+    assertOneError(result, /^makeSave \(sub\/a\.ts\): /, ACTION_ADVICE);
+    assert.deepEqual(result.functions, []);
+  }
+});
+
+test("@Action beside another main marker is reported once, and the other marker still makes the component", async () => {
+  const result = await scan({ "a.ts": `/**\n * @Action\n * @UseCase\n * @Action\n */\nexport function makeSave(): SaveUser { return null as any; }\n` });
+  assertOneError(result, /^makeSave \(a\.ts\): /, ACTION_ADVICE);
+  assert.deepEqual(result.functions.map((found) => [found.metadata.mainDecorator.name, found.metadata.additionalDecorators]), [["UseCase", []]]);
+});
+
+test("with the list, a lowercase @action gets the same advice, and @Action on a constant or a method is reported as a misplaced marker", async () => {
+  const lower = await scan({ "a.ts": `/** @action */\nexport function makeSave()${body}` }, LIST);
+  assertOneError(lower, /^makeSave \(a\.ts\): /, /@action, but that is not a marker any more; mark it @UseCase or @Gateway/);
+  const placed = await scan({ "a.ts": `/** @Action */\nexport const makeSave = (): Thing => null as any;\n` }, LIST);
+  assertOneError(placed, /^makeSave \(a\.ts\): /, /@Action/, /only top-level function declarations can be components/);
+  const silent = await scan({ "a.ts": `/** @Action */\nexport const makeSave = (): Thing => null as any;\n` });
+  assert.deepEqual(silent.errors, []);
 });

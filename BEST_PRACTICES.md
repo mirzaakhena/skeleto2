@@ -8,7 +8,7 @@ This file is the conceptual half of the practices. The technical half, how to us
 
 An application on Skeleto is described at two levels.
 
-- **The technical level** is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` and `@Action`, which kind may depend on which, the order in which components are created, and the wrapping of every action by every wrapper. A mistake at this level stops startup.
+- **The technical level** is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper`, `@UseCase` and `@Gateway`, which kind may depend on which, the order in which components are created, and the wrapping of every action by every wrapper. A mistake at this level stops startup.
 - **The architectural level** is what an application builds on top: entities, use cases, gateways. Skeleto knows use cases and gateways as kinds of action, and guards the rules between them (B8, a use case depends on gateways only, and a gateway on configs only); an entity is not a component at all.
 
 Skeleto provides the mechanism and one standard structure of actions; the rest of the policy, how the application divides its work, is yours. The rest of this file recommends one.
@@ -73,9 +73,9 @@ Why: bending an existing use case to hand one screen the data it wants puts the 
 
 A **use case** is a `@UseCase` that stands for one business operation of your application: something a user, a job or another system asks for. A **gateway** is a `@Gateway` that reaches something outside the process (a store, a service, the clock) on the use case's behalf.
 
-### B5. Mark every use case `@UseCase` and every gateway `@Gateway`, and write no plain `@Action` (Mandatory)
+### B5. Mark every use case `@UseCase` and every gateway `@Gateway` (Mandatory)
 
-Why: both are kinds of action that Skeleto knows, so the difference is written as the main marker, where Skeleto, wrappers, checks and readers can see it. A name or a folder is a convention that drifts; the marker is data that Skeleto checks and that a wrapper reads from `metadata.mainDecorator.name`. Skeleto still allows a plain `@Action`, free of these rules, and a plain action may depend on a use case; so a plain action between two use cases would bridge them. An application that has use cases and gateways therefore has every action as one of the two.
+Why: both are kinds of action that Skeleto knows, so the difference is written as the main marker, where Skeleto, wrappers, checks and readers can see it. A name or a folder is a convention that drifts; the marker is data that Skeleto checks and that a wrapper reads from `metadata.mainDecorator.name`. Skeleto knows no third kind of action, so none can pass these rules unchecked: a function marked `@Action` stops startup, and every action of an application is one of the two.
 
 ```ts
 // src/usecase/stock/stock_transfer.ts (excerpt)

@@ -76,7 +76,7 @@ Semua gateway satu teknologi untuk satu entity boleh berbagi satu berkas.
 
 ### GW-1. Setiap gateway ditandai sebagai gateway
 
-Gateway ditulis dengan penanda utama `@Gateway`, tanpa `@Action` di sampingnya, dan tidak didaftarkan di `MARKERS` ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)).
+Gateway ditulis dengan penanda utama `@Gateway`, tanpa penanda utama lain di sampingnya, dan tidak didaftarkan di `MARKERS` ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)).
 
 ### GW-2. Semua yang di luar proses dijangkau lewat gateway, termasuk nilai tak terduga
 
@@ -214,7 +214,7 @@ Gateway hanya bergantung pada config: tidak pada gateway lain dan tidak pada use
 - Gateway yang butuh waktu sekarang atau id baru menerimanya di inputnya; use case memintanya sekali, di awal (UC-10).
 - Satu gateway tidak bisa memanggil gateway lain, misalnya gateway outbox yang memanggil gateway pembayaran. Pengirim outbox adalah proses terpisah: controller yang memanggil use case.
 
-Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor. Gateway juga tidak boleh bergantung pada `@Action` polos.
+Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor.
 
 ## Aturan opsional
 

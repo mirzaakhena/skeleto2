@@ -8,7 +8,7 @@ function block(...lines: string[]): string {
 }
 
 test("a marker without data has undefined data", () => {
-  assert.deepEqual(readDecorators(block("@Action")), { decorators: [{ name: "Action", data: undefined }], tags: [], problems: [] });
+  assert.deepEqual(readDecorators(block("@UseCase")), { decorators: [{ name: "UseCase", data: undefined }], tags: [], problems: [] });
   assert.deepEqual(readDecorators("/** @Config */").decorators, [{ name: "Config", data: undefined }]);
   assert.deepEqual(readDecorators(block("@Config   ", "", "  ")).decorators, [{ name: "Config", data: undefined }]);
 });
@@ -38,18 +38,18 @@ test("JSON data spread over several lines is parsed", () => {
 });
 
 test("an @ in the middle of a sentence is not a marker", () => {
-  const reading = readDecorators(block("Runs the @Action of the day, see @Config too.", "@Action"));
-  assert.deepEqual(reading, { decorators: [{ name: "Action", data: undefined }], tags: [], problems: [] });
+  const reading = readDecorators(block("Runs the @UseCase of the day, see @Config too.", "@UseCase"));
+  assert.deepEqual(reading, { decorators: [{ name: "UseCase", data: undefined }], tags: [], problems: [] });
 });
 
 test("an @ inside an e-mail address is not a marker", () => {
-  assert.deepEqual(readDecorators(block("Ask owner@Example.com or", "team@Action.dev about it.")), { decorators: [], tags: [], problems: [] });
+  assert.deepEqual(readDecorators(block("Ask owner@Example.com or", "team@UseCase.dev about it.")), { decorators: [], tags: [], problems: [] });
   assert.deepEqual(readDecorators(block("@Logging mail owner@Example.com")).decorators, [{ name: "Logging", data: "mail owner@Example.com" }]);
 });
 
 test("a marker line may be preceded by spaces and asterisks", () => {
-  for (const text of ["@Action", "   @Action", "*@Action", " * @Action", "\t *   @Action", " ** @Action", "/**\n@Action\n*/", "/**\n     *     @Action\n */"]) {
-    assert.deepEqual(readDecorators(text).decorators, [{ name: "Action", data: undefined }], JSON.stringify(text));
+  for (const text of ["@UseCase", "   @UseCase", "*@UseCase", " * @UseCase", "\t *   @UseCase", " ** @UseCase", "/**\n@UseCase\n*/", "/**\n     *     @UseCase\n */"]) {
+    assert.deepEqual(readDecorators(text).decorators, [{ name: "UseCase", data: undefined }], JSON.stringify(text));
   }
 });
 
@@ -64,15 +64,15 @@ test("a lowercase tag that is on no list is not a marker", () => {
 });
 
 test("lowercase tags are listed by name as written and in order, apart from the markers", () => {
-  const reading = readDecorators(block("@Action", "@transaction now", "Mail owner@action.dev", "@tRANSACTION", "@Logging", "@param name"));
-  assert.deepEqual(reading.decorators.map((decorator) => decorator.name), ["Action", "Logging"]);
+  const reading = readDecorators(block("@UseCase", "@transaction now", "Mail owner@usecase.dev", "@tRANSACTION", "@Logging", "@param name"));
+  assert.deepEqual(reading.decorators.map((decorator) => decorator.name), ["UseCase", "Logging"]);
   assert.deepEqual(reading.tags, ["transaction", "tRANSACTION", "param"]);
 });
 
 test("a lowercase tag between two markers is skipped and its text does not leak into the marker before it", () => {
   for (const tag of ["param ctx the context", "returns the saved user", "defaultValue 42", "example", "deprecated"]) {
-    const reading = readDecorators(block("@Action", `@${tag}`, "more text of the tag", "@Transaction"));
-    assert.deepEqual(reading, { decorators: [{ name: "Action", data: undefined }, { name: "Transaction", data: undefined }], tags: [tag.split(/\W/)[0]], problems: [] }, tag);
+    const reading = readDecorators(block("@UseCase", `@${tag}`, "more text of the tag", "@Transaction"));
+    assert.deepEqual(reading, { decorators: [{ name: "UseCase", data: undefined }, { name: "Transaction", data: undefined }], tags: [tag.split(/\W/)[0]], problems: [] }, tag);
   }
 });
 
@@ -86,12 +86,12 @@ test("a lowercase tag ends the text and JSON data of the marker before it", () =
 });
 
 test("invalid JSON is a problem that names the marker, and the other markers are still returned", () => {
-  const reading = readDecorators(block("@Action", '@Wrapper {"ordinal": }', "@Transaction", "@Logging text"));
+  const reading = readDecorators(block("@UseCase", '@Wrapper {"ordinal": }', "@Transaction", "@Logging text"));
   assert.equal(reading.problems.length, 1);
   assert.match(reading.problems[0] ?? "", /@Wrapper/);
   assert.match(reading.problems[0] ?? "", /invalid JSON/);
   assert.deepEqual(reading.decorators, [
-    { name: "Action", data: undefined },
+    { name: "UseCase", data: undefined },
     { name: "Wrapper", data: undefined },
     { name: "Transaction", data: undefined },
     { name: "Logging", data: "text" },
@@ -108,10 +108,10 @@ test("every invalid JSON data is reported, one problem per marker", () => {
 });
 
 test("several markers come back in the order written", () => {
-  const reading = readDecorators(block("Saves a user.", "", "@Transaction", "@Action", '@Logging {"level": "debug"}', "@Audit who did it", "@Transaction again"));
+  const reading = readDecorators(block("Saves a user.", "", "@Transaction", "@UseCase", '@Logging {"level": "debug"}', "@Audit who did it", "@Transaction again"));
   assert.deepEqual(reading.decorators, [
     { name: "Transaction", data: undefined },
-    { name: "Action", data: undefined },
+    { name: "UseCase", data: undefined },
     { name: "Logging", data: { level: "debug" } },
     { name: "Audit", data: "who did it" },
     { name: "Transaction", data: "again" },
@@ -125,8 +125,8 @@ test("a block without markers and an empty text give nothing", () => {
 });
 
 test("Windows line endings are read like any other", () => {
-  assert.deepEqual(readDecorators('/**\r\n * @Action\r\n * @Wrapper {\r\n *   "ordinal": 1\r\n * }\r\n */').decorators, [
-    { name: "Action", data: undefined },
+  assert.deepEqual(readDecorators('/**\r\n * @UseCase\r\n * @Wrapper {\r\n *   "ordinal": 1\r\n * }\r\n */').decorators, [
+    { name: "UseCase", data: undefined },
     { name: "Wrapper", data: { ordinal: 1 } },
   ]);
 });

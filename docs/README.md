@@ -17,7 +17,7 @@ Skeleto memberi kode buatan AI satu struktur standar yang dijaga mesin, supaya m
 | Lapis | Isi | Siapa yang menjaga |
 | --- | --- | --- |
 | **Konsep** (arsitektur) | entity, use case, gateway, controller | dokumen, reviewer, tes salinan; aturan antara use case, gateway, dan config dijaga Skeleto lewat jenis bawaan `@UseCase`, `@Gateway` |
-| **Mekanisme** (Skeleto) | `@UseCase`, `@Gateway`, `@Action`, `@Wrapper`, `@Config`, container | kode Skeleto, saat startup |
+| **Mekanisme** (Skeleto) | `@UseCase`, `@Gateway`, `@Wrapper`, `@Config`, container | kode Skeleto, saat startup |
 
 Hubungan keduanya:
 
@@ -47,7 +47,7 @@ Review berjalan dalam dua lapis (keputusan pemilik, 2026-11-22):
 
 | Lapis | Pertanyaan | Ditangani oleh |
 | --- | --- | --- |
-| 1. Kepatuhan konsep | apakah kode mengikuti struktur: jenis komponen, dependency, nama, berkas, penanda | mesin (Skeleto, tes arsitektur) dan LLM |
+| 1. Kepatuhan konsep | apakah kode mengikuti struktur: jenis komponen, dependency, nama, berkas, penanda | mesin (Skeleto) dan LLM |
 | 2. Logika dan requirement | apakah kode melakukan yang diminta bisnis, dan benar | sebagian LLM, sebagian reviewer manusia |
 
 Lapis pertama dibuat semekanis mungkin, supaya waktu manusia terpakai di lapis kedua.
@@ -63,7 +63,7 @@ Aturan dibaca **per lingkup**: reviewer yang sedang membaca use case cukup mener
 | [konsep/gateway.md](konsep/gateway.md) | jalan keluar; perubahan bersamaan; efek di luar penyimpanan |
 | [konsep/controller.md](konsep/controller.md) | jalan masuk; penerjemahan error; container |
 | [teknis/komponen.md](teknis/komponen.md) | aturan yang berlaku untuk semua komponen: dua tahap, nama, berkas, penanda, tes integrasi |
-| [teknis/action.md](teknis/action.md) | `@Action`, `@UseCase`, `@Gateway` dan context |
+| [teknis/action.md](teknis/action.md) | `@UseCase`, `@Gateway` dan context |
 | [teknis/wrapper.md](teknis/wrapper.md) | `@Wrapper`; transaksi; pengamat gateway |
 | [teknis/config.md](teknis/config.md) | `@Config`; config asinkron |
 | [teknis/use-case-gateway-bawaan.md](teknis/use-case-gateway-bawaan.md) | `@UseCase` dan `@Gateway` sebagai jenis bawaan Skeleto |

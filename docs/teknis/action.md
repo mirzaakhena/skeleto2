@@ -8,20 +8,18 @@
 export type ActionHandler<REQUEST = any, RESPONSE = any> = (ctx: Context, request: REQUEST) => Promise<RESPONSE>;
 ```
 
-Action ditandai `@UseCase`, `@Gateway`, atau `@Action` (action polos). Ketiganya adalah jenis action, dan hanya action yang dibungkus wrapper.
+Action ditandai `@UseCase` atau `@Gateway`. Keduanya adalah jenis action, dan hanya action yang dibungkus wrapper. `@Action` bukan penanda: fungsi yang bertanda itu menghentikan startup, dengan saran memakai `@UseCase` atau `@Gateway` (keputusan pemilik, 2026-11-22).
 
 ## Kenapa ada
 
-Action adalah mekanisme umum untuk "sesuatu yang dipanggil per permintaan". Skeleto mengenal tiga jenis action, dan jenisnya dibaca dari nama penanda utama di metadata ([use-case-gateway-bawaan.md](use-case-gateway-bawaan.md)):
+Action adalah mekanisme umum untuk "sesuatu yang dipanggil per permintaan". Skeleto mengenal dua jenis action, dan jenisnya dibaca dari nama penanda utama di metadata ([use-case-gateway-bawaan.md](use-case-gateway-bawaan.md)):
 
 | Konsep | Ditulis sebagai |
 | --- | --- |
 | Use case | `@UseCase` |
 | Gateway | `@Gateway` |
-| Action polos, tanpa konsep clean architecture | `@Action` |
 
-`@Action` polos tetap ada dan boleh dipakai, dengan aturan yang bebas (keputusan pemilik, 2026-11-22).
-
+Setiap action aplikasi adalah salah satu dari keduanya, sehingga tidak ada action yang lolos dari aturan dependency use case dan gateway.
 ## Use case dan gateway: struktur sama, konsep berbeda
 
 Kode use case dan kode gateway hampir tidak bisa dibedakan dari bentuknya. Keduanya action, jadi bentuknya sama; hanya penanda utamanya yang berbeda:
@@ -66,9 +64,9 @@ export function implLockWarehouses(database: Database): LockWarehouses {
 
 ## Perilaku yang dijamin Skeleto
 
-- `@UseCase` hanya boleh bergantung pada `@Gateway`, dan `@Gateway` hanya pada `@Config`: strukturnya satu garis lurus, controller -> use case -> gateway -> config. `@Action` polos boleh bergantung pada `@Config`, `@Gateway`, `@UseCase`, dan `@Action`. Dependency lain menghentikan startup, dengan pesan yang menyebut kedua komponen.
-- Urutan pembuatan: semua gateway, lalu semua use case, lalu semua action polos.
-- Action selalu sinkron di tahap luarnya: return type `Promise<...>` pada fungsi `@UseCase`, `@Gateway`, dan `@Action` adalah kesalahan.
+- `@UseCase` hanya boleh bergantung pada `@Gateway`, dan `@Gateway` hanya pada `@Config`: strukturnya satu garis lurus, controller -> use case -> gateway -> config. Dependency lain menghentikan startup, dengan pesan yang menyebut kedua komponen.
+- Urutan pembuatan: semua gateway, lalu semua use case.
+- Action selalu sinkron di tahap luarnya: return type `Promise<...>` pada fungsi `@UseCase` dan `@Gateway` adalah kesalahan.
 - Fungsi action harus mengembalikan fungsi. Hasil lain (`undefined`, objek, promise) menghentikan startup dengan pesan yang menyebut action dan fungsinya.
 - Hasil action dibungkus **semua** wrapper. Action yang disuntikkan ke action lain adalah versi yang **sudah** dibungkus.
 
@@ -102,11 +100,11 @@ Action mengikuti aturan umum di [komponen.md](komponen.md). Nama dan berkas use 
 
 ## Aturan wajib
 
-### ACT-1. Operasi bisnis ditulis sebagai use case dan jalan keluar sebagai gateway; `@Action` polos untuk yang bukan keduanya
+### ACT-1. Setiap action adalah use case atau gateway: operasi bisnis ditulis sebagai use case dan jalan keluar sebagai gateway
 
-`@Action` polos boleh dipakai, dan aturan konsep (UC-, GW-) tidak berlaku untuknya: hanya aturan mekanisme Skeleto dan aturan umum di [komponen.md](komponen.md). Tetapi sesuatu yang sebenarnya operasi bisnis atau jalan keluar tetap ditandai sebagai use case atau gateway. Action yang keduanya sekaligus melanggar UC-4 atau GW-12.
+Operasi bisnis ditandai `@UseCase` dan jalan keluar ditandai `@Gateway`. Action yang keduanya sekaligus melanggar UC-4 atau GW-12.
 
-Aplikasi yang memakai use case dan gateway tidak punya `@Action` polos (keputusan pemilik, 2026-11-22). Skeleto sendiri membolehkannya, jadi tes arsitektur di `REVIEW_CHECKLIST.md` (B5) yang menolaknya. Alasannya: `@Action` polos boleh bergantung pada use case, sehingga ia bisa menjadi jembatan diam-diam dari satu use case ke use case lain.
+Skeleto sendiri yang menjaganya saat startup (keputusan pemilik, 2026-11-22): tidak ada penanda untuk action polos. Alasannya: action polos yang bebas aturan bisa menjadi jembatan diam-diam dari satu use case ke use case lain, dan lolos dari semua aturan use case dan gateway.
 
 ### ACT-2. Handler hanya menerima context dan input; semua yang lain datang sebagai dependency
 
@@ -125,12 +123,12 @@ Data bisnis di context adalah input yang tidak dinyatakan tipe mana pun. Ia memb
 | Dengan | Hubungannya |
 | --- | --- |
 | Config | boleh menjadi dependency |
-| Action lain | boleh menjadi dependency menurut tabel di atas; yang disuntikkan versi yang sudah dibungkus. Skeleto menolak use case yang bergantung pada config atau use case, gateway yang bergantung pada gateway lain atau use case, dan use case atau gateway yang bergantung pada `@Action` polos |
+| Action lain | boleh menjadi dependency menurut tabel di atas; yang disuntikkan versi yang sudah dibungkus. Skeleto menolak use case yang bergantung pada config atau use case, dan gateway yang bergantung pada gateway lain atau use case |
 | Wrapper | membungkus setiap action; tidak boleh menjadi dependency action |
 
 ## Status implementasi
 
 | Bagian | Status |
 | --- | --- |
-| `@Action`, perilaku dan pemeriksaannya | terealisasi |
+| `@Action` dihapus sebagai penanda; pemakaiannya menghentikan startup | terealisasi |
 | `@UseCase` dan `@Gateway` sebagai jenis bawaan, dan aturan dependency antar jenis action | terealisasi |

@@ -91,7 +91,7 @@ Aturan nama umum (alias tipe, nama parameter) ada di [komponen.md](../teknis/kom
 
 ### UC-1. Setiap use case ditandai sebagai use case
 
-Use case ditulis dengan penanda utama `@UseCase`, tanpa `@Action` di sampingnya, dan tidak didaftarkan di `MARKERS`: ia penanda utama, bukan penanda tambahan ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)). Aplikasi yang memakai use case dan gateway tidak punya `@Action` polos; tes arsitektur dari `REVIEW_CHECKLIST.md` memeriksanya.
+Use case ditulis dengan penanda utama `@UseCase`, tanpa penanda utama lain di sampingnya, dan tidak didaftarkan di `MARKERS`: ia penanda utama, bukan penanda tambahan ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)). Tidak ada penanda untuk action polos, jadi setiap action aplikasi adalah use case atau gateway.
 
 Use case dan gateway jangan pernah dibedakan dari namanya (`...Gateway`, `Find...`) atau dari letak berkasnya. Nama dan folder adalah kebiasaan yang bisa bergeser, sedangkan penanda utama adalah data yang diperiksa Skeleto dan dibaca wrapper.
 
@@ -107,7 +107,7 @@ Aturan bisnis yang ditulis di use case hanya dipatuhi use case itu (lihat [entit
 
 Use case adalah satu operasi bisnis dengan transaksinya sendiri, audit-nya sendiri, dan error-nya sendiri. Memanggil use case lain menyeret semua itu, menyatukan dua operasi yang berubah karena alasan berbeda, dan lama-lama membentuk rantai yang tidak bisa diikuti. Kalau dua use case berbagi satu langkah, aturan bersamanya masuk fungsi entity dan akses bersamanya masuk gateway.
 
-Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor, bersama kesalahan lain dan dengan pesan yang menyebut kedua use case. Use case juga tidak boleh bergantung pada `@Action` polos, yang bisa menjadi jembatan ke use case lain, dan tidak boleh bergantung pada config. Strukturnya satu garis lurus: controller -> use case -> gateway -> config. Akibatnya, parameter bisnis (batas, tarif, feature flag) sampai ke use case lewat gateway yang membacanya, atau menjadi konstanta entity, tidak pernah lewat config.
+Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor, bersama kesalahan lain dan dengan pesan yang menyebut kedua use case. Use case juga tidak boleh bergantung pada config. Strukturnya satu garis lurus: controller -> use case -> gateway -> config. Akibatnya, parameter bisnis (batas, tarif, feature flag) sampai ke use case lewat gateway yang membacanya, atau menjadi konstanta entity, tidak pernah lewat config.
 
 ### UC-5. Use case punya tipe Request dan Response sendiri dan tidak mengembalikan entity
 

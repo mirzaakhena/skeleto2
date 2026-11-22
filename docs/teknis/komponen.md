@@ -1,10 +1,10 @@
 # Dasar komponen
 
-Aturan yang berlaku untuk kelima jenis komponen Skeleto: `@Config`, `@Wrapper`, `@UseCase`, `@Gateway`, dan `@Action`. Hal yang khusus satu jenis ada di [action.md](action.md), [wrapper.md](wrapper.md), dan [config.md](config.md).
+Aturan yang berlaku untuk keempat jenis komponen Skeleto: `@Config`, `@Wrapper`, `@UseCase`, dan `@Gateway`. Hal yang khusus satu jenis ada di [action.md](action.md), [wrapper.md](wrapper.md), dan [config.md](config.md).
 
 ## Definisi
 
-**Komponen** adalah deklarasi fungsi tingkat atas yang di-`export` dan JSDoc-nya memuat tepat satu penanda utama: `@Config`, `@Wrapper`, `@UseCase`, `@Gateway`, atau `@Action`.
+**Komponen** adalah deklarasi fungsi tingkat atas yang di-`export` dan JSDoc-nya memuat tepat satu penanda utama: `@Config`, `@Wrapper`, `@UseCase`, atau `@Gateway`.
 
 Skeleto hanya membaca dua hal dari setiap komponen:
 - **Nama komponen:** teks return type-nya, persis seperti tertulis.
@@ -16,8 +16,8 @@ Skeleto tidak pernah membuka definisi tipe. Dependency dicocokkan dengan nama ko
 
 1. **Pindai** semua berkas `.ts` di direktori sumber sebagai teks, tanpa menjalankannya.
 2. **Periksa**: dependency yang tidak ada, jenis dependency yang dilarang, dependency melingkar, penanda yang salah tulis. Semua kesalahan dilaporkan sekaligus dalam satu `Error`, **sebelum** satu pun berkas aplikasi diimpor.
-3. **Buat**: impor berkas, lalu panggil setiap fungsi tepat sekali dengan dependency-nya. Urutannya semua config, lalu semua wrapper, lalu semua gateway, lalu semua use case, lalu semua action polos.
-4. **Bungkus**: setiap action (use case, gateway, dan action polos) dibungkus semua wrapper.
+3. **Buat**: impor berkas, lalu panggil setiap fungsi tepat sekali dengan dependency-nya. Urutannya semua config, lalu semua wrapper, lalu semua gateway, lalu semua use case.
+4. **Bungkus**: setiap action (use case dan gateway) dibungkus semua wrapper.
 5. **Simpan** semuanya di container, dengan kunci nama komponen.
 
 | Jenis | Boleh bergantung pada |
@@ -26,7 +26,6 @@ Skeleto tidak pernah membuka definisi tipe. Dependency dicocokkan dengan nama ko
 | `@Wrapper` | `@Config` |
 | `@Gateway` | `@Config` |
 | `@UseCase` | `@Gateway` |
-| `@Action` | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
 Kontrak lengkap perilaku Skeleto ada di `CLAUDE.md` bagian 4 dan di `README.md`.
 
@@ -174,9 +173,9 @@ Skeleto mengimpor setiap berkas yang dipindainya. Berkas tes yang diimpor saat s
 
 ## Yang boleh diandalkan alat di luar aplikasi
 
-Alat yang membaca atau memeriksa aplikasi dari luar (tes arsitektur, tes celah, penjejak scenario-explorer) boleh mengandalkan hal berikut, setelah `Skeleto.start` dengan `MARKERS` aplikasi:
+Alat yang membaca atau memeriksa aplikasi dari luar (tes celah, penjejak scenario-explorer) boleh mengandalkan hal berikut, setelah `Skeleto.start` dengan `MARKERS` aplikasi:
 
-- `getContainer()` mendaftar setiap komponen, dari kelima jenis, dengan namanya.
+- `getContainer()` mendaftar setiap komponen, dari keempat jenis, dengan namanya.
 - `getMetadata()` sebuah komponen memberi `dependencies` (nama komponen yang dimintanya, menurut urutan parameter) dan `additionalDecorators` (penanda tambahan beserta datanya).
 - Nama komponen adalah nama tipenya, sehingga alat menemukan tipe sebuah komponen dari namanya.
 - Use case dibedakan dari gateway lewat nama penanda utamanya (`mainDecorator.name`), dan wrapper dinamai menurut penanda yang dibacanya.

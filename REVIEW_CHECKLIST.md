@@ -4,7 +4,7 @@ Every rule of [BEST_PRACTICES.md](BEST_PRACTICES.md), [TECHNICAL_PRACTICES.md](T
 
 ## How to review
 
-- **Machine** rules are checked by the [architecture test](#the-architecture-test) and the [gap test](#the-gap-test) below. Run the two; a reviewer does not check them by reading.
+- **Machine** rules are checked by Skeleto at startup and by the [gap test](#the-gap-test) below. Start the application and run the test; a reviewer does not check them by reading.
 - **Reviewer** rules are checked by reading the change, or, for the process rules, the files in the repository. Skeleto checks none of them.
 - **Process** rules are checked with the owner, not in the code: a repository does not show them, so a reviewer does not look for them there.
 - A change that breaks a **Mandatory** rule gets a finding, always.
@@ -31,7 +31,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | B2 | Name and shape the Request and the Response after the business operation, not after a screen; no field exists only because a screen shows it | Mandatory | Reviewer |
 | B3 | A screen may call many use cases and a use case may serve many callers; the two are not paired one to one | Mandatory | Reviewer |
 | B4 | A view that needs data gathered for one screen is served on the caller's side, or by a query use case of its own, not by changing an existing use case | Optional | Reviewer |
-| B5 | Mark every use case `@UseCase` and every gateway `@Gateway`, and write no plain `@Action` | Mandatory | Machine: the architecture test |
+| B5 | Mark every use case `@UseCase` and every gateway `@Gateway` | Mandatory | Machine: Skeleto, at startup |
 | B6 | Put each use case in a file of its own, named after it | Mandatory | Reviewer |
 | B7 | A use case only orchestrates: it fetches through gateways, calls entity functions, and saves through gateways | Mandatory | Reviewer |
 | B8 | A use case never depends on another use case | Mandatory | Machine: Skeleto, at startup |
@@ -116,29 +116,9 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | P13 | Debt that is not a gap is either Planned or Shortcut, and obsolete code is forbidden: it is removed in the change that replaces it | Mandatory | Reviewer: every such marker has one of the two kinds, and no replaced code is left |
 | P14 | Skeleton use cases are allowed only in the area being worked on | Mandatory | Reviewer: no area outside the one being worked on holds a use case that only throws "not implemented" |
 
-## The architecture test
-
-Skeleto itself refuses a use case that depends on another use case or on a config (B8), a gateway that depends on a use case or on another gateway, and a use case or a gateway that depends on a plain `@Action`, all at startup. What it cannot see is a plain `@Action` that an application of use cases and gateways should not have: to Skeleto a plain action is allowed. The test below checks that one thing (B5). Copy this file as it is to the root of your application, next to `main.test.ts` (T21); it reads the same `MARKERS` (T10).
-
-It fails, naming each action at fault, when the container holds a plain `@Action`. This also catches a forgotten marker: a function marked `@Action` by habit is as good as any to Skeleto.
-
-```ts
-// architecture.test.ts
-import assert from "node:assert/strict";
-import { test } from "node:test";
-import { Skeleto } from "skeleto";
-import { MARKERS } from "./src/markers.js";
-
-test("B5: no action is a plain @Action", async () => {
-  const container = (await Skeleto.start("src", { decorators: MARKERS })).getContainer();
-  const plain = [...container].filter(([, component]) => component.getMetadata().mainDecorator.name === "Action").map(([name]) => name);
-  assert.deepEqual(plain, []);
-});
-```
-
 ## The gap test
 
-A gap on a scenario map (P10) is closed by a marker in the code (T25) or a recorded decision (P12). Skeleto knows nothing of maps or debts, so this test reads files only: it does not start the application. Copy it as it is to the root of your application, next to `architecture.test.ts`.
+A gap on a scenario map (P10) is closed by a marker in the code (T25) or a recorded decision (P12). Skeleto knows nothing of maps or debts, so this test reads files only: it does not start the application. Copy it as it is to the root of your application, next to `main.test.ts` (T21).
 
 It fails, naming each gap or marker at fault:
 

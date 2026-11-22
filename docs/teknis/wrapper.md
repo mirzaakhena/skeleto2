@@ -8,7 +8,7 @@
 export type WrapperHandler = (actionHandler: ActionHandler, functionMetadata: FuncMetadata) => ActionHandler;
 ```
 
-Wrapper ditandai `@Wrapper`, tanpa data, seperti `@Config` dan `@Action`.
+Wrapper ditandai `@Wrapper`, tanpa data, seperti `@Config`, `@UseCase`, dan `@Gateway`.
 
 ## Kenapa ada
 
@@ -152,7 +152,7 @@ Wrapper bukan alat validasi struktur. Aturan antara use case dan gateway dijaga 
 | Dengan | Hubungannya |
 | --- | --- |
 | Config | satu-satunya dependency yang boleh |
-| Action | membungkus semua jenis action (use case, gateway, action polos); memilih yang dibungkus lewat penanda tambahan di `metadata.additionalDecorators`, atau lewat jenisnya di `metadata.mainDecorator.name` |
+| Action | membungkus semua jenis action (use case dan gateway); memilih yang dibungkus lewat penanda tambahan di `metadata.additionalDecorators`, atau lewat jenisnya di `metadata.mainDecorator.name` |
 | Wrapper lain | tidak bergantung padanya; urutan antarwrapper adalah urutan penulisan (WRP-5) |
 | Context | menambah dan menghapus yang dikelolanya |
 

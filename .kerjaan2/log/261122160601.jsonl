@@ -1,2 +1,16 @@
 {"t":"2026-11-22 16:06:16","event":"created","status":"backlog","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
 {"t":"2026-11-22 16:06:29","event":"moved","to":"todo","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:06:29","event":"started","branch":"k2/261122160601-drop-every-special-handling","base":"26d1491","contract":"458a71387383","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:06:35","event":"agent","role":"worker","agent":"a5c8305fc8c3167c1","step":"first:1:0:0","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:07:08","event":"test","by":"worker:a5c8305fc8c3167c1","exit":1,"seconds":1,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:07:20","event":"test","by":"worker:a5c8305fc8c3167c1","exit":0,"seconds":9,"fingerprint":null,"command":"npm run typecheck && npm test && npm run build","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:07:25","event":"check","n":1,"evidence":"grep of src/ finds no @Action, REMOVED_MARKER or advice; scanner treats it as unknown marker","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a5c8305fc8c3167c1"}
+{"t":"2026-11-22 16:07:25","event":"check","n":2,"evidence":"new scanner test: silent without list, generic 'has @Action but no main marker' with list; suite passes","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a5c8305fc8c3167c1"}
+{"t":"2026-11-22 16:07:25","event":"check","n":3,"evidence":"CLAUDE.md 4.2 clause and README sentence removed; only table row remains","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a5c8305fc8c3167c1"}
+{"t":"2026-11-22 16:07:26","event":"check","n":4,"evidence":"removed scanner, skeleto and readme tests for refusal and for the banned words","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a5c8305fc8c3167c1"}
+{"t":"2026-11-22 16:07:26","event":"check","n":5,"evidence":"grep of docs/ and REVIEW_CHECKLIST.md for @Action, action polos, plain action: nothing","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a5c8305fc8c3167c1"}
+{"t":"2026-11-22 16:07:35","event":"test","by":"worker:a5c8305fc8c3167c1","exit":0,"seconds":9,"fingerprint":"c93c4c0ac7e1f7ae12f9c3f8246128d53149ebd4","command":"npm run typecheck && npm test && npm run build","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:07:35","event":"submitted","commit":"a5da526","lane":"standard","to":"review","files":7,"fingerprint":"c93c4c0ac7e1f7ae12f9c3f8246128d53149ebd4","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a5c8305fc8c3167c1"}
+{"t":"2026-11-22 16:07:51","event":"agent","role":"reviewer","agent":"ada35013c6a52515b","step":"review:1:0:0","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:08:51","event":"verdict","result":"pass","round":1,"commit":"a5da526","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"reviewer:ada35013c6a52515b"}
+{"t":"2026-11-22 16:09:05","event":"landed","branch":"k2/261122160601-drop-every-special-handling","files":["CLAUDE.md","README.md","package.json","src/scanner.ts","test/readme.test.ts","test/scanner.test.ts","test/skeleto.test.ts"],"session":"3581ac0f-c58f-4349-b833-c978731fcea8"}

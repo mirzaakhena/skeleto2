@@ -737,29 +737,13 @@ test("files are listed with / as separator on every system, so that a/b.ts sorts
   assert.deepEqual(result.functions.map((found) => found.metadata.name), ["Early", "Late"]);
 });
 
-// ---- the removed @Action marker ----
 
-const ACTION_ADVICE = /@Action, but that is not a marker any more; mark it @UseCase or @Gateway/;
-
-test("a function marked @Action is a mistake naming it, its file and the advice, with or without the list, and is not a component", async () => {
-  for (const list of [undefined, LIST, ["Action"]]) {
-    const result = await scan({ "sub/a.ts": `/** @Action */\nexport function makeSave(): SaveUser { return null as any; }\n` }, list);
-    assertOneError(result, /^makeSave \(sub\/a\.ts\): /, ACTION_ADVICE);
-    assert.deepEqual(result.functions, []);
-  }
-});
-
-test("@Action beside another main marker is reported once, and the other marker still makes the component", async () => {
-  const result = await scan({ "a.ts": `/**\n * @Action\n * @UseCase\n * @Action\n */\nexport function makeSave(): SaveUser { return null as any; }\n` });
-  assertOneError(result, /^makeSave \(a\.ts\): /, ACTION_ADVICE);
-  assert.deepEqual(result.functions.map((found) => [found.metadata.mainDecorator.name, found.metadata.additionalDecorators]), [["UseCase", []]]);
-});
-
-test("with the list, a lowercase @action gets the same advice, and @Action on a constant or a method is reported as a misplaced marker", async () => {
-  const lower = await scan({ "a.ts": `/** @action */\nexport function makeSave()${body}` }, LIST);
-  assertOneError(lower, /^makeSave \(a\.ts\): /, /@action, but that is not a marker any more; mark it @UseCase or @Gateway/);
-  const placed = await scan({ "a.ts": `/** @Action */\nexport const makeSave = (): Thing => null as any;\n` }, LIST);
-  assertOneError(placed, /^makeSave \(a\.ts\): /, /@Action/, /only top-level function declarations can be components/);
-  const silent = await scan({ "a.ts": `/** @Action */\nexport const makeSave = (): Thing => null as any;\n` });
+test("a function marked only @Action is no component and silent without the list; with the list it is the generic markers-but-no-main-marker mistake", async () => {
+  const source = { "a.ts": `/** @Action */\nexport function makeSave(): SaveUser { return null as any; }\n` };
+  const silent = await scan(source);
   assert.deepEqual(silent.errors, []);
+  assert.deepEqual(silent.functions, []);
+  const listed = await scan(source, LIST);
+  assertOneError(listed, /^makeSave \(a\.ts\): /, /has @Action but no main marker/);
+  assert.deepEqual(listed.functions, []);
 });

@@ -1,7 +1,7 @@
 {
   "name": "skeleto",
   "version": "0.1.0",
-  "description": "Automatic binding of closure-based components marked with @Config, @Wrapper and @Action",
+  "description": "Automatic binding of closure-based components marked with @Config, @Wrapper, @UseCase and @Gateway",
   "license": "MIT",
   "type": "module",
   "main": "dist/index.js",

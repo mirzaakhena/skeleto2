@@ -1,13 +1,12 @@
 # `@UseCase` dan `@Gateway` sebagai jenis bawaan
 
-> **Seluruh dokumen ini adalah rencana dan belum terealisasi di kode.** Pemilik memutuskan (2026-11-22) bahwa `@UseCase` dan `@Gateway` menjadi bagian inti Skeleto, bukan preset terpisah (`TEMUAN.md`, temuan 12). Sampai kode dibuat, yang berlaku adalah cara sekarang yang disebut di setiap dokumen.
+> **Sudah terealisasi di kode** (tiket 261122101201). `CLAUDE.md` bagian 4.6 dan 4.7 adalah kontraknya; dokumen ini menjelaskan alasannya. Bagian "Yang belum diputuskan" dan "Dampak" di bawah ditulis sebelum kode ada.
 
 ## Definisi
 
 `@UseCase` dan `@Gateway` adalah **jenis khusus `@Action`** yang dikenal langsung oleh Skeleto. Keduanya action, jadi semua perilaku action berlaku: tahap luar sinkron, menghasilkan handler, dan dibungkus semua wrapper. Bedanya, Skeleto juga menjaga aturan dependency keduanya.
 
 ```ts
-// Rencana, belum bisa dijalankan
 /**
  * Moves units of stock from one warehouse to another.
  *
@@ -40,11 +39,12 @@ Pemilik memilih jenis bawaan, bukan preset, karena tujuan utama Skeleto adalah k
 | `@Wrapper` | `@Config` |
 | `@UseCase` | `@Config`, `@Gateway` |
 | `@Gateway` | `@Config`, `@Gateway` |
-| `@Action` | `@Config`, `@Action` (seperti sekarang; lihat pertanyaan terbuka di bawah) |
+| `@Action` | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
+
+Keputusan pemilik (2026-11-22): `@UseCase` dan `@Gateway` tidak boleh bergantung pada `@Action` polos, supaya `@Action` polos tidak menjadi jembatan antar use case. Urutan pembuatan: semua gateway, lalu semua use case, lalu semua action polos.
 
 ## Yang belum diputuskan
 
-- **Dependency antara `@Action` polos dan dua jenis baru.** Bolehkah `@Action` polos bergantung pada `@Gateway` atau `@UseCase`, dan sebaliknya?
 - **Kontrak dengan alat luar.** Bagian mana dari kebutuhan penjejak scenario-explorer yang diformalkan di Skeleto (`TEMUAN.md`, temuan 14). Pemilik ingin menelitinya lebih dalam: yang hanya untuk penjejak tidak dibuat di Skeleto, tetapi yang bermanfaat umum boleh diformalkan.
 - **Wrapper siap pakai** (transaksi, pengamat gateway): tetap kode contoh di README, atau disediakan Skeleto.
 - **Controller:** apakah Skeleto juga akan mengenalnya (belum dibahas).

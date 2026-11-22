@@ -92,7 +92,7 @@ test("two configs both returning Promise<X> are two functions returning the same
   assertOneError(result, /^Database: returned by both/, /one \(a\.ts\)/, /two \(a\.ts\)/);
 });
 
-for (const marker of ["Wrapper", "Action"]) {
+for (const marker of ["Wrapper", "Action", "UseCase", "Gateway"]) {
   test(`a @${marker} declared Promise<X> is a mistake naming the function, and is not marked as one to wait for`, async () => {
     const result = await scan({ "a.ts": `/** @${marker} */\nexport async function implLate(): Promise<Late> { return null as any; }\n` });
     assertOneError(result, /^implLate \(a\.ts\): /, new RegExp(`is marked @${marker} but returns Promise<Late>`), /only a @Config may be asynchronous/);
@@ -212,7 +212,7 @@ test("three functions returning the same type name give one mistake per extra fu
 
 // ---- 4.4: data of the main marker ----
 
-for (const marker of ["Config", "Action"]) {
+for (const marker of ["Config", "Action", "UseCase", "Gateway"]) {
   for (const data of [`{"readTypeArguments": true}`, `{}`, `some text`, `{"ordinal": 1}`]) {
     test(`@${marker} with data ${data} is a mistake naming the function`, async () => {
       const result = await scan({ "a.ts": `/** @${marker} ${data} */\nexport function implWithData(): WithData { return null as any; }\n` });
@@ -220,6 +220,12 @@ for (const marker of ["Config", "Action"]) {
     });
   }
 }
+
+test("@UseCase and @Gateway alone are main markers, and the scan keeps each name in the metadata", async () => {
+  const result = await scan({ "a.ts": `/** @UseCase */\nexport function u(g: G): U { return null as any; }\n/** @Gateway */\nexport function g(): G { return null as any; }\n` });
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.functions.map((found) => [found.metadata.name, found.metadata.mainDecorator.name, found.metadata.additionalDecorators]), [["U", "UseCase", []], ["G", "Gateway", []]]);
+});
 
 test("@Action followed by another marker on the same line is a mistake, because that marker became its data", async () => {
   const result = await scan({ "a.ts": `/** @Action @Transaction */\nexport function implInline(): Inline { return null as any; }\n` });

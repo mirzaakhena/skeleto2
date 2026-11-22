@@ -1,10 +1,10 @@
 # Skeleto
 
-Skeleto wires up an application made of plain functions. You mark a function with `@Config`, `@Wrapper` or `@Action` in its JSDoc comment; Skeleto reads the TypeScript sources, works out which function needs which, calls each one once with its dependencies, puts every wrapper around every action, and hands you the results in a container.
+Skeleto wires up an application made of plain functions. You mark a function with `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` or `@Action` in its JSDoc comment; Skeleto reads the TypeScript sources, works out which function needs which, calls each one once with its dependencies, puts every wrapper around every action, and hands you the results in a container.
 
 ## What it does, and what it leaves out
 
-It does **binding only**:
+It does **binding**, and it knows one structure for the actions of an application, use cases and gateways:
 
 - It scans every `.ts` file below one directory for marked, exported, top-level functions, except the files and folders on its [exclusion list](#files-the-scan-leaves-out).
 - The **name** of a component is its return type, exactly as written (`StockTransfer`, `winston.Logger`); a config written `Promise<Database>` is [asynchronous](#asynchronous-configs) and is named `Database`. Its **dependencies** are the types of its parameters, in order. Nothing else is read: Skeleto never opens a type definition.
@@ -12,15 +12,19 @@ It does **binding only**:
 
 It deliberately does **not** know about HTTP, routing, validation, OpenAPI, databases or logging. Anything of that sort belongs to your application, usually as a wrapper or as code that reads the container. Its only runtime dependency is `ts-morph`.
 
-## The three kinds
+## The kinds
 
 | Marker | What the function returns | May depend on |
 | --- | --- | --- |
 | `@Config` | anything: settings, a client, a logger; or a promise of it, which startup waits for | `@Config` |
 | `@Wrapper` | a function that takes an action and returns the action to use instead | `@Config` |
-| `@Action` | an async function `(ctx, input) => result` | `@Config`, `@Action` |
+| `@Gateway` | an async function `(ctx, input) => result` that reaches something outside the application | `@Config`, `@Gateway` |
+| `@UseCase` | an async function `(ctx, input) => result` that carries out one business operation | `@Config`, `@Gateway` |
+| `@Action` | an async function `(ctx, input) => result`, without a rule of its own | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
-Any other dependency, and any circular one, stops startup. Configs are created first, then wrappers, then actions.
+`@UseCase`, `@Gateway` and `@Action` are all kinds of action: each is wrapped by every wrapper, and what is injected into another component is the wrapped one. A function carries exactly one of the five markers. Any other dependency, and any circular one, stops startup, so a use case never depends on another use case, and a gateway never depends on a use case. Neither depends on a plain `@Action`, since that would bridge one use case to another. Configs are created first, then wrappers, then all gateways, then all use cases, then all plain actions; each is created after what it depends on.
+
+An application built on use cases and gateways has no use for a plain `@Action`; the architecture test of REVIEW_CHECKLIST.md says so.
 
 ## Example
 
@@ -157,7 +161,7 @@ The additional markers the application allows, kept in one place:
 ```ts
 // src/markers.ts
 /** The additional markers this application allows. Startup refuses any other, so a misspelt marker cannot pass unnoticed. */
-export const MARKERS = ["UseCase", "Gateway", "Transaction", "Audit"];
+export const MARKERS = ["Transaction", "Audit"];
 ```
 
 Gateways. Their contracts are types of their own, apart from the code that fulfils them, so that a use case depends on what a gateway promises and not on the technology behind it.
@@ -184,7 +188,7 @@ export type SaveWarehouses = ActionHandler<Warehouse[], void>;
 export type NotifyWarehouses = ActionHandler<Warehouse[], void>;
 ```
 
-The implementations, one file per technology. A gateway carries `@Action` and `@Gateway`. It maps stored data to the type and applies no business rule; in particular it never calls `newWarehouse`, since what it reads already exists.
+The implementations, one file per technology. A gateway carries `@Gateway`. It maps stored data to the type and applies no business rule; in particular it never calls `newWarehouse`, since what it reads already exists.
 
 `LockWarehouses` is what protects the transfer against a concurrent one: the second transfer of the same warehouses waits until the first has committed or rolled back, and then reads what the first left. In a real database it stands for reading the rows with a lock held until the end of the transaction (in SQL, `SELECT ... FOR UPDATE`), taken in the same order by every transaction.
 
@@ -197,7 +201,6 @@ import type { LockWarehouses, SaveWarehouses } from "../warehouse.js";
 /**
  * Locks and reads warehouses in the store.
  *
- * @Action
  * @Gateway
  */
 export function implLockWarehouses(database: Database): LockWarehouses {
@@ -217,7 +220,6 @@ export function implLockWarehouses(database: Database): LockWarehouses {
 /**
  * Writes warehouses to the store.
  *
- * @Action
  * @Gateway
  */
 export function implSaveWarehouses(database: Database): SaveWarehouses {
@@ -239,7 +241,6 @@ import type { NotifyWarehouses } from "../warehouse.js";
 /**
  * Reports changed warehouses on the log.
  *
- * @Action
  * @Gateway
  */
 export function implNotifyWarehouses(logger: Logger): NotifyWarehouses {
@@ -253,7 +254,7 @@ export function implNotifyWarehouses(logger: Logger): NotifyWarehouses {
 
 The use case. It has its own file, in the folder of its business area, its own input and output types, and asks for the gateways simply by naming their types. It locks both warehouses, calls the entity's rule, saves and reports what the rule returned, and answers with its own type rather than with the entities; the rule itself is not in it.
 
-It carries `@Action` and three **additional markers**: `@UseCase`, `@Transaction` and `@Audit`. Skeleto gives them no meaning, it only records them, with their data, for wrappers and for your own code to read. `@UseCase` and `@Gateway` are how the application tells its use cases from its gateways; their names play no part.
+It carries the main marker `@UseCase` and two **additional markers**, `@Transaction` and `@Audit`. Skeleto gives the additional markers no meaning, it only records them, with their data, for wrappers and for your own code to read. The main marker tells a use case from a gateway: a wrapper reads it from `metadata.mainDecorator.name`.
 
 ```ts
 // src/usecase/stock/stock_transfer.ts
@@ -268,7 +269,6 @@ export type StockTransfer = ActionHandler<StockTransferRequest, StockTransferRes
 /**
  * Moves units of stock from one warehouse to another.
  *
- * @Action
  * @UseCase
  * @Transaction
  * @Audit {"level": "info"}
@@ -330,7 +330,7 @@ export function implAuditWrapper(logger: Logger): AuditWrapper {
  */
 export function implGatewayWrapper(): GatewayWrapper {
   return (handler, metadata) => {
-    if (!marked(metadata, "Gateway")) return handler;
+    if (metadata.mainDecorator.name !== "Gateway") return handler;
     return (ctx, input) => {
       const observer: GatewayObserver | undefined = ctx.data.gatewayObserver;
       // Nobody observes: the call goes through untouched.
@@ -425,10 +425,10 @@ Logger: @Config {"dependencies":[],"additionalDecorators":[]}
 AuditWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
 GatewayWrapper: @Wrapper {"dependencies":[],"additionalDecorators":[]}
 TransactionWrapper: @Wrapper {"dependencies":["Connection","Logger"],"additionalDecorators":[]}
-NotifyWarehouses: @Action {"dependencies":["Logger"],"additionalDecorators":[{"name":"Gateway"}]}
-LockWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[{"name":"Gateway"}]}
-SaveWarehouses: @Action {"dependencies":["Database"],"additionalDecorators":[{"name":"Gateway"}]}
-StockTransfer: @Action {"dependencies":["LockWarehouses","SaveWarehouses","NotifyWarehouses"],"additionalDecorators":[{"name":"UseCase"},{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
+NotifyWarehouses: @Gateway {"dependencies":["Logger"],"additionalDecorators":[]}
+LockWarehouses: @Gateway {"dependencies":["Database"],"additionalDecorators":[]}
+SaveWarehouses: @Gateway {"dependencies":["Database"],"additionalDecorators":[]}
+StockTransfer: @UseCase {"dependencies":["LockWarehouses","SaveWarehouses","NotifyWarehouses"],"additionalDecorators":[{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
 ```
 
 The output shows the layering: `AuditWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), and `GatewayWrapper` (ordinal -10) is inside both. `AuditWrapper` wraps only the use case marked `@Audit`, so the gateways do not appear in its log, and `GatewayWrapper` does nothing here because no observer is in the context. The report of the changed stock comes after the commit, and the failed transfer rolls back without one. The entity's functions are not in the container.
@@ -437,8 +437,8 @@ The output shows the layering: `AuditWrapper` (ordinal 10) is outside `Transacti
 
 - A component must be an exported top-level `function` declaration with a return type annotation, and every parameter needs a type annotation. Arrow functions and methods are not picked up. A marked function that is a default export is a mistake, not something skipped: only a named `export` counts, and startup says so.
 - One component per type name. To offer two things of the same shape, give each its own type alias, as `AuditWrapper` and `TransactionWrapper` do above.
-- A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Any tag that starts with a lowercase letter (`@param`, `@returns`, `@example`, ...) is a standard JSDoc tag and is ignored.
-- **Where markers go.** Write the description first, then the markers, one per line, with nothing after a marker but its data. Data runs on to the next marker, so a sentence written after a marker becomes that marker's data: after `@Action` that stops startup (it takes no data), and after an additional marker such as `@Audit` it silently becomes the data of that marker. For the same reason a line inside an `@example` body that starts with a main marker is read as a real marker and turns that function into a component; do not begin an example line with `@Config`, `@Wrapper` or `@Action`.
+- A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config`, `@UseCase`, `@Gateway` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Any tag that starts with a lowercase letter (`@param`, `@returns`, `@example`, ...) is a standard JSDoc tag and is ignored.
+- **Where markers go.** Write the description first, then the markers, one per line, with nothing after a marker but its data. Data runs on to the next marker, so a sentence written after a marker becomes that marker's data: after `@UseCase` that stops startup (it takes no data), and after an additional marker such as `@Audit` it silently becomes the data of that marker. For the same reason a line inside an `@example` body that starts with a main marker is read as a real marker and turns that function into a component; do not begin an example line with `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` or `@Action`.
 - Pass `decorators` to catch markers that are misspelt or misplaced. Without it, a function with no main marker is not looked at, so a wrapper marked `@Wraper` is skipped and every action runs without it. With it, these stop startup, each naming the function or constant, its file and the marker:
   - a top-level function whose JSDoc block has markers but no main marker (`@Wraper`, `@Actions`, or only `@Transaction`);
   - a lowercase tag on any top-level function that equals a main marker or one of your markers when letter case is ignored (`@transaction`, `@action`, `@wrapper`);
@@ -456,7 +456,7 @@ Some things are usable only after an asynchronous start: a database connection, 
 - Startup waits for it before it creates anything that depends on it. It is still called once only, however many components need it, and they all receive the same instance. Configs are waited for one after another, not side by side.
 - A config that fails (its promise is rejected) stops startup, exactly as a config that throws does: the error names the component and its function and carries the original error as its `cause`. Nothing after it is created.
 - **Startup sets no time limit.** It waits for as long as the config does, so a config that never finishes keeps `Skeleto.start` pending for ever. Give the config its own timeout, usually the connect timeout of the client it creates.
-- Only a `@Config` may be asynchronous. A `@Wrapper` or an `@Action` whose return type is `Promise<...>` is a mistake, reported at startup with the others. (An action's *handler* is asynchronous as always; the function that creates it is not.)
+- Only a `@Config` may be asynchronous. A `@Wrapper`, `@UseCase`, `@Gateway` or `@Action` whose return type is `Promise<...>` is a mistake, reported at startup with the others. (An action's *handler* is asynchronous as always; the function that creates it is not.)
 - The rule goes by what is written, like every other: only a return type spelled `Promise<...>` counts. A config declared with an alias of a promise, or `PromiseLike<X>`, keeps that name and its result is stored as it is.
 - `X` and `Promise<X>` are the same name, so two configs returning them are two functions returning the same type.
 

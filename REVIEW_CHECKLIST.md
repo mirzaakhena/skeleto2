@@ -17,9 +17,9 @@ Every finding names one rule, one place and one fix, on one line:
 
 > `<rule> <file>:<line>: <what breaks the rule>. Fix: <the change asked for>.`
 
-For example, in a copy of the README example where `implStockTransfer` also asks for a use case `StockCount`:
+For example, in a copy of the README example where `implStockTransfer` also asks for `MemoryWarehouses`, an implementation of a gateway:
 
-> B8 src/usecase/stock/stock_transfer.ts:18: `implStockTransfer` depends on the use case `StockCount`. Fix: move the step the two share into an entity function or a gateway, and depend on that instead.
+> B18 src/usecase/stock/stock_transfer.ts:17: `implStockTransfer` depends on `MemoryWarehouses`, an implementation, and not on the contract type `LockWarehouses`. Fix: ask for the contract type and leave the choice of implementation to the application's start.
 
 The line is the line of the code that breaks the rule. A finding without a rule number, a place or a fix is not a finding: rewrite it until it has all three.
 
@@ -31,10 +31,10 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 | B2 | Name and shape the Request and the Response after the business operation, not after a screen; no field exists only because a screen shows it | Mandatory | Reviewer |
 | B3 | A screen may call many use cases and a use case may serve many callers; the two are not paired one to one | Mandatory | Reviewer |
 | B4 | A view that needs data gathered for one screen is served on the caller's side, or by a query use case of its own, not by changing an existing use case | Optional | Reviewer |
-| B5 | Mark every use case `@UseCase` and every gateway `@Gateway`, next to `@Action` | Mandatory | Machine: the architecture test |
+| B5 | Mark every use case `@UseCase` and every gateway `@Gateway`, and write no plain `@Action` | Mandatory | Machine: the architecture test |
 | B6 | Put each use case in a file of its own, named after it | Mandatory | Reviewer |
 | B7 | A use case only orchestrates: it fetches through gateways, calls entity functions, and saves through gateways | Mandatory | Reviewer |
-| B8 | A use case never depends on another use case | Mandatory | Machine: the architecture test |
+| B8 | A use case never depends on another use case | Mandatory | Machine: Skeleto, at startup |
 | B9 | A use case has its own Request and Response types and does not return entities | Mandatory | Reviewer |
 | B10 | A query never writes: a use case without `@Transaction` depends only on gateways that read | Mandatory | Reviewer |
 | B11 | An entity is a plain type with pure functions that return new copies | Mandatory | Reviewer |
@@ -118,13 +118,9 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 
 ## The architecture test
 
-Skeleto knows nothing of use cases and gateways, but after startup its container holds every action with its dependencies and its additional markers, and that is enough to check B5 and B8. Copy this file as it is to the root of your application, next to `main.test.ts` (T21); it reads the same `MARKERS` (T10).
+Skeleto itself refuses a use case that depends on another use case (B8), a gateway that depends on a use case, and a use case or a gateway that depends on a plain `@Action`, all at startup. What it cannot see is a plain `@Action` that an application of use cases and gateways should not have: to Skeleto a plain action is allowed. The test below checks that one thing (B5). Copy this file as it is to the root of your application, next to `main.test.ts` (T21); it reads the same `MARKERS` (T10).
 
-It fails, naming each action at fault:
-
-- when an action carries neither `@UseCase` nor `@Gateway`, or both (B5). This also catches a forgotten marker, which Skeleto cannot see: to it an unmarked action is as good as any;
-- when a use case depends on another use case (B8);
-- when a gateway depends on a use case. A gateway is called from inside a use case, so a use case behind it is a use case called by another one, which B8 forbids.
+It fails, naming each action at fault, when the container holds a plain `@Action`. This also catches a forgotten marker: a function marked `@Action` by habit is as good as any to Skeleto.
 
 ```ts
 // architecture.test.ts
@@ -133,41 +129,10 @@ import { test } from "node:test";
 import { Skeleto } from "skeleto";
 import { MARKERS } from "./src/markers.js";
 
-type Role = "UseCase" | "Gateway";
-type Action = { roles: Role[]; dependencies: string[] };
-
-/** Every action in the container, with the roles its markers give it (B5). */
-async function readActions(): Promise<Map<string, Action>> {
+test("B5: no action is a plain @Action", async () => {
   const container = (await Skeleto.start("src", { decorators: MARKERS })).getContainer();
-  const actions = new Map<string, Action>();
-  for (const [name, component] of container) {
-    const { mainDecorator, additionalDecorators, dependencies } = component.getMetadata();
-    if (mainDecorator.name !== "Action") continue;
-    const roles = additionalDecorators.map((decorator) => decorator.name).filter((marker): marker is Role => marker === "UseCase" || marker === "Gateway");
-    actions.set(name, { roles, dependencies });
-  }
-  return actions;
-}
-
-/** Every dependency on a use case of the actions that have the given role, as `<action> -> <use case>`. */
-function useCaseDependencies(actions: Map<string, Action>, role: Role): string[] {
-  const useCases = [...actions].filter(([, action]) => action.roles.includes("UseCase")).map(([name]) => name);
-  return [...actions]
-    .filter(([, action]) => action.roles.includes(role))
-    .flatMap(([name, action]) => action.dependencies.filter((dependency) => useCases.includes(dependency)).map((dependency) => `${name} -> ${dependency}`));
-}
-
-test("B5: every action is marked exactly one of @UseCase and @Gateway", async () => {
-  const unmarked = [...(await readActions())].filter(([, action]) => action.roles.length !== 1).map(([name, action]) => `${name}: ${action.roles.join(" and ") || "neither"}`);
-  assert.deepEqual(unmarked, []);
-});
-
-test("B8: no use case depends on another use case", async () => {
-  assert.deepEqual(useCaseDependencies(await readActions(), "UseCase"), []);
-});
-
-test("B8: no gateway depends on a use case", async () => {
-  assert.deepEqual(useCaseDependencies(await readActions(), "Gateway"), []);
+  const plain = [...container].filter(([, component]) => component.getMetadata().mainDecorator.name === "Action").map(([name]) => name);
+  assert.deepEqual(plain, []);
 });
 ```
 
@@ -219,37 +184,3 @@ test("T27: every marker names a gap that is on a map", () => {
 ```
 
 Run it from the root of the application, as `tsx --test gaps.test.ts`: the paths it reads are relative to the folder it runs in.
-
-## Optional: the startup guard
-
-The architecture test catches a use case that depends on another one when the tests run. The guard below catches it every time the application starts, test or not, and stops startup with the names of both. It is **Optional**: the architecture test is enough, and the guard costs one wrapper.
-
-It relies on an ordering that Skeleto guarantees: an action's dependencies are created before the action, and every action is offered to every wrapper as soon as it is created. So when a use case is offered to the guard, every use case it depends on has already been offered, and has been remembered.
-
-```ts
-// src/use_case_wrapper.ts
-import type { WrapperHandler } from "skeleto";
-
-export type UseCaseWrapper = WrapperHandler;
-
-/**
- * Optional. Stops startup when a use case depends on another use case (B8).
- * It relies on Skeleto creating the dependencies of an action before the action, and offering each action to every wrapper as soon as it is created:
- * the use cases a use case depends on have therefore been offered, and remembered, before it.
- *
- * @Wrapper
- */
-export function implUseCaseWrapper(): UseCaseWrapper {
-  const useCases = new Set<string>();
-  return (handler, metadata) => {
-    if (!metadata.additionalDecorators.some((decorator) => decorator.name === "UseCase")) return handler;
-    const called = metadata.dependencies.filter((dependency) => useCases.has(dependency));
-    if (called.length > 0) throw new Error(`use case ${metadata.name} depends on use case ${called.join(", ")}, which B8 forbids`);
-    useCases.add(metadata.name);
-    // It only watches: the handler is returned as it is, so the guard adds nothing to a call.
-    return handler;
-  };
-}
-```
-
-It is shown here in a file of its own so that it can be copied whole; in your application it goes into `src/wrappers.ts` with the other wrappers (T8). Its name follows T7: it reads the `@UseCase` marker. Being a wrapper, it is listed in the container like any other.

@@ -64,7 +64,7 @@ type Example = {
   output: string;
   /** Files another document adds to the example at paths of their own, such as its tests; they are type-checked with it, and run when they are `*.test.ts`. */
   additions: Record<string, string>;
-  /** Files REVIEW_CHECKLIST.md shows for applications to copy: the architecture test and the startup guard. */
+  /** Files REVIEW_CHECKLIST.md shows for applications to copy: the architecture test and the gap test. */
   checklist: Record<string, string>;
 };
 
@@ -126,9 +126,9 @@ function run(tool: string, args: string[], cwd: string): Promise<Run> {
 
 const example = readExample(readme, bestPractices, technicalPractices, checklist);
 
-test("the README covers the three kinds, the start and the container", () => {
+test("the README covers the kinds, the start and the container", () => {
   const sources = Object.values(example.files).join("\n");
-  for (const needed of ["@Config", "@Action", '@Wrapper {"ordinal": 10}', "@UseCase", "@Gateway", "@Transaction", "Skeleto.start(", "decorators: MARKERS", "getContainer()", "getMetadata()"]) {
+  for (const needed of ["@Config", '@Wrapper {"ordinal": 10}', "@UseCase", "@Gateway", "@Transaction", "Skeleto.start(", "decorators: MARKERS", "getContainer()", "getMetadata()"]) {
     assert.ok(sources.includes(needed), `no README example shows ${needed}`);
   }
   assert.ok(Object.keys(example.files).length >= 4);
@@ -147,7 +147,7 @@ test("CLAUDE.md states the rule for async configs in sections 4.3 and 4.7", () =
   const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
   const section = (number: string): string => new RegExp(`^### ${number.replace(".", "\\.")} [\\s\\S]*?(?=^###? )`, "m").exec(guide)?.[0] ?? "";
   assert.match(section("4.3"), /`Promise<X>`[\s\S]*nama komponennya `X`/);
-  assert.match(section("4.3"), /`@Wrapper` dan `@Action` selalu sinkron/);
+  assert.match(section("4.3"), /`@Wrapper`, `@UseCase`, `@Gateway`, dan `@Action` selalu sinkron/);
   assert.match(section("4.7"), /\*\*ditunggu\*\*/);
   assert.match(section("4.7"), /tidak memasang batas waktu/);
 });
@@ -180,10 +180,10 @@ test("the README examples start and print exactly the output the README shows", 
     const metadata = (name: string): unknown => JSON.parse((lines.find((line) => line.startsWith(`${name}: `)) ?? "").replace(/^[^{]*/, ""));
     assert.deepEqual(metadata("StockTransfer"), {
       dependencies: ["LockWarehouses", "SaveWarehouses", "NotifyWarehouses"],
-      additionalDecorators: [{ name: "UseCase" }, { name: "Transaction" }, { name: "Audit", data: { level: "info" } }],
+      additionalDecorators: [{ name: "Transaction" }, { name: "Audit", data: { level: "info" } }],
     });
-    for (const gateway of ["LockWarehouses", "SaveWarehouses"]) assert.deepEqual(metadata(gateway), { dependencies: ["Database"], additionalDecorators: [{ name: "Gateway" }] });
-    assert.deepEqual(metadata("NotifyWarehouses"), { dependencies: ["Logger"], additionalDecorators: [{ name: "Gateway" }] });
+    for (const gateway of ["LockWarehouses", "SaveWarehouses"]) assert.deepEqual(metadata(gateway), { dependencies: ["Database"], additionalDecorators: [] });
+    assert.deepEqual(metadata("NotifyWarehouses"), { dependencies: ["Logger"], additionalDecorators: [] });
     // The async config is listed under the plain name, and the connection it delivered late is the one the transaction wrapper used.
     assert.ok(lines.includes('Connection: @Config {"dependencies":[],"additionalDecorators":[]}'));
     assert.deepEqual(metadata("TransactionWrapper"), { dependencies: ["Connection", "Logger"], additionalDecorators: [] });
@@ -222,13 +222,13 @@ test("the README example keeps business rules in plain entity functions, and no 
       const { dependencies, additionalDecorators } = JSON.parse(match[3] ?? "{}");
       components.set(match[1] ?? "", { kind: match[2] ?? "", dependencies, markers: additionalDecorators.map((marker: { name: string }) => marker.name) });
     }
-    // Use cases and gateways are told apart by their markers, never by their names or folders; every action is one of the two.
-    const actions = [...components].filter(([, component]) => component.kind === "Action");
-    const useCases = actions.filter(([, component]) => component.markers.includes("UseCase")).map(([name]) => name);
-    const gateways = actions.filter(([, component]) => component.markers.includes("Gateway")).map(([name]) => name);
+    // Use cases and gateways are told apart by their main marker, never by their names or folders, and the example has no plain action.
+    const useCases = [...components].filter(([, component]) => component.kind === "UseCase").map(([name]) => name);
+    const gateways = [...components].filter(([, component]) => component.kind === "Gateway").map(([name]) => name);
     assert.deepEqual(useCases, ["StockTransfer"]);
     assert.deepEqual(gateways.sort(), ["LockWarehouses", "NotifyWarehouses", "SaveWarehouses"]);
-    for (const [name, component] of actions) assert.equal(component.markers.filter((marker) => marker === "UseCase" || marker === "Gateway").length, 1, `${name} is not exactly one of use case and gateway`);
+    assert.ok(![...components.values()].some((component) => component.kind === "Action"), "the example has a plain @Action");
+    // Skeleto itself keeps a use case away from other use cases, so the example has to start; it is checked here too.
     for (const useCase of useCases) {
       assert.ok(components.get(useCase)?.markers.includes("Transaction"), `use case ${useCase} carries no @Transaction`);
       for (const dependency of components.get(useCase)?.dependencies ?? []) assert.ok(!useCases.includes(dependency), `use case ${useCase} depends on use case ${dependency}`);
@@ -329,7 +329,7 @@ test("BEST_PRACTICES.md resolves how an entity comes into being apart from how s
 
 test("BEST_PRACTICES.md says Skeleto does not check it and leaves the technical rules to TECHNICAL_PRACTICES.md", () => {
   assert.match(bestPractices, /Skeleto does not check them/);
-  assert.match(bestPractices, /still lets an action depend on another action/);
+  assert.match(bestPractices, /a gateway may still be built from other gateways/i);
   assert.ok(bestPractices.split("](TECHNICAL_PRACTICES.md)").length > 2, "BEST_PRACTICES.md does not point to TECHNICAL_PRACTICES.md");
   for (const reason of [/already a plain object/, /leaves the old state intact/, /inputs and outputs alone/, /`import \* as Warehouse from /]) assert.match(bestPractices, reason);
 });
@@ -337,9 +337,9 @@ test("BEST_PRACTICES.md says Skeleto does not check it and leaves the technical 
 test("BEST_PRACTICES.md opens with the two levels and maps every architectural concept to what expresses it and what Skeleto checks", () => {
   const opening = bestPractices.slice(0, bestPractices.indexOf("### B1."));
   assert.match(opening, /^## Two levels$/m);
-  assert.match(opening, /\*\*The technical level\*\* is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper` and `@Action`/);
-  assert.match(opening, /\*\*The architectural level\*\*[^\n]*entities, use cases, gateways\. Skeleto does not know about any of them/);
-  assert.match(opening, /mechanism versus policy/);
+  assert.match(opening, /\*\*The technical level\*\* is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` and `@Action`/);
+  assert.match(opening, /\*\*The architectural level\*\*[^\n]*entities, use cases, gateways\. Skeleto knows use cases and gateways as kinds of action/);
+  assert.match(opening, /one standard structure of actions/);
   const rows = new Map(
     [...opening.matchAll(/^\| ([^|]+?) \| ([^|]+?) \| ([^|]+?) \|$/gm)].slice(2).map((match) => [match[1] ?? "", { expressed: match[2] ?? "", checked: match[3] ?? "" }]),
   );
@@ -348,8 +348,8 @@ test("BEST_PRACTICES.md opens with the two levels and maps every architectural c
   assert.equal(rows.get("Entity")?.checked, "nothing");
   for (const role of ["use case", "gateway"]) {
     const row = rows.get(role[0]?.toUpperCase() + role.slice(1));
-    assert.equal(row?.expressed, "`@Action`");
-    assert.match(row?.checked ?? "", new RegExp(`the rules of an action; not that it is a ${role}`));
+    assert.equal(row?.expressed, `\`@${role === "use case" ? "UseCase" : "Gateway"}\``);
+    assert.match(row?.checked ?? "", new RegExp(`the rules of an action, and that it depends on configs and gateways only`));
   }
   assert.equal(rows.get("Resource, such as a database or settings")?.expressed, "`@Config`");
   assert.match(rows.get("Cross-cutting concern, such as logging or transactions")?.expressed ?? "", /^`@Wrapper`, chosen per action by additional markers/);
@@ -417,7 +417,7 @@ async function checkImplNames(files: Record<string, string>): Promise<void> {
     assert.deepEqual(errors, [], `the scanner refuses the files:\n${errors.join("\n")}`);
     const wrong = functions.filter(({ functionName, metadata }) => functionName !== `impl${metadata.name}`);
     assert.deepEqual(wrong.map(({ functionName, metadata }) => `${functionName} is not impl + ${metadata.name}`), [], "component functions not named impl + their component's name");
-    assert.deepEqual([...new Set(functions.map(({ metadata }) => metadata.mainDecorator.name))].sort(), ["Action", "Config", "Wrapper"]);
+    assert.deepEqual([...new Set(functions.map(({ metadata }) => metadata.mainDecorator.name))].sort(), ["Config", "Gateway", "UseCase", "Wrapper"]);
   });
 }
 
@@ -463,7 +463,7 @@ test("the README example creates entities only through newWarehouse, and keeps i
   assert.doesNotMatch(example.files["src/usecase/stock/stock_transfer.ts"] ?? "", /\{\s*id:/);
   for (const path of Object.keys(example.files).filter((name) => name.startsWith("src/gateway/"))) assert.doesNotMatch(example.files[path] ?? "", /Connection/, `${path} uses the connection`);
   assert.match(example.files["src/gateway/memory/warehouse.ts"] ?? "", /database\(ctx\)/);
-  assert.match(example.files["src/markers.ts"] ?? "", /^export const MARKERS = \["UseCase", "Gateway", "Transaction", "Audit"\];$/m);
+  assert.match(example.files["src/markers.ts"] ?? "", /^export const MARKERS = \["Transaction", "Audit"\];$/m);
   assert.match(example.files["main.ts"] ?? "", /Skeleto\.start\("src", \{ decorators: MARKERS \}\)/);
   // Business errors are typed by kind, and nothing in the example speaks of the transport its caller uses.
   assert.match(example.files["src/entity/error.ts"] ?? "", /export type BusinessErrorKind = "validation" \| "not_found" \| "conflict" \| "tech_debt";/);
@@ -601,7 +601,7 @@ test("TECHNICAL_PRACTICES.md covers every agreed topic, and names no product or 
   rule(/parameter is named after its type/);
   rule(/path follows from the name/);
   assert.match(rule(/description first/), /README\.md#rules-worth-knowing/);
-  assert.match(rule(/allowed markers are kept in one exported constant/), /`UseCase`, `Gateway` and `Transaction`/);
+  assert.match(rule(/allowed markers are kept in one exported constant/), /`Transaction`.*`UseCase` and `Gateway` are main markers/);
   rule(/One wrapper per marker/);
   rule(/opens the transaction and keeps it in the context/);
   assert.match(rule(/only through a function of the context \(Mandatory\)/), /implDatabase/);
@@ -705,22 +705,18 @@ test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a r
   assert.match(example.files[path]?.split("\n")[Number(line) - 1] ?? "", /^export function implStockTransfer\(/, `${path}:${line} is not the line the example finding is about`);
 });
 
-test("REVIEW_CHECKLIST.md marks the startup guard Optional and states the ordering it relies on", () => {
-  assert.deepEqual(Object.keys(example.checklist).sort(), ["architecture.test.ts", "gaps.test.ts", "src/use_case_wrapper.ts"]);
-  const section = checklist.slice(checklist.indexOf("## Optional: the startup guard"));
-  assert.ok(checklist.includes("## Optional: the startup guard"));
-  assert.match(section, /It is \*\*Optional\*\*/);
-  assert.match(section, /an action's dependencies are created before the action, and every action is offered to every wrapper as soon as it is created/);
-  assert.match(example.checklist["src/use_case_wrapper.ts"] ?? "", /^ \* Optional\./m);
+test("REVIEW_CHECKLIST.md holds the architecture test and the gap test, and no startup guard", () => {
+  assert.deepEqual(Object.keys(example.checklist).sort(), ["architecture.test.ts", "gaps.test.ts"]);
+  assert.doesNotMatch(checklist, /startup guard|UseCaseWrapper|use_case_wrapper/);
+  assert.match(checklist, /Skeleto itself refuses a use case that depends on another use case \(B8\)/);
 });
 
-/** The README example with every file the other documents add, and the checklist's architecture test and guard, as an application would hold them. */
-function application(changes: Record<string, string> = {}, guard = true): Record<string, string> {
-  const { "src/use_case_wrapper.ts": guardFile, ...copied } = example.checklist;
-  return { ...installation(), ...example.files, ...example.additions, ...copied, ...(guard ? { "src/use_case_wrapper.ts": guardFile ?? "" } : {}), ...changes };
+/** The README example with every file the other documents add, and the checklist's tests, as an application would hold them. */
+function application(changes: Record<string, string> = {}): Record<string, string> {
+  return { ...installation(), ...example.files, ...example.additions, ...example.checklist, ...changes };
 }
 
-// A second use case, for the copies that break the rules.
+// A second use case and a plain action, for the copies that break the rules.
 const stockCount = `import type { ActionHandler } from "skeleto";
 
 export type StockCount = ActionHandler<string, number>;
@@ -728,7 +724,6 @@ export type StockCount = ActionHandler<string, number>;
 /**
  * Counts the units a warehouse holds.
  *
- * @Action
  * @UseCase
  */
 export function implStockCount(): StockCount {
@@ -736,72 +731,48 @@ export function implStockCount(): StockCount {
 }
 `;
 
-/** A copy of the example's use case that asks for a use case among its dependencies. */
-function useCaseOnUseCase(): Record<string, string> {
+/** A copy of the example's use case that asks for the given type among its dependencies, declared in `stock_count.ts`. */
+function stockTransferOn(type: string): Record<string, string> {
   const path = "src/usecase/stock/stock_transfer.ts";
   const source = (example.files[path] ?? "")
     .replace('import type { ActionHandler } from "skeleto";\n', 'import type { ActionHandler } from "skeleto";\nimport type { StockCount } from "./stock_count.js";\n')
-    .replace("notifyWarehouses: NotifyWarehouses): StockTransfer", "notifyWarehouses: NotifyWarehouses, stockCount: StockCount): StockTransfer");
+    .replace("notifyWarehouses: NotifyWarehouses): StockTransfer", `notifyWarehouses: NotifyWarehouses, stockCount: ${type}): StockTransfer`);
   assert.notEqual(source, example.files[path]);
-  return { "src/usecase/stock/stock_count.ts": stockCount, [path]: source };
+  return { [path]: source };
 }
 
-test("the checklist's architecture test and guard type-check with the example, pass on it, and leave its behaviour alone", async () => {
+test("the checklist's architecture test type-checks with the example, passes on it, and leaves its behaviour alone", async () => {
   await withFixture(application(), async (directory) => {
     const checked = await run("tsc", ["-p", "."], directory);
     assert.equal(checked.code, 0, checked.stdout + checked.stderr);
     const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
     assert.equal(tested.code, 0, tested.stdout + tested.stderr);
-    assert.match(tested.stdout, /pass 3\b/);
+    assert.match(tested.stdout, /pass 1\b/);
     assert.match(tested.stdout, /fail 0\b/);
-    // The guard prints nothing and wraps nothing: the example prints what the README shows, with the guard listed in the container as one more wrapper.
     const started = await run("tsx", example.command, directory);
     assert.equal(started.code, 0, started.stderr);
-    const lines = started.stdout.split("\n");
-    assert.ok(lines.includes('UseCaseWrapper: @Wrapper {"dependencies":[],"additionalDecorators":[]}'));
-    assert.deepEqual(lines.filter((line) => !line.startsWith("UseCaseWrapper: ")), example.output.split("\n"));
+    assert.deepEqual(started.stdout.split("\n"), example.output.split("\n"));
   });
 });
 
-test("both the architecture test and the startup guard catch a use case that depends on another use case", async () => {
-  // Without the guard the application starts, and the architecture test names the dependency.
-  await withFixture(application(useCaseOnUseCase(), false), async (directory) => {
-    const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
-    assert.notEqual(tested.code, 0);
-    assert.match(tested.stdout, /fail 1\b/);
-    assert.match(tested.stdout, /not ok \d+ - B8: no use case depends on another use case/);
-    assert.match(tested.stdout, /StockTransfer -> StockCount/);
-  });
-  // With the guard the application does not start at all.
-  await withFixture(application(useCaseOnUseCase()), async (directory) => {
+test("Skeleto refuses, before the application's code runs, a use case that depends on another use case", async () => {
+  await withFixture(application({ ...stockTransferOn("StockCount"), "src/usecase/stock/stock_count.ts": stockCount }), async (directory) => {
     const started = await run("tsx", example.command, directory);
     assert.notEqual(started.code, 0);
     assert.equal(started.stdout, "");
-    assert.match(started.stderr, /implStockTransfer .* failed while wrapping it with UseCaseWrapper: use case StockTransfer depends on use case StockCount, which B8 forbids/);
+    assert.match(started.stderr, /StockTransfer: is a @UseCase and depends on StockCount, which is a @UseCase/);
   });
 });
 
-test("the architecture test fails when an action carries neither marker, and when a gateway depends on a use case", async () => {
-  const gatewayFile = "src/gateway/memory/warehouse.ts";
-  const unmarked = (example.files[gatewayFile] ?? "").replace(" * @Gateway\n */\nexport function implSaveWarehouses", " */\nexport function implSaveWarehouses");
-  const logFile = "src/gateway/log/warehouse.ts";
-  const onUseCase = (example.files[logFile] ?? "")
-    .replace('import type { NotifyWarehouses } from "../warehouse.js";\n', 'import type { NotifyWarehouses } from "../warehouse.js";\nimport type { StockCount } from "../../usecase/stock/stock_count.js";\n')
-    .replace("implNotifyWarehouses(logger: Logger)", "implNotifyWarehouses(logger: Logger, stockCount: StockCount)");
-  const cases: [string, Record<string, string>, RegExp, RegExp][] = [
-    ["an action with neither marker", { [gatewayFile]: unmarked }, /B5: every action is marked exactly one of @UseCase and @Gateway/, /SaveWarehouses: neither/],
-    ["a gateway on a use case", { [logFile]: onUseCase, "src/usecase/stock/stock_count.ts": stockCount }, /B8: no gateway depends on a use case/, /NotifyWarehouses -> StockCount/],
-  ];
-  for (const [name, changes, failing, offender] of cases) {
-    for (const [path, source] of Object.entries(changes)) assert.notEqual(source, example.files[path], `${name}: ${path} is unchanged`);
-    await withFixture(application(changes, false), async (directory) => {
-      const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
-      assert.notEqual(tested.code, 0, `${name}: the architecture test passed`);
-      assert.match(tested.stdout, /fail 1\b/, name);
-      assert.match(tested.stdout, new RegExp(`not ok \\d+ - ${failing.source}`), name);
-      assert.match(tested.stdout, offender, name);
-    });
-  }
+test("the architecture test fails, naming it, when the application has a plain @Action", async () => {
+  const plain = stockCount.replace(" * @UseCase\n", " * @Action\n");
+  await withFixture(application({ "src/usecase/stock/stock_count.ts": plain }), async (directory) => {
+    const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
+    assert.notEqual(tested.code, 0);
+    assert.match(tested.stdout, /fail 1\b/);
+    assert.match(tested.stdout, /not ok \d+ - B5: no action is a plain @Action/);
+    assert.match(tested.stdout, /StockCount/);
+  });
 });
 
 // A map and the markers of an application whose gaps are all closed: one by a marker, one by a decision.
@@ -817,7 +788,7 @@ function withMarkers(...markers: string[]): Record<string, string> {
 
 test("the gap test passes when every gap has a marker or a decision and every marker names a gap, and leaves Planned and Shortcut markers alone", async () => {
   const changes = { "docs/scenarios/stock_transfer.json": closedMap, ...withMarkers("stock_transfer-1: nobody checks who moves", "Planned Notifications: a real notifier", "Shortcut: one lock at a time") };
-  await withFixture(application(changes, false), async (directory) => {
+  await withFixture(application(changes), async (directory) => {
     const checked = await run("tsc", ["-p", "."], directory);
     assert.equal(checked.code, 0, checked.stdout + checked.stderr);
     const tested = await run("tsx", ["--test", "gaps.test.ts"], directory);
@@ -834,7 +805,7 @@ test("the gap test fails, naming it, for a gap without a marker or a decision, a
     ["a marker with no map at all", withMarkers("stock_transfer-3: x"), /T27: every marker names a gap that is on a map/, /stock_transfer-3/],
   ];
   for (const [name, changes, failing, offender] of cases) {
-    await withFixture(application(changes, false), async (directory) => {
+    await withFixture(application(changes), async (directory) => {
       const tested = await run("tsx", ["--test", "gaps.test.ts"], directory);
       assert.notEqual(tested.code, 0, `${name}: the gap test passed`);
       assert.match(tested.stdout, /fail 1\b/, name);

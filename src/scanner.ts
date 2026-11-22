@@ -23,7 +23,7 @@ export type ScanResult = {
   errors: string[];
 };
 
-const MAIN_DECORATORS = ["Config", "Wrapper", "Action"];
+const MAIN_DECORATORS = ["Config", "Wrapper", "Action", "UseCase", "Gateway"];
 
 /**
  * Reads every `.ts` file under the directory that is not excluded, as text, and returns its components. No file is imported or run, and

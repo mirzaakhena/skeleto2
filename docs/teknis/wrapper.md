@@ -99,15 +99,22 @@ Action ber-`@Transaction` yang dipanggil action lain di dalam transaksinya harus
       return result;
 ```
 
+Keluaran contoh di README menunjukkannya: `stock changed: north 7, south 3` muncul setelah `commit`, dan pemindahan yang di-rollback tidak melaporkan apa pun.
+
 Gateway mengantrekan efeknya di `ctx.data.afterCommit` (GW-10 di [gateway.md](../konsep/gateway.md)). Efek yang dikirim sebelum commit tidak bisa ditarik kembali ketika transaksinya kemudian di-rollback. Bentuk ini bisa kehilangan efek; untuk efek yang tidak boleh hilang, pakai outbox.
 
 ## Aturan opsional
 
-### WRP-5. Urutan lapisan wrapper ditetapkan dengan `ordinal`, bukan dengan nama
+### WRP-5. Urutan lapisan wrapper adalah urutan penulisannya
 
-> **Usulan, belum diputuskan pemilik.** Aturan ini baru; dokumen lama tidak memuatnya.
+> **Rencana, belum terealisasi di kode** (arahan pemilik, 2026-11-22). Pemilik ingin membuang `ordinal` dan memakai urutan penulisan sebagai urutan resmi lapisan, seperti kulit bawang.
+>
+> **Yang berlaku sekarang:** urutan ditentukan `ordinal`; angka lebih besar menjadi lapisan lebih luar. Dalam contoh, `AuditWrapper` (ordinal 10) berada di luar `TransactionWrapper` (ordinal 0), dan wrapper pengamat gateway (ordinal -10) berada di dalam keduanya.
 
-Dalam contoh, `AuditWrapper` (ordinal 10) berada di luar `TransactionWrapper` (ordinal 0), dan wrapper pengamat gateway (ordinal -10) berada di dalam keduanya. Urutan menurut nama hanya pemecah seri untuk ordinal yang sama, dan berubah diam-diam ketika sebuah wrapper diganti nama.
+Rencananya:
+- Semua wrapper wajib berada di satu berkas, `src/wrappers.ts` (KOM-8). Wrapper di berkas lain menjadi kesalahan saat startup, karena urutan antarberkas bergantung pada nama berkas dan itu rapuh.
+- Arahnya belum final. Pemilik condong: wrapper yang ditulis **pertama** adalah lapisan **terdalam**, dipasang paling dulu, sehingga berkas dibaca dari inti ke luar. Pada saat dipanggil, urutannya terbalik: lapisan terluar, yang ditulis terakhir, berjalan paling dulu.
+- `{"ordinal": ...}` dihapus dari kontrak `@Wrapper`. Ini perubahan API (`CLAUDE.md` bagian 4.4 dan 4.7, README, dan tes).
 
 ### WRP-6. Wrapper pengamat gateway menyerahkan setiap panggilan gateway ke pengamat di context, dan meneruskan panggilannya kalau tidak ada pengamat
 
@@ -137,11 +144,13 @@ export function implGatewayWrapper(): GatewayWrapper {
 }
 ```
 
-Wrapper ini hanya dibutuhkan aplikasi yang membiarkan alat luar (misalnya penjejak scenario-explorer) mengamati sebuah jalan. Pengamat dibaca di `ctx.data.gatewayObserver`, satu-satunya kunci yang dilihat alat seperti itu. Pengamat menerima nama gateway, input-nya, dan `proceed`, lalu mengembalikan apa yang diterima pemanggil gateway. Ia memanggil `proceed()` paling banyak sekali dan mengembalikan hasilnya, atau menjawab panggilan itu sendiri tanpa memanggil `proceed()`. Yang kedua hanya boleh dilakukan alat yang menjalankan aplikasi untuk dilihat, tidak pernah di produksi. Wrapper ini memakai `ordinal` terendah, sehingga menjadi lapisan terdalam dan melaporkan panggilan gateway itu sendiri, tanpa transaksi atau audit di sekitarnya.
+Wrapper ini hanya dibutuhkan aplikasi yang membiarkan alat luar (misalnya penjejak scenario-explorer) mengamati sebuah jalan. Pengamat dibaca di `ctx.data.gatewayObserver`, satu-satunya kunci yang dilihat alat seperti itu. Pengamat menerima nama gateway, input-nya, dan `proceed`, lalu mengembalikan apa yang diterima pemanggil gateway. Ia memanggil `proceed()` paling banyak sekali dan mengembalikan hasilnya, atau menjawab panggilan itu sendiri tanpa memanggil `proceed()`. Yang kedua hanya boleh dilakukan alat yang menjalankan aplikasi untuk dilihat, tidak pernah di produksi. Pengamat boleh mengukur waktu panggilan atau melihat apa yang kembali. Wrapper ini memakai `ordinal` terendah, sehingga menjadi lapisan terdalam dan melaporkan panggilan gateway itu sendiri, tanpa transaksi atau audit di sekitarnya.
+
+Alat yang menggambar atau mengukur sebuah jalan perlu melihat setiap panggilan yang keluar dari use case, dan gateway-lah panggilan-panggilan itu. Satu wrapper pada penandanya menemukan semuanya tanpa mengubah gateway atau use case mana pun. Kesepakatan tentang kunci, signature, dan letaknya di antara wrapper membuat satu alat bisa membaca aplikasi mana pun.
 
 ## Yang bukan tugas wrapper
 
-> **Catatan.** `REVIEW_CHECKLIST.md` memuat `implUseCaseWrapper`, wrapper opsional yang menghentikan startup kalau use case bergantung pada use case lain. Ini memakai wrapper sebagai alat validasi, sehingga pelanggarannya baru ketahuan **setelah** berkas aplikasi diimpor dan config dibuat, dan caranya bergantung pada urutan pembuatan internal Skeleto. Dengan preset clean architecture (rencana), pemeriksaan ini pindah ke inti dan wrapper penjaga itu tidak dibutuhkan lagi.
+> **Catatan.** `REVIEW_CHECKLIST.md` memuat `implUseCaseWrapper`, wrapper opsional yang menghentikan startup kalau use case bergantung pada use case lain. Ini memakai wrapper sebagai alat validasi, sehingga pelanggarannya baru ketahuan **setelah** berkas aplikasi diimpor dan config dibuat, dan caranya bergantung pada urutan pembuatan internal Skeleto. Dengan jenis bawaan `@UseCase` dan `@Gateway` (rencana), pemeriksaan ini pindah ke inti dan wrapper penjaga itu tidak dibutuhkan lagi.
 
 ## Hubungan dengan komponen lain
 
@@ -158,4 +167,4 @@ Wrapper ini hanya dibutuhkan aplikasi yang membiarkan alat luar (misalnya penjej
 | --- | --- |
 | `@Wrapper`, `ordinal`, dan pembungkusan | terealisasi |
 | Wrapper transaksi, audit, pengamat gateway | kode contoh di `README.md`, disalin setiap aplikasi |
-| Wrapper siap pakai di preset | belum diputuskan apakah preset menyediakannya (`TEMUAN.md`, temuan 12) |
+| Wrapper siap pakai dari Skeleto | belum diputuskan (`TEMUAN.md`, temuan 12) |

@@ -10,6 +10,30 @@ Skeleto adalah framework TypeScript yang **hanya** mengerjakan satu hal: **bindi
 
 Skeleto memindai berkas TypeScript, membaca penanda dan tipe parameter setiap fungsi, mengurutkan dependency, memanggil setiap fungsi dengan dependency-nya, memasang wrapper ke setiap action, lalu menyimpan hasilnya di sebuah container.
 
+### 1.1 Untuk apa (keputusan pemilik, 2026-11-22)
+
+Binding adalah *cara*, bukan *tujuan*. Kode aplikasi sekarang hampir seluruhnya ditulis AI, yang tidak deterministik. Skeleto memberi kode itu **satu struktur standar yang dijaga mesin**, supaya manusia bisa mereview dengan cepat tanpa mempelajari struktur dari awal, dan supaya bisnis dibangun dari bagian yang paling penting lebih dulu. Strukturnya tidak harus yang ini; yang penting ada satu standar.
+
+Skeleto ada untuk:
+
+1. Merangkai kode secara otomatis (binding dengan dependency injection).
+2. Menjaga kode mudah dibaca lewat struktur yang konsisten dan konsep yang teruji (clean architecture).
+3. Memandu proses dan tahapan pengembangan.
+4. Menunjukkan bagian mana yang layak didahulukan (Core lebih dulu).
+5. Menjadi pagar otomatis bagi kode buatan AI: pelanggaran struktur ditolak mesin saat startup, tidak bergantung pada ketelitian reviewer.
+6. Mempercepat review: setiap berkas punya peran yang jelas, jadi reviewer tahu harus mencari apa dan di mana.
+7. Memisahkan logika dari infrastruktur, supaya aturan bisnis bisa dites tanpa database atau jaringan, dan infrastruktur bisa diganti tanpa menyentuh logika.
+8. Menjadikan pekerjaan yang belum selesai terlihat: celah, stub, dan utang ditandai dan bisa dihitung.
+9. Menyimpan keputusan dan bahasa bisnis di repo aplikasi, bukan di percakapan.
+10. Memungkinkan frontend dan backend dikerjakan bersamaan lewat kontrak use case.
+11. Membuat aplikasi bisa dibaca dan diamati alat lain (container, metadata, observer).
+
+Hanya butir 1, 5, dan 11 yang dikerjakan kode `src/`. Sisanya dikerjakan dokumen praktik (`docs/`, dan untuk sementara `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md`, `DEVELOPMENT_PROCESS.md`). Saat menimbang perubahan, ukurannya bukan hanya "apakah ini binding?", tetapi juga "apakah ini membuat struktur lebih seragam dan lebih cepat direview?".
+
+**Lingkup:** Skeleto menangani **low level design**, yaitu struktur di dalam satu aplikasi (komponen, nama, berkas, dependency, transaksi). **High level design** (pembagian sistem, layanan, broker pesan, deployment) di luar lingkupnya.
+
+Hasil peninjauan konsep dan keputusan pemilik yang belum masuk dokumen ada di `TEMUAN.md`.
+
 ## 2. Prinsip "lite"
 
 - **Hanya binding.** Skeleto tidak tahu apa pun tentang HTTP, controller, request, response, validasi, OpenAPI, database, atau logging. Kalau sebuah fitur butuh pengetahuan tentang salah satu hal itu, fitur itu **bukan** milik Skeleto.

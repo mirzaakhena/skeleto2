@@ -84,4 +84,4 @@ Membengkokkan use case yang sudah ada supaya memberi satu screen data yang diing
 
 ## Status implementasi
 
-Controller tidak bergantung pada preset. Dokumen ini belum memutuskan apakah preset kelak akan mengenal controller. Semua aturan di sini dijaga reviewer.
+Controller tidak bergantung pada rencana jenis bawaan. Belum diputuskan apakah Skeleto kelak akan mengenal controller. Semua aturan di sini dijaga reviewer.

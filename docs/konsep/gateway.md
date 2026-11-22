@@ -77,7 +77,7 @@ Semua gateway satu teknologi untuk satu entity boleh berbagi satu berkas.
 
 ### GW-1. Setiap gateway ditandai sebagai gateway
 
-> **Rencana preset, belum terealisasi di kode.** Dengan preset clean architecture ([preset-clean-architecture.md](../teknis/preset-clean-architecture.md)), gateway cukup ditulis `@Gateway`, karena `@Gateway` adalah jenis khusus `@Action`.
+> **Rencana, belum terealisasi di kode.** `@Gateway` akan menjadi jenis bawaan Skeleto ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)), sehingga gateway cukup ditulis `@Gateway`.
 >
 > **Yang berlaku sekarang:** tulis `@Action` lalu `@Gateway` sebagai penanda tambahan, dan daftarkan `Gateway` di `MARKERS`.
 
@@ -124,7 +124,7 @@ Gateway yang memegang koneksi bisa membaca atau menulis di samping transaksi use
 
 ### GW-6. Perlindungan dari perubahan bersamaan milik gateway dan teknologinya, dan terlihat di kontraknya
 
-**Transaksi saja tidak memberi perlindungan ini.** Transaksi membuat perubahan semua-atau-tidak-sama-sekali dan menyembunyikannya dari yang lain sampai commit. Ia tidak mencegah dua transaksi membaca keadaan yang sama, masing-masing memutuskan berdasarkan itu, lalu keduanya commit. Masalahnya punya dua bentuk.
+**Transaksi saja tidak memberi perlindungan ini.** Transaksi membuat perubahan semua-atau-tidak-sama-sekali dan menyembunyikannya dari yang lain sampai commit. Ia tidak mencegah dua transaksi membaca keadaan yang sama, masing-masing memutuskan berdasarkan itu, lalu keduanya commit. Kebanyakan penyimpanan, secara bawaan, membiarkan setiap transaksi melihat apa yang sudah di-commit saat ia membaca, dan tidak melihat apa pun yang belum di-commit transaksi lain; tidak ada yang melihat keputusan pihak lain. Masalahnya punya dua bentuk.
 
 **Cek-lalu-sisip.** Use case membuat gudang `east` hanya kalau belum ada.
 
@@ -138,6 +138,8 @@ Gateway yang memegang koneksi bisa membaca atau menulis di samping transaksi use
 | 6 | commit | |
 | 7 | | commit: sekarang ada dua gudang `east` |
 
+Setiap pemeriksaan benar saat dibuat. Tidak ada yang bisa dikunci, karena yang diperiksa keduanya belum ada.
+
 **Baca-ubah-simpan.** Gudang `north` berisi 10 unit, dan dua pemindahan 6 unit dimulai bersamaan. Aturannya: stok tidak pernah di bawah nol.
 
 | Langkah | Pemindahan A | Pemindahan B |
@@ -149,9 +151,9 @@ Gateway yang memegang koneksi bisa membaca atau menulis di samping transaksi use
 | 5 | menyimpan `north`: 4, commit | |
 | 6 | | menyimpan `north`: 4, commit |
 
-Dua belas unit keluar dari gudang yang berisi sepuluh, dan penyimpanan menunjukkan 4.
+Dua belas unit keluar dari gudang yang berisi sepuluh, dan penyimpanan menunjukkan 4: perubahan satu pemindahan hilang, dan aturannya dilanggar tanpa satu pun pemindahan melihatnya.
 
-Perlindungannya harus mencegah B memutuskan berdasarkan apa yang akan diubah A: B menunggu A, atau tulisan B gagal karena tulisan A lebih dulu. Caranya bergantung pada teknologi:
+Perlindungannya harus mencegah B memutuskan berdasarkan apa yang akan diubah A: B menunggu A, atau tulisan B gagal karena tulisan A lebih dulu. Dalam contoh, `LockWarehouses` membuat B menunggu di langkah 2 sampai A commit; B lalu membaca 4 dan ditolak dengan error `conflict`. Caranya bergantung pada teknologi:
 
 | Penyimpanan | Mekanisme, misalnya |
 | --- | --- |
@@ -159,6 +161,8 @@ Perlindungannya harus mencegah B memutuskan berdasarkan apa yang akan diubah A: 
 | Layanan pihak ketiga | permintaan bersyarat: ubah hanya kalau sumber dayanya masih berversi yang dibaca |
 | Cache | compare-and-set: tulis hanya kalau nilainya masih yang dibaca |
 | Antrean | idempotency key di setiap pesan, sehingga pesan yang diproses dua kali hanya mengubah sekali |
+
+Versi yang diperiksa saat menyimpan mengubah perubahan yang hilang menjadi error `conflict` untuk penyimpanan yang datang belakangan, dan pemanggilnya boleh mengulang dari awal.
 
 Ditulis di kontrak, perlindungannya bisa dilihat reviewer dan wajib dipertahankan implementasi kedua. Gateway yang kontraknya tidak menyebut apa pun tentang perubahan bersamaan tidak memberi perlindungan, apa pun yang kebetulan dilakukan implementasinya.
 
@@ -209,7 +213,7 @@ Outbox menjamin setiap pesan terkirim setidaknya sekali, bukan tepat sekali. Pen
 
 Gateway boleh dibangun dari gateway lain, tetapi tidak dari use case. Gateway dipanggil dari dalam use case, sehingga use case di belakang gateway berarti use case yang dipanggil use case lain (UC-4).
 
-> **Rencana preset, belum terealisasi di kode.** Preset akan menolak pelanggaran ini saat startup. **Sekarang** hanya tes arsitektur salinan dari `REVIEW_CHECKLIST.md` yang memeriksanya.
+> **Rencana, belum terealisasi di kode.** Dengan jenis bawaan, Skeleto akan menolak pelanggaran ini saat startup. **Sekarang** hanya tes arsitektur salinan dari `REVIEW_CHECKLIST.md` yang memeriksanya.
 
 ## Aturan opsional
 
@@ -217,19 +221,20 @@ Gateway boleh dibangun dari gateway lain, tetapi tidak dari use case. Gateway di
 
 Satu pembaruan bersyarat, misalnya "ambil 6 unit dari `north` hanya kalau isinya setidaknya 6", aman dari perubahan bersamaan dan tidak butuh kunci. Tetapi aturan "stok tidak pernah di bawah nol" kemudian hidup di penyimpanan, bukan di entity, dan UC-3 serta ENT-3 tidak lagi berlaku untuknya: fungsi entity dilewati, dan aturannya ada dua kali. Kalau kecepatannya sepadan, tulis alasannya di samping gateway, dan pertahankan aturan entity sebagai yang dideskripsikan tes.
 
-> **Usulan, belum diputuskan pemilik: jalur resmi untuk optimisasi.** Pemilik menghindari optimisasi dini: logika benar lebih dulu, optimisasi belakangan. Supaya kode yang dioptimasi tetap berpola, usulannya:
-> - optimisasi hanya dilakukan **di dalam gateway**, misalnya satu query gabungan yang menggantikan beberapa panggilan gateway;
-> - **kontraknya tidak berubah bagi use case**, atau kalau harus berubah, menjadi kontrak gateway baru yang dinamai menurut aturan biasa;
-> - **alasannya ditulis** di samping gateway, seperti aturan di atas;
-> - aturan bisnis yang ikut terbawa ke penyimpanan tetap dipertahankan di entity dan dites di sana.
+**Optimisasi dipimpin manusia** (keputusan pemilik, 2026-11-22). Optimisasi tidak diserahkan langsung kepada AI: perkaranya besar, tidak punya pola khusus, dan harus melibatkan manusia. Yang berlaku:
+- logika benar lebih dulu; optimisasi belakangan, tidak dini;
+- AI boleh **menunjukkan** kandidat optimisasi beserta alasannya, tetapi tidak mengoptimasi tanpa keputusan pemilik;
+- optimisasi yang diputuskan menuliskan alasannya di samping kodenya, dan aturan bisnis yang ikut terbawa ke penyimpanan tetap dipertahankan di entity dan dites di sana.
 
 ### GW-14. Selama pengembangan, gateway boleh berupa dummy, di memori atau hardcode, di balik kontrak yang sama dengan yang asli
 
 Gateway dummy adalah komponen sungguhan: ia berpenanda gateway, mengembalikan tipe kontraknya, dan dinyalakan Skeleto seperti yang lain. Ia menyimpan datanya di memori atau hardcode, dan diganti implementasi asli ketika lapis di belakangnya dibangun. Fake di tes use case (UC-13) adalah hal lain: ditulis tangan di dalam tes dan tidak pernah dinyalakan Skeleto.
 
-Pengembangan Core lebih dulu (lihat [pengembangan.md](../proses/pengembangan.md)) membangun use case sebelum penyimpanan dan layanan yang dibutuhkannya. Dummy di balik kontrak final membuat aplikasi bisa menyala dan berjalan sekarang, dan mengganti dummy tidak mengubah use case mana pun. Dummy yang menggantikan lapis yang akan dibangun kemudian adalah utang terencana dan diberi penanda (lihat [utang-teknis.md](../proses/utang-teknis.md)).
+Pengembangan Core lebih dulu (lihat [pengembangan.md](../proses/pengembangan.md)) membangun use case sebelum penyimpanan dan layanan yang dibutuhkannya. Dummy di balik kontrak final membuat aplikasi bisa menyala dan berjalan sekarang, use case ditulis terhadap kontrak yang akan dipertahankannya, dan mengganti dummy tidak mengubah use case mana pun. Tanpa dummy, Core harus menunggu lapis yang justru bergantung padanya. Dummy yang menggantikan lapis yang akan dibangun kemudian adalah utang terencana dan diberi penanda (lihat [utang-teknis.md](../proses/utang-teknis.md)).
 
 ### GW-15. Gateway untuk menyisipkan, menyimpan, mencari satu, dan mencari banyak memakai bentuk standar
+
+Empat operasi yang sama muncul untuk hampir setiap entity. Kalau bentuknya selalu sama, pembaca mengenalinya sekilas, dan use case tahu seperti apa entity yang tidak ada tanpa membaca gateway-nya.
 
 | Operasi | Kontrak | Perilaku |
 | --- | --- | --- |
@@ -256,7 +261,7 @@ Entity baru dari `new<Entity>` selalu lewat Insert, tidak pernah lewat Save. Sav
 
 | Bagian | Status |
 | --- | --- |
-| `@Gateway` sebagai jenis khusus `@Action` | rencana preset, belum terealisasi |
-| Penolakan gateway yang bergantung pada use case, saat startup | rencana preset, belum terealisasi; sekarang lewat tes arsitektur salinan |
-| Jalur resmi optimisasi | usulan, belum diputuskan |
+| `@Gateway` sebagai jenis bawaan | rencana, belum terealisasi |
+| Penolakan gateway yang bergantung pada use case, saat startup | rencana, belum terealisasi; sekarang lewat tes arsitektur salinan |
+| Optimisasi | dipimpin manusia (keputusan pemilik) |
 | Aturan lain di dokumen ini | dijaga reviewer |

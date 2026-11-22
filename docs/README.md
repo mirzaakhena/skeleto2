@@ -16,7 +16,7 @@ Skeleto memberi kode buatan AI satu struktur standar yang dijaga mesin, supaya m
 
 | Lapis | Isi | Siapa yang menjaga |
 | --- | --- | --- |
-| **Konsep** (arsitektur) | entity, use case, gateway, controller | dokumen, reviewer, tes salinan; sebagian kelak preset |
+| **Konsep** (arsitektur) | entity, use case, gateway, controller | dokumen, reviewer, tes salinan; sebagian kelak Skeleto (jenis bawaan `@UseCase`, `@Gateway`) |
 | **Mekanisme** (Skeleto) | `@Action`, `@Wrapper`, `@Config`, container | kode Skeleto, saat startup |
 
 Hubungan keduanya:
@@ -24,8 +24,8 @@ Hubungan keduanya:
 | Konsep | Ditulis sebagai |
 | --- | --- |
 | Entity | tipe biasa dan fungsi murni; bukan komponen |
-| Use case | `@Action` + `@UseCase` (dengan preset, kelak `@UseCase`) |
-| Gateway | `@Action` + `@Gateway` (dengan preset, kelak `@Gateway`) |
+| Use case | `@Action` + `@UseCase` (kelak `@UseCase` sebagai jenis bawaan) |
+| Gateway | `@Action` + `@Gateway` (kelak `@Gateway` sebagai jenis bawaan) |
 | Controller | kode biasa di luar container; bukan komponen |
 | Urusan lintas-use-case (transaksi, audit) | `@Wrapper`, dipilih per action lewat penanda tambahan |
 | Sumber daya (koneksi, pengaturan, logger) | `@Config` |
@@ -36,6 +36,23 @@ Hubungan keduanya:
 - **Use case** memegang **keputusan alur**: urutan langkah dan cabang menurut hasil entity atau gateway. Ia mengorkestrasi entity dan gateway, dan tidak memegang aturan bisnis.
 - **Gateway** adalah **infrastruktur di sisi keluar**: I/O, database, file, HTTP keluar, dan semua yang tidak deterministik (jam, id baru, angka acak). Ia boleh berlogika teknis, tetapi tidak berisi aturan bisnis.
 - **Controller** adalah **infrastruktur di sisi masuk**: menerima permintaan, memeriksa bentuk input, memanggil use case, dan menerjemahkan error.
+
+## Lingkup
+
+Skeleto menangani **low level design**: struktur di dalam satu aplikasi (komponen, nama, berkas, dependency, transaksi). **High level design** (pembagian sistem, layanan, broker pesan, deployment) berada di luar dokumen ini.
+
+## Cara mereview
+
+Review berjalan dalam dua lapis (keputusan pemilik, 2026-11-22):
+
+| Lapis | Pertanyaan | Ditangani oleh |
+| --- | --- | --- |
+| 1. Kepatuhan konsep | apakah kode mengikuti struktur: jenis komponen, dependency, nama, berkas, penanda | mesin (Skeleto, tes arsitektur) dan LLM |
+| 2. Logika dan requirement | apakah kode melakukan yang diminta bisnis, dan benar | sebagian LLM, sebagian reviewer manusia |
+
+Lapis pertama dibuat semekanis mungkin, supaya waktu manusia terpakai di lapis kedua.
+
+Aturan dibaca **per lingkup**: reviewer yang sedang membaca use case cukup menerapkan aturan di [use-case.md](konsep/use-case.md), ditambah aturan umum di [komponen.md](teknis/komponen.md). Itulah alasan dokumen dipecah per komponen.
 
 ## Daftar dokumen
 
@@ -49,7 +66,7 @@ Hubungan keduanya:
 | [teknis/action.md](teknis/action.md) | `@Action` dan context |
 | [teknis/wrapper.md](teknis/wrapper.md) | `@Wrapper`; transaksi; pengamat gateway |
 | [teknis/config.md](teknis/config.md) | `@Config`; config asinkron |
-| [teknis/preset-clean-architecture.md](teknis/preset-clean-architecture.md) | rencana `@UseCase` dan `@Gateway` sebagai jenis khusus `@Action` (belum terealisasi) |
+| [teknis/use-case-gateway-bawaan.md](teknis/use-case-gateway-bawaan.md) | rencana `@UseCase` dan `@Gateway` sebagai jenis bawaan Skeleto (belum terealisasi) |
 | [proses/pengembangan.md](proses/pengembangan.md) | urutan membangun aplikasi baru, Core lebih dulu |
 | [proses/utang-teknis.md](proses/utang-teknis.md) | celah, stub, jalan pintas, dan kode usang |
 
@@ -66,14 +83,14 @@ Selain itu ada dua tanda di dalam teks:
 
 | Tanda | Artinya |
 | --- | --- |
-| **Rencana preset, belum terealisasi di kode** | menggambarkan bentuk yang dituju; bagian "yang berlaku sekarang" di sebelahnya adalah yang harus dipakai hari ini |
+| **Rencana, belum terealisasi di kode** | menggambarkan bentuk yang dituju; bagian "yang berlaku sekarang" di sebelahnya adalah yang harus dipakai hari ini |
 | **Usulan, belum diputuskan pemilik** | belum berlaku; dicatat supaya bisa diputuskan |
 
 ## Pemetaan nomor lama ke nomor baru
 
 | Lama | Baru | | Lama | Baru | | Lama | Baru |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| B1 | DEV-2 | | T1 | KOM-1 | | P1 | DEV-1 |
+| B1 | DEV-2 (tingkat berubah, lihat DEV-2) | | T1 | KOM-1 | | P1 | DEV-1 |
 | B2 | UC-6 | | T2 | KOM-2, CFG-3 | | P2 | DEV-3 |
 | B3 | CTL-4 | | T3 | KOM-3 | | P3 | DEV-4 |
 | B4 | CTL-6 | | T4 | KOM-4 | | P4 | DEV-5 |
@@ -95,7 +112,7 @@ Selain itu ada dua tanda di dalam teks:
 | B20 | GW-15 | | T20 | ENT-8 | | | |
 | B21 | GW-2 | | T21 | KOM-11 | | | |
 | B22 | UC-10, GW-2 | | T22 | KOM-12 | | | |
-| B23 | UC-11, tabel context di action.md | | T23 | GW-14 | | | |
+| B23 | UC-11, ACT-3, tabel context di action.md | | T23 | GW-14 | | | |
 | B24 | CTL-2 | | T24 | UC-15 | | | |
 | B25 | ENT-5, CTL-3, UTG-2 | | T25 | UTG-1 | | | |
 | B26 | CTL-3 | | T26 | WRP-6 | | | |
@@ -111,4 +128,4 @@ Selain itu ada dua tanda di dalam teks:
 | B36 | ENT-6 | | | | | | |
 | B37 | ENT-7 | | | | | | |
 
-Aturan yang tidak punya padanan lama: ACT-2, CFG-3, GW-12 (sebelumnya hanya di tes arsitektur), UTG-2 (sebelumnya bagian B25), serta usulan WRP-5 dan DEV-13.
+Aturan yang dirumuskan baru dari isi lama: CFG-3 (bagian pengecualian T2), GW-12 (bagian B8, sebelumnya hanya diperiksa tes arsitektur), dan UTG-2 (bagian B25). Aturan yang tidak punya padanan lama: ACT-2, ACT-3 (keputusan pemilik tentang context), dan rencana WRP-5. DEV-13 menuliskan keputusan pemilik tentang urutan kerja di dalam satu area.

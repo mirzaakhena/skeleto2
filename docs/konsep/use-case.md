@@ -92,9 +92,9 @@ Aturan nama umum (alias tipe, nama parameter) ada di [komponen.md](../teknis/kom
 
 ### UC-1. Setiap use case ditandai sebagai use case
 
-> **Rencana preset, belum terealisasi di kode.** Dengan preset clean architecture ([preset-clean-architecture.md](../teknis/preset-clean-architecture.md)), use case cukup ditulis `@UseCase`, karena `@UseCase` adalah jenis khusus `@Action`.
+> **Rencana, belum terealisasi di kode.** `@UseCase` akan menjadi jenis bawaan Skeleto ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)), sehingga use case cukup ditulis `@UseCase`.
 >
-> **Yang berlaku sekarang:** tulis `@Action` lalu `@UseCase` sebagai penanda tambahan, daftarkan `UseCase` di `MARKERS`, dan pasang tes arsitektur dari `REVIEW_CHECKLIST.md`. Hanya tes itu yang memeriksa bahwa setiap action tepat salah satu dari use case atau gateway.
+> **Yang berlaku sekarang:** tulis `@Action` lalu `@UseCase` sebagai penanda tambahan, daftarkan `UseCase` di `MARKERS`, dan pasang tes arsitektur dari `REVIEW_CHECKLIST.md`.
 
 Use case dan gateway jangan pernah dibedakan dari namanya (`...Gateway`, `Find...`) atau dari letak berkasnya. Nama dan folder adalah kebiasaan yang bisa bergeser, sedangkan penanda adalah data yang bisa dibaca wrapper dan dihitung tes.
 
@@ -110,7 +110,7 @@ Aturan bisnis yang ditulis di use case hanya dipatuhi use case itu (lihat [entit
 
 Use case adalah satu operasi bisnis dengan transaksinya sendiri, audit-nya sendiri, dan error-nya sendiri. Memanggil use case lain menyeret semua itu, menyatukan dua operasi yang berubah karena alasan berbeda, dan lama-lama membentuk rantai yang tidak bisa diikuti. Kalau dua use case berbagi satu langkah, aturan bersamanya masuk fungsi entity dan akses bersamanya masuk gateway.
 
-> **Rencana preset, belum terealisasi di kode.** Preset akan menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor. **Sekarang** hanya tes arsitektur salinan dari `REVIEW_CHECKLIST.md` yang memeriksanya, ditambah wrapper penjaga opsional `implUseCaseWrapper` yang baru menangkapnya setelah impor.
+> **Rencana, belum terealisasi di kode.** Dengan jenis bawaan, Skeleto akan menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor. **Sekarang** hanya tes arsitektur salinan dari `REVIEW_CHECKLIST.md` yang memeriksanya, ditambah wrapper penjaga opsional `implUseCaseWrapper` yang baru menangkapnya setelah impor.
 
 ### UC-5. Use case punya tipe Request dan Response sendiri dan tidak mengembalikan entity
 
@@ -122,7 +122,7 @@ Request atau Response yang dibentuk menurut screen berubah ketika screen berubah
 
 ### UC-7. Query tidak pernah menulis: use case tanpa `@Transaction` hanya bergantung pada gateway pembaca
 
-Use case yang menulis di luar transaksi bisa meninggalkan setengah perubahannya tersimpan ketika gagal. Dengan menulis hanya di use case bertanda `@Transaction`, penanda itu menjadi pernyataan yang benar tentang operasi mana yang mengubah keadaan, dan pembaca bisa yakin bahwa query tidak berefek. Kontrak gateway menyatakan apakah ia membaca atau menulis (GW-3).
+Use case yang menulis di luar transaksi bisa meninggalkan setengah perubahannya tersimpan ketika gagal. Dengan menulis hanya di use case bertanda `@Transaction`, penanda itu menjadi pernyataan yang benar tentang operasi mana yang mengubah keadaan, dan pembaca bisa yakin bahwa query tidak berefek. Kontrak gateway menyatakan apakah ia membaca atau menulis (GW-3). Dalam contoh, setiap gateway bekerja di dalam transaksi yang dibuka use case-nya; penyimpanan yang mengizinkan baca di luar transaksi memberi gateway pembacanya cara untuk itu.
 
 ### UC-8. Use case tidak pernah menulis literal entity
 
@@ -138,7 +138,7 @@ Waktu sekarang, id baru, token acak, dan hash bergaram berbeda di setiap panggil
 
 ### UC-11. Use case meneruskan context tanpa pernah membacanya
 
-Context membawa kebutuhan lapis teknis (transaksi yang terbuka, efek yang menunggu commit, trace id), bukan input bisnis. Use case yang membacanya bergantung pada wrapper mana yang berjalan, dan pada data yang tidak dinyatakan tipe Request-nya. Semua yang dibutuhkan bisnis datang lewat Request atau dari gateway. Siapa boleh memakai context dan untuk apa ada di [action.md](../teknis/action.md).
+Context membawa kebutuhan lapis teknis (transaksi yang terbuka, efek yang menunggu commit, trace id), bukan input bisnis. Use case yang membacanya bergantung pada wrapper mana yang berjalan, dan pada data yang tidak dinyatakan tipe Request-nya. Semua yang dibutuhkan bisnis datang lewat Request atau dari gateway, dan tidak ada data bisnis yang dititipkan di context (ACT-3). Siapa boleh memakai context dan untuk apa ada di [action.md](../teknis/action.md).
 
 ### UC-12. Use case yang membaca, memutuskan, lalu menulis dilindungi gateway-nya dari perubahan yang terjadi bersamaan
 
@@ -179,9 +179,18 @@ test("a transfer saves and reports both warehouses, and answers with what they h
   assert.deepEqual(saved, [moved]);
   assert.deepEqual(notified, [moved]);
 });
+
+test("a transfer beyond the stock is a conflict, and saves and reports nothing", async () => {
+  const { stockTransfer, saved, notified } = fakeGateways([{ id: "north", units: 10 }, { id: "south", units: 3 }]);
+
+  await assert.rejects(stockTransfer(newContext(), { from: "south", to: "north", units: 50 }), { kind: "conflict", message: "warehouse south holds 3 units, not 50" });
+
+  assert.deepEqual(saved, []);
+  assert.deepEqual(notified, []);
+});
 ```
 
-Karena komponen ditulis dua tahap (lihat [komponen.md](../teknis/komponen.md)), use case adalah fungsi biasa dari gateway-nya, sehingga tes membuatnya langsung. Fake yang bertipe kontrak diperiksa compiler: ketika kontrak berubah, fake berhenti dikompilasi alih-alih diam-diam lulus, dan itu tidak bisa dijanjikan pustaka mock. Tes membandingkan objek utuh, sama seperti ENT-8.
+Karena komponen ditulis dua tahap (lihat [komponen.md](../teknis/komponen.md)), use case adalah fungsi biasa dari gateway-nya, sehingga tes membuatnya langsung. Fake yang bertipe kontrak diperiksa compiler: ketika kontrak berubah, fake berhenti dikompilasi alih-alih diam-diam lulus, dan itu tidak bisa dijanjikan pustaka mock. Ditulis tangan, fake tetap semudah use case untuk dibaca. Tes membandingkan objek utuh, sama seperti ENT-8.
 
 ### UC-14. Fake menetapkan setiap nilai tak terduga
 
@@ -189,7 +198,7 @@ Isi penyimpanan, waktu sekarang, id yang dibuat, token acak: tes menentukan semu
 
 ### UC-15. Setiap use case bisa dijalankan sendirian
 
-Use case mendapat data yang dibutuhkannya dari tesnya (lewat fake) atau dari gateway dummy (GW-14). Ia tidak pernah butuh use case lain dijalankan lebih dulu untuk menyiapkan data. Use case yang baru jalan setelah use case lain menyembunyikan ketergantungan yang tidak dinyatakan kontrak mana pun.
+Use case mendapat data yang dibutuhkannya dari tesnya (lewat fake) atau dari gateway dummy (GW-14). Ia tidak pernah butuh use case lain dijalankan lebih dulu untuk menyiapkan data. Use case yang baru jalan setelah use case lain menyembunyikan ketergantungan yang tidak dinyatakan kontrak mana pun, dan tidak bisa dicoba, dites, atau diubah sendirian. Use case yang berjalan sendiri bisa dipahami dari gateway-nya saja, dan tes yang gagal menunjuk ke use case itu, bukan ke use case yang seharusnya berjalan sebelumnya.
 
 ## Hubungan dengan komponen lain
 
@@ -206,6 +215,6 @@ Use case mendapat data yang dibutuhkannya dari tesnya (lewat fake) atau dari gat
 
 | Bagian | Status |
 | --- | --- |
-| `@UseCase` sebagai jenis khusus `@Action` | rencana preset, belum terealisasi |
-| Penolakan use case yang bergantung pada use case, saat startup | rencana preset, belum terealisasi; sekarang lewat tes arsitektur salinan |
+| `@UseCase` sebagai jenis bawaan | rencana, belum terealisasi |
+| Penolakan use case yang bergantung pada use case, saat startup | rencana, belum terealisasi; sekarang lewat tes arsitektur salinan |
 | Aturan lain di dokumen ini | dijaga reviewer |

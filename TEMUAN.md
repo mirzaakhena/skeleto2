@@ -6,21 +6,23 @@ Dimulai: 2026-11-21.
 
 | No | Temuan | Status |
 | --- | --- | --- |
-| 1 | Ukuran inti di atas patokan | belum dibahas |
-| 2 | Dokumen praktik di luar "hanya binding" | belum dibahas |
-| 3 | README memuat konsep bisnis | belum dibahas |
-| 4 | `Context` dan `newContext()` di API publik | belum dibahas |
-| 5 | Tujuan sebenarnya tidak tertulis di mana pun | belum dibahas |
-| 6 | Pembaca kodenya tetap manusia | belum dibahas |
-| 7 | Belum ada jalur resmi untuk optimisasi | belum dibahas |
-| 8 | Urutan menulis kode di dalam Core tidak tertulis | belum dibahas |
-| 9 | Jumlah aturan sangat besar dibanding kodenya | belum dibahas |
+| 1 | Ukuran inti di atas patokan | ditunda pemilik (2026-11-22); ingatkan lagi |
+| 2 | Dokumen praktik di luar "hanya binding" | ditutup (2026-11-22): bagian dari tujuan |
+| 3 | README memuat konsep bisnis | ditutup (2026-11-22): bagian dari tujuan |
+| 4 | `Context` dan `newContext()` di API publik | diputuskan: tetap di inti, sebagai metadata; ditulis sebagai ACT-3 |
+| 5 | Tujuan sebenarnya tidak tertulis di mana pun | diputuskan: 11 tujuan disetujui; ditulis di `CLAUDE.md` |
+| 6 | Pembaca kodenya tetap manusia | dijawab pemilik: review dua lapis |
+| 7 | Belum ada jalur resmi untuk optimisasi | diputuskan: optimisasi dipimpin manusia; ditulis di GW-13 dan ENT-7 |
+| 8 | Urutan menulis kode di dalam Core tidak tertulis | diputuskan; ditulis sebagai DEV-13 (termasuk syarat kerja paralel) |
+| 9 | Jumlah aturan sangat besar dibanding kodenya | dijawab pemilik: aturan dibaca per lingkup dokumen |
 | 10 | Pemisahan kode infrastruktur dan kode logika tidak dinyatakan sebagai prinsip | lima poin diterima pemilik |
-| 11 | B1: screen adalah petunjuk, bukan larangan | belum dibahas |
-| 12 | `@UseCase` dan `@Gateway` sebagai jenis khusus `@Action` | arah dipilih: paket bawaan tambahan; rincian belum dibahas |
-| 13 | Satu dokumen per komponen, dibuat baru | rancangan dibuat di `docs/`; penggantian belum diputuskan |
-| 14 | Kontrak tak tertulis antara Skeleto dan penjejak scenario-explorer | belum dibahas |
-| 15 | Celah di praktik transaksi dan locking, dan urusan lintas-use-case lain yang belum diatur | belum dibahas |
+| 11 | B1: screen adalah petunjuk, bukan larangan | arahan pemilik; ditulis sebagai DEV-2 di `docs/` |
+| 12 | `@UseCase` dan `@Gateway` sebagai jenis khusus `@Action` | diputuskan: jenis bawaan di inti; `@Action` polos tetap boleh, aturannya bebas; belum diimplementasi |
+| 13 | Satu dokumen per komponen, dibuat baru | kekurangan hasil pemeriksaan sudah diisi (2026-11-22); penggantian resmi belum diputuskan |
+| 14 | Kontrak tak tertulis antara Skeleto dan penjejak scenario-explorer | pemilik ingin diteliti lebih dalam |
+| 15 | Celah di praktik transaksi dan locking, dan urusan lintas-use-case lain yang belum diatur | dicatat; dibahas lain waktu |
+| 16 | Proses pengembangan ditulis berurutan, padahal penemuan berjalan bersamaan | disetujui; ditulis di `pengembangan.md`; bounded context belum diputuskan |
+| 17 | Definisi Core, Supporting, Generic menurut pemilik berbeda dari yang tertulis | diputuskan; ditulis di DEV-3 dan DEV-14 |
 
 ---
 
@@ -174,3 +176,77 @@ Dimulai: 2026-11-21.
   8. **Cache dan invalidasinya.** Disebut sebagai efek setelah commit, tetapi cara membaca dari cache tidak diatur.
   9. **Event-driven (dibahas 2026-11-22).** Yang sudah ada: menerbitkan event adalah efek lewat gateway, setelah commit atau lewat outbox (GW-9, GW-10), dan penerima tahan duplikat (GW-11). Yang belum diatur: nama gateway penerbit dan isi event (usulan: dinamai menurut fakta bisnis, misalnya `PublishStockTransferred`, bukan menurut pendengarnya seperti `NotifyEmailService`); bahwa konsumen event di dalam aplikasi yang sama adalah **controller** yang memanggil use case; dan larangan bus event di dalam proses yang membuat gateway memanggil use case lain secara langsung, karena itu menyembunyikan pelanggaran UC-4 dan GW-12.
 - **Kenapa dibahas:** setiap hal yang tidak diatur akan dikarang AI dengan bentuk yang berbeda-beda, dan itu bertentangan dengan tujuan konsistensi (temuan 5). Tidak semuanya harus diatur sekarang. Usulan prioritas: identitas dan otorisasi, idempotensi permintaan masuk, percobaan ulang setelah `conflict`, dan error program, karena keempatnya muncul di hampir setiap aplikasi.
+
+## 16. Proses pengembangan ditulis berurutan, padahal penemuan berjalan bersamaan
+
+- **Pernyataan pemilik (2026-11-22):** cerita pengguna biasanya berupa aktivitas yang melibatkan entitas ("aplikasi yang bisa begini dan begitu, kalau dia begini maka kita begitu"). Karena itu use case dan entity bisa diidentifikasi bersamaan sejak awal. Lalu prioritas disusun (Core, Supporting, Generic), alur ditentukan (boleh dengan mockup aplikasi yang hanya untuk mempelajari alur), dan semua itu dilakukan bersamaan.
+- **Fakta:** `docs/proses/pengembangan.md` (dan `DEVELOPMENT_PROCESS.md` lama) menulis lima tahap berurutan, dan DEV-11 melarang kode sebelum DEV-1 sampai DEV-10 selesai. Mockup tidak disebut sama sekali.
+- **Tanggapan:**
+  1. **Bedakan menemukan, memutuskan, dan menulis kode.** *Menemukan* (calon entity dari kata benda, calon use case dari kata kerja, calon alur, calon celah) memang berjalan bersamaan dan berulang. *Memutuskan* tetap punya gerbang: klasifikasi diputuskan pemilik sebelum perancangan mendalam, dan istilah disepakati sebelum dipakai sebagai nama di kode. *Menulis kode* mengikuti DEV-13.
+  2. **Klasifikasi tetap per area, bukan per use case** (DEV-3). Use case dalam satu area saling bergantung. Prioritas *di dalam* area Core bisa diurutkan menurut alur: jalur utama lebih dulu, lalu cabang.
+  3. **Mockup cocok dengan DEV-2** (screen sebagai petunjuk), dengan dua syarat: ditandai sebagai alat belajar yang akan dibuang, dan setiap screen-nya digali menjadi use case. Risikonya adalah pemilik mengira "screen sudah ada, berarti aplikasi hampir selesai". Peta skenario adalah "mockup alur" tanpa screen; keduanya saling melengkapi: mockup untuk *bentuk interaksi*, peta untuk *state, waktu, dan celah*.
+  4. **Usulan perubahan dokumen:** tahap 1–4 ditulis sebagai satu **putaran penemuan** yang diulang (wawancara → kandidat glosarium, entity, use case → mockup/peta → pertanyaan baru → wawancara), dengan dua **gerbang keputusan** yang tetap berurutan: klasifikasi area (DEV-4) dan kesepakatan istilah (DEV-6).
+- **Catatan istilah:** glosarium adalah bentuk tertulis dari **ubiquitous language** DDD. Area bisnis dan kelas Core/Supporting/Generic sesuai dengan **subdomain** DDD (core, supporting, generic subdomain). Dokumen belum menyebut **bounded context**: dalam DDD, ubiquitous language berlaku di dalam satu bounded context, dan kata yang sama boleh berarti berbeda di context lain. Aturan DEV-6 "satu kata untuk satu hal" sekarang berlaku untuk seluruh aplikasi.
+
+## 17. Definisi Core, Supporting, Generic menurut pemilik berbeda dari yang tertulis
+
+- **Yang tertulis** (DEV-3, dulu P2, mengikuti subdomain DDD), diukur dari **pentingnya bagi bisnis**:
+  - Core: kalau salah, bisnis kehilangan alasan keberadaannya; pembeda bisnis.
+  - Supporting: khas bisnis ini dan dibutuhkan, tetapi bukan pembeda.
+  - Generic: dimiliki hampir setiap aplikasi (login, notifikasi, unggah berkas, pembayaran).
+- **Menurut pemilik (2026-11-22)**, diukur dari **kapan harus ada**:
+  - Core: tujuan utama aplikasi dibuat; kalau tujuan itu belum tercapai, Core belum selesai. Contoh: alur aplikasi, state utama, peran pengguna yang terlibat, skenario positif lebih dulu lalu beberapa contoh skenario negatif, sehingga aplikasi punya kerangka dasar.
+  - Supporting: sebenarnya bagian dari Core, tetapi bisa ditunda atau diganti data dummy sampai Core selesai. Contoh: algoritma perhitungan biaya, geolokasi yang menentukan alur.
+  - Generic: tidak perlu disebut bahwa ia harus ada, karena sudah umum dan selayaknya ada. Contoh: registrasi, login, query yang optimal, hal-hal keamanan.
+- **Pemilik juga menegaskan:** satu area adalah satu set use case yang saling bergantung (satu use case mengubah state yang menentukan use case lain bisa bergerak), dan semuanya Core.
+- **Perbedaan yang perlu diputuskan:**
+  1. **Supporting.** Di DDD, supporting adalah subdomain tersendiri. Menurut pemilik, supporting adalah *bagian dari Core yang bisa ditunda*. Ini lebih dekat ke tiga cara di DEV-8 (stub, disederhanakan) daripada ke klasifikasi area. Contohnya, "algoritma perhitungan biaya" di DDD sering justru Core, karena harga bisa jadi pembeda.
+  2. **Satuan klasifikasi.** Kalau Supporting adalah bagian dari Core, yang diklasifikasi bukan lagi hanya area, tetapi juga kemampuan di dalam area. Ini perlu dirumuskan supaya tidak bertentangan dengan "yang diklasifikasi adalah area" (DEV-3) yang baru disetujui pemilik.
+  3. **Generic mencampur area dan kualitas.** Registrasi dan login adalah area. "Query yang optimal" dan "keamanan" adalah kualitas atau urusan lintas-use-case, bukan area. Keduanya punya tempat lain: optimisasi di jalur gateway (GW-13), keamanan di aturan identitas dan otorisasi (temuan 15).
+  4. **Definisi selesai.** Menurut pemilik, kerangka Core cukup dengan skenario positif dan contoh skenario negatif. DEV-14 lebih ketat: setiap cabang peta punya tes dan setiap celah punya penanda atau keputusan.
+- **Keputusan pemilik (2026-11-22): usulan di bawah diterima.** `docs/proses/pengembangan.md` (DEV-3, DEV-14) belum diubah.
+- **Usulan:** pakai definisi pemilik sebagai dasar karena lebih praktis untuk menentukan urutan kerja, dengan rumusan:
+  - **Core**: area yang mewujudkan tujuan utama aplikasi. Selesai ketika tujuan itu tercapai.
+  - **Supporting**: kemampuan yang dibutuhkan Core, tetapi versi aslinya bisa menunggu. Selama menunggu, ia berupa stub, dummy, atau versi sederhana (DEV-8), dan dicatat sebagai utang Planned.
+  - **Generic**: kemampuan yang dianggap sudah ada dan tidak perlu diputuskan bersama pemilik. Biasanya diambil dari pustaka atau layanan luar ("dianggap sudah ada" di DEV-8).
+  - Kualitas (optimisasi, keamanan) dikeluarkan dari klasifikasi dan diatur di tempatnya sendiri.
+  - "Selesai" dua tingkat: **kerangka Core** (jalur utama dan contoh skenario negatif berjalan) dan **Core selesai** (DEV-14).
+
+---
+
+## Jawaban pemilik, 2026-11-22
+
+- **#1:** diabaikan dulu; optimasi ukuran kode nanti. Pemilik minta diingatkan lagi.
+- **#2, #3:** ditutup. Dokumen praktik dan contoh bisnis di README adalah bagian dari tujuan (#5), bukan penyimpangan.
+- **#4:** `Context` tetap di inti. Context adalah **metadata** yang boleh dipakai infrastruktur, bukan bagian proses bisnis: data bisnis tidak boleh dititipkan di context. Sebelumnya hanya tertulis sebagian (B23/UC-11: "carries what the technical level needs, not business input"; use case tidak membacanya); larangan menitipkan data bisnis belum tertulis tegas.
+- **#5:** 11 tujuan disetujui. `CLAUDE.md` diperbarui.
+- **#6:** review dua lapis: (1) **kepatuhan konsep**, bisa ditangani mesin dan LLM; (2) **logika dan requirement**, sebagian oleh LLM dan sebagian oleh reviewer manusia. Ini menjawab temuan 6: struktur dibuat semekanis mungkin supaya waktu manusia hanya untuk lapis kedua.
+- **#7:** optimisasi tidak boleh diserahkan langsung ke AI. Prosesnya melibatkan manusia, perkaranya besar, dan tidak punya pola khusus. Usulan "jalur resmi optimisasi" (GW-13) diganti: AI boleh menunjukkan kandidat, tetapi tidak mengoptimasi tanpa keputusan pemilik.
+- **#8:** urutan awal adalah mengidentifikasi Core. Di dalam satu area, kerja berputar: use case → entity → dummy gateway, lalu use case berikutnya di area yang sama. Satu area idealnya dikerjakan **satu sesi AI**, karena dua sesi bisa memutuskan hal berbeda dan menimbulkan konflik yang tidak perlu.
+- **#9:** aturan dibaca per lingkup: reviewer yang membaca use case menerapkan aturan use case saja. Inilah alasan `docs/` dipecah per komponen.
+- **#12:** pemilik condong menjadikan `@UseCase` dan `@Gateway` bagian inti framework, bukan preset. Belum final.
+- **#13:** pemilik minta dicek apakah `docs/` sudah mencakup seluruh isi tiga dokumen lama.
+- **#14:** pemilik ingin meneliti lebih dalam apa yang dibutuhkan penjejak. Skeleto sebagai *penyedia informasi*: hal yang hanya untuk penjejak tidak dibuat di Skeleto, tetapi yang bermanfaat umum boleh diformalkan.
+- **#15:** tetap dicatat, dibahas lain waktu.
+- **#16:** disetujui.
+- **WRP-5:** pemilik ingin membuang `ordinal` dan memakai urutan penulisan sebagai urutan resmi lapisan wrapper. Belum diputuskan.
+- **Lingkup:** pemilik melihat Skeleto menangani **low level design** (struktur di dalam satu aplikasi), bukan high level design.
+
+## Hasil pemeriksaan cakupan `docs/` (#13), 2026-11-22
+
+Semua aturan bernomor sudah ada di `docs/`. Yang hilang terutama penjelasan "kenapa" dan contoh kerja:
+
+- **Bagian tanpa nomor:** paragraf "gunung es soal letak kerumitan, bukan soal penting tidaknya" (frontend sama penting), tabel "Under the waterline / Covered by", dan argumen "screen tidak bisa diurutkan, hanya use case dan area" (pembuka `pengembangan.md`).
+- **Tingkat berubah tanpa tanda:** B1 dulu Opsional, DEV-2 diletakkan di aturan wajib.
+- **Konkurensi (GW-6):** penjelasan isolasi bawaan penyimpanan, "tidak ada yang bisa dikunci karena barangnya belum ada", cara `LockWarehouses` membuat B menunggu lalu kena `conflict`, dan pemeriksaan versi yang mengubah perubahan hilang menjadi `conflict` yang bisa diulang.
+- **Detail teknis:** KOM-8 (nama teknologi dalam bentuk `<snake>`), KOM-10 (daftar minimal `UseCase`, `Gateway`, `Transaction`), KOM-11 (memakai `MARKERS` yang sama), UC-13 (tes kedua, kasus `conflict`), UC-7 (gateway pembaca di luar transaksi), GW-15 (alasan bentuk standar), WRP-4 (keluaran README), WRP-6 (alasan dan "boleh mengukur waktu panggilan"), komponen.md ("alat tidak mengambil apa pun selain itu, dan membaca container sekali").
+- **Proses:** sebagian besar alasan P3–P7, P9, P11; P10 (cara menulis state bebas, alasan id celah tetap, contoh tabel celah, `<process>` = nama berkas peta); P12 (dummy untuk pengembangan tidak diberi penanda; alasannya); P14 ("area itu tetap boleh disketsa"); penunjuk ke `REVIEW_CHECKLIST.md` di bagian reviewer.
+- **Kontradiksi baru:** DEV-10 menyebut scenario-explorer membaca peta, padahal aturan lama menyatakan bagian state dan pilihan "hanya dibaca manusia".
+- **Kesalahan tabel pemetaan:** catatan di bawah tabel `docs/README.md` menyebut CFG-3 dan GW-12 tanpa padanan lama, padahal tabel memetakan T2 → CFG-3 dan B8 → GW-12.
+
+## Jawaban pemilik dan pembaruan `docs/`, 2026-11-22 (lanjutan)
+
+- **#12:** `@Action` polos tetap boleh dipakai, dan aturannya bebas. `docs/teknis/preset-clean-architecture.md` diganti menjadi `docs/teknis/use-case-gateway-bawaan.md`. ACT-1 dirumuskan ulang; tambahan "yang sebenarnya use case atau gateway tetap ditandai begitu" ditandai usulan. Prinsip "Hanya binding" di `CLAUDE.md` belum ditulis ulang; itu dilakukan saat jenis bawaan diimplementasi.
+- **WRP-5:** pemilik condong wrapper yang ditulis pertama menjadi lapisan terdalam (kulit bawang, dipasang dari dalam). Ditulis sebagai rencana dengan syarat semua wrapper di satu berkas; arahnya belum final.
+- **#8, kerja paralel:** boleh, tetapi dipertimbangkan sangat matang; baru layak setelah sebagian besar entity terbentuk dan use case Core selesai, terutama untuk Supporting dan Generic.
+- **Pembaruan `docs/`:** kekurangan dari pemeriksaan #13 diisi; keputusan #4 (ACT-3), #6 dan #9 (bagian "Cara mereview" di `docs/README.md`), #7, #8, #16, #17, dan lingkup LLD ditulis. Perubahan tingkat B1 → DEV-2 (Opsional → Wajib) ditandai belum diputuskan. Catatan tabel pemetaan diperbaiki.

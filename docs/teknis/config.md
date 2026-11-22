@@ -74,4 +74,4 @@ Config adalah pengecualian KOM-2 ([komponen.md](komponen.md)): ia boleh membuka 
 
 ## Status implementasi
 
-Semua yang ada di dokumen ini terealisasi. Config tidak bergantung pada preset.
+Semua yang ada di dokumen ini terealisasi. Config tidak bergantung pada rencana jenis bawaan.

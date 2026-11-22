@@ -53,7 +53,7 @@ Kode usang tidak disimpan dengan tenggat dan tidak ditandai. Perubahan yang meng
 
 Kerangka use case, yang isinya hanya melempar "not implemented", hanya boleh ada di area bisnis yang sedang dikerjakan. Area yang tidak sedang dikerjakan tidak memuatnya. Celah bukan kerangka: celah hidup di dalam cabang sebuah use case, sebagai penanda dan penolakan `tech_debt`, bukan di badan yang kosong.
 
-Menulis kerangka setiap use case sebelum satu pun selesai mengubur pekerjaan dalam daftar yang terlalu panjang untuk diingat, dan sebagian besar akan ditulis ulang setelah Core dikenal.
+Menulis kerangka setiap use case sebelum satu pun selesai mengubur pekerjaan dalam daftar yang terlalu panjang untuk diingat, dan sebagian besar akan ditulis ulang setelah Core dikenal. Mengizinkan kerangka di satu area yang sedang dikerjakan tetap membuat area itu bisa disketsa.
 
 ## Hubungan dengan alat lain
 

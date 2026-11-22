@@ -105,7 +105,7 @@ Setiap kata ditulis dengan huruf besar di awal dan disambung tanpa pemisah: `Sto
 | Error bisnis | `src/entity/error.ts` |
 | Use case, satu per berkas | `src/usecase/<area>/<use case snake>.ts` |
 | Kontrak gateway satu entity | `src/gateway/<entity snake>.ts` |
-| Implementasinya dalam satu teknologi | `src/gateway/<technology>/<entity snake>.ts` |
+| Implementasinya dalam satu teknologi | `src/gateway/<technology>/<entity snake>.ts`, dengan nama teknologinya sendiri dalam bentuk `<snake>` |
 | Semua config | `src/config.ts` |
 | Semua wrapper | `src/wrappers.ts` |
 | Daftar penanda yang sah | `src/markers.ts` |
@@ -133,6 +133,8 @@ Data penanda berjalan sampai penanda berikutnya, sehingga kalimat setelah penand
 
 ### KOM-10. Penanda yang sah disimpan di satu konstanta yang diekspor, dan selalu diberikan ke `Skeleto.start`
 
+Daftarnya memuat setidaknya `UseCase`, `Gateway`, dan `Transaction`, ditambah setiap penanda lain yang dibaca aplikasi.
+
 ```ts
 // src/markers.ts (excerpt)
 /** The additional markers this application allows. Startup refuses any other, so a misspelt marker cannot pass unnoticed. */
@@ -146,7 +148,7 @@ const skeleto = await Skeleto.start("src", { decorators: MARKERS });
 
 Tanpa `decorators`, `@Transction` yang salah tulis diterima dan use case diam-diam berjalan tanpa transaksi, dan penanda utama yang salah tulis diam-diam membuang komponennya. Dengan daftar, keduanya menghentikan startup. Satu konstanta berarti awal aplikasi, tesnya, dan wrapper-nya membaca daftar yang sama.
 
-> **Rencana preset, belum terealisasi di kode.** Dengan preset clean architecture, `UseCase` dan `Gateway` tidak lagi menjadi penanda tambahan di `MARKERS`, melainkan jenis yang disediakan preset.
+> **Rencana, belum terealisasi di kode.** Dengan jenis bawaan, `UseCase` dan `Gateway` tidak lagi menjadi penanda tambahan di `MARKERS`.
 
 ### KOM-11. Satu tes integrasi menyalakan Skeleto dan membuktikan aplikasinya bisa menyala
 
@@ -163,7 +165,7 @@ test("the application starts, and its use cases are in the container", async () 
 });
 ```
 
-Tes use case tidak pernah menyalakan Skeleto, sehingga dependency yang hilang, siklus, penanda salah tulis, atau alias yang dieja dua cara baru terlihat saat aplikasi di-deploy. Startup melaporkan semua kesalahan itu sekaligus, jadi satu tes yang menyalakannya sudah cukup.
+Tes use case tidak pernah menyalakan Skeleto, sehingga dependency yang hilang, siklus, penanda salah tulis, atau alias yang dieja dua cara baru terlihat saat aplikasi di-deploy. Startup melaporkan semua kesalahan itu sekaligus, jadi satu tes yang menyalakannya sudah cukup. Tes ini memakai `MARKERS` yang sama dengan aplikasi (KOM-10), sehingga memeriksa aturan yang sama.
 
 ### KOM-12. Berkas tes dan berkas hasil generator dikecualikan dari pemindaian
 
@@ -181,4 +183,6 @@ Alat yang membaca atau memeriksa aplikasi dari luar (tes arsitektur, tes celah, 
 - Use case dibedakan dari gateway lewat penandanya, dan wrapper dinamai menurut penanda yang dibacanya.
 - Alat yang mengamati sebuah jalan menemukan pengamatnya di `ctx.data.gatewayObserver`, kalau aplikasi punya wrapper pengamat gateway ([wrapper.md](wrapper.md), WRP-6).
 
-> **Usulan, belum diputuskan pemilik.** Penjejak scenario-explorer ternyata mengandalkan lebih dari daftar di atas: `ctx.data.transaction` dan `ctx.data.afterCommit` dari wrapper transaksi, bentuk `BusinessError` (`name`, `kind`, `gap`), pola teks penanda utang, dan alias `type X = ActionHandler<Input, Output>` yang dibaca isinya. Kontrak itu sekarang tersebar dan sebagian tidak tertulis di sisi Skeleto. Usulannya: kalau preset clean architecture dibuat, preset itulah yang memiliki dan mengetes seluruh kontrak ini (lihat [preset-clean-architecture.md](preset-clean-architecture.md)).
+Alat tidak mengambil apa pun selain itu dari aplikasi, dan container dibaca sekali, saat alat itu mulai (CTL-5). Tes arsitektur dan tes celah di `REVIEW_CHECKLIST.md` adalah alat seperti itu.
+
+> **Akan diteliti (arahan pemilik, 2026-11-22).** Skeleto berperan sebagai *penyedia informasi*: yang hanya dibutuhkan penjejak tidak dibuat di Skeleto, tetapi yang bermanfaat umum boleh diformalkan. Penjejak scenario-explorer ternyata mengandalkan lebih dari daftar di atas: `ctx.data.transaction` dan `ctx.data.afterCommit` dari wrapper transaksi, bentuk `BusinessError` (`name`, `kind`, `gap`), pola teks penanda utang, dan alias `type X = ActionHandler<Input, Output>` yang dibaca isinya. Kontrak itu sekarang tersebar dan sebagian tidak tertulis di sisi Skeleto. Mana yang diformalkan belum diputuskan (`TEMUAN.md`, temuan 14).

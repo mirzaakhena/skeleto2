@@ -133,7 +133,7 @@ Status tersimpan yang sebenarnya bisa dihitung adalah salinan kedua dari kebenar
 - Status yang tidak bisa dihasilkan dari fakta tersimpan, misalnya yang dipilih seseorang, bukan status turunan dan boleh disimpan.
 - Query yang harus menyaring menurut status turunan meminta fakta tersimpan yang dibutuhkan (misalnya waktu pengiriman) dari gateway, lalu menerapkan fungsi entity pada baris yang didapat.
 
-> **Usulan, belum diputuskan pemilik.** Aturan lama menambahkan "tidak menambah kolom status supaya query lebih cepat". Kalimat itu menutup satu jenis optimisasi untuk selamanya, padahal pemilik ingin optimisasi tetap mungkin setelah logika benar. Usulannya: status turunan tetap tidak disimpan sebagai sumber kebenaran, tetapi salinan untuk mempercepat query boleh dibuat di dalam gateway lewat jalur optimisasi di [gateway.md](gateway.md) (GW-13), dengan alasan tertulis.
+- Query itu tidak menambah kolom status supaya lebih cepat. Pengecualiannya hanya optimisasi yang diputuskan pemilik (GW-13 di [gateway.md](gateway.md)): optimisasi dipimpin manusia, tidak dilakukan AI sendiri.
 
 ### ENT-8. Tes entity membandingkan objek utuh, bukan field yang dipilih
 
@@ -157,4 +157,4 @@ Constraint di penyimpanan (nilai tidak boleh negatif, id harus unik) menangkap y
 
 ## Status implementasi
 
-Tidak ada yang bergantung pada preset (lihat [preset-clean-architecture.md](../teknis/preset-clean-architecture.md)). Semua aturan di sini dijaga reviewer, bukan mesin.
+Tidak ada yang bergantung pada rencana jenis bawaan (lihat [use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)). Semua aturan di sini dijaga reviewer, bukan mesin.

@@ -25,6 +25,11 @@ The action document says plainly that it is about the shape shared by use cases 
 
 ## Done when
 
-- [ ] The document's title reads "Action: bentuk bersama use case dan gateway" (or the same meaning), and its file name and the links to it stay as they are.
-- [ ] ACT-1 is no longer a rule: what it said is kept as one explanatory sentence, its number is not reused, and the checklist, the old-to-new number table and every citation of ACT-1 are updated to match.
-- [ ] The repository's tests pass.
+- [x] The document's title reads "Action: bentuk bersama use case dan gateway" (or the same meaning), and its file name and the links to it stay as they are.
+- [x] ACT-1 is no longer a rule: what it said is kept as one explanatory sentence, its number is not reused, and the checklist, the old-to-new number table and every citation of ACT-1 are updated to match.
+- [x] The repository's tests pass.
+
+<!-- k2:record — written by k2 only; do not edit by hand -->
+
+## Handoff
+action.md retitled and ACT-1 retired: its content is one sentence under 'Kenapa ada', a note in 'Aturan wajib' says the number is not reused. REVIEW_CHECKLIST row, docs/README mapping (B5) and a note, and the Mesin list in test/readme.test.ts updated. The citation test rejects any cite of a missing number, so notes refer to 'nomor 1 dari awalan ACT' instead of the literal. TEMUAN.md left as history.

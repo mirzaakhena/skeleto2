@@ -122,7 +122,6 @@ Aturan di [docs/teknis/action.md](docs/teknis/action.md).
 
 | Aturan | Isinya | Tingkat | Diperiksa oleh |
 | --- | --- | --- | --- |
-| ACT-1 | Setiap action adalah use case atau gateway: operasi bisnis ditulis sebagai use case dan jalan keluar sebagai gateway | Wajib | Mesin: Skeleto, saat startup |
 | ACT-2 | Handler hanya menerima context dan input; semua yang lain datang sebagai dependency | Wajib | Reviewer |
 | ACT-3 | Context adalah metadata untuk infrastruktur; data bisnis tidak pernah dititipkan di context | Wajib | Reviewer |
 

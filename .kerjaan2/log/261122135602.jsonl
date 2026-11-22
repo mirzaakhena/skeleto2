@@ -1,1 +1,16 @@
 {"t":"2026-11-22 13:56:58","event":"created","status":"backlog","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 14:26:22","event":"question","key":"Q1","blocking":true,"session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}
+{"t":"2026-11-22 14:26:22","event":"assumption","key":"A1","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}
+{"t":"2026-11-22 14:26:22","event":"assumption","key":"A2","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}
+{"t":"2026-11-22 14:26:22","event":"assumption","key":"A3","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}
+{"t":"2026-11-22 14:26:22","event":"assumption","key":"A4","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}
+{"t":"2026-11-22 14:26:28","event":"question","key":"Q2","blocking":true,"session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}
+{"t":"2026-11-22 15:24:53","event":"answer","key":"Q1","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 15:24:54","event":"answer","key":"Q2","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 15:34:40","event":"assumption-overturned","key":"A1","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 15:34:41","event":"assumption-overturned","key":"A2","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 15:34:41","event":"assumption-overturned","key":"A3","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 15:34:41","event":"assumption-overturned","key":"A4","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 15:35:23","event":"assumption","key":"A5","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}
+{"t":"2026-11-22 15:35:23","event":"assumption","key":"A6","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}
+{"t":"2026-11-22 15:35:37","event":"moved","to":"todo","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:aae4aa819053fad3a"}

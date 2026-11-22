@@ -109,7 +109,7 @@ Setiap kata ditulis dengan huruf besar di awal dan disambung tanpa pemisah: `Sto
 | Kontrak gateway satu entity | `src/gateway/<entity snake>.ts` |
 | Implementasinya dalam satu teknologi | `src/gateway/<technology>/<entity snake>.ts`, dengan nama teknologinya sendiri dalam bentuk `<snake>` |
 | Semua config | `src/config.ts` |
-| Semua wrapper | `src/wrappers.ts` |
+| Semua wrapper, satu berkas sebagai bawaan opsional; urutan penulisan adalah urutan lapisan (WRP-5) | `src/wrappers.ts` |
 | Daftar penanda yang sah | `src/markers.ts` |
 | Awal aplikasi | `main.ts` di akar proyek |
 | Tes use case | di sebelahnya, `<use case snake>.test.ts` |

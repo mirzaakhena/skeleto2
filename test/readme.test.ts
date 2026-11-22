@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DEFAULT_EXCLUDE } from "../src/index.js";
@@ -128,7 +128,7 @@ const example = readExample(readme, bestPractices, technicalPractices, checklist
 
 test("the README covers the kinds, the start and the container", () => {
   const sources = Object.values(example.files).join("\n");
-  for (const needed of ["@Config", '@Wrapper {"ordinal": 10}', "@UseCase", "@Gateway", "@Transaction", "Skeleto.start(", "decorators: MARKERS", "getContainer()", "getMetadata()"]) {
+  for (const needed of ["@Config", "export function implAuditWrapper", "@UseCase", "@Gateway", "@Transaction", "Skeleto.start(", "decorators: MARKERS", "getContainer()", "getMetadata()"]) {
     assert.ok(sources.includes(needed), `no README example shows ${needed}`);
   }
   assert.ok(Object.keys(example.files).length >= 4);
@@ -141,6 +141,14 @@ test("the README example has an async config, and says that startup waits for it
   assert.match(readme, /^## Asynchronous configs$/m);
   assert.match(readme, /Startup sets no time limit/);
   assert.match(readme, /Give the config its own timeout/);
+});
+
+test("CLAUDE.md states that wrappers layer in written order, and no public document mentions ordinal any more", () => {
+  const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
+  assert.match(guide, /Urutan pembungkusan adalah urutan penulisan.*\*\*pertama\*\* menjadi lapisan \*\*terdalam\*\*.*urutan pemindaian/);
+  assert.match(guide, /\| `@Config`, `@Wrapper` \| tidak ada \|/);
+  const files = ["CLAUDE.md", "README.md", "BEST_PRACTICES.md", "TECHNICAL_PRACTICES.md", "REVIEW_CHECKLIST.md", "DEVELOPMENT_PROCESS.md", ...["konsep", "proses", "teknis"].flatMap((folder) => readdirSync(`${repo}docs/${folder}`).map((name) => `docs/${folder}/${name}`)), "docs/README.md"];
+  for (const file of files) assert.doesNotMatch(readFileSync(`${repo}${file}`, "utf8"), /ordinal/i, `${file} still mentions ordinal`);
 });
 
 test("CLAUDE.md states the rule for async configs in sections 4.3 and 4.7", () => {
@@ -166,7 +174,7 @@ test("the README examples start and print exactly the output the README shows", 
     assert.equal(result.stdout, example.output);
 
     const lines = result.stdout.split("\n");
-    // Larger ordinal outside: the ordinal 10 wrapper is entered before, and left after, the wrapper without an ordinal.
+    // The wrapper written last (audit) is outermost: it is entered before, and left after, the transaction wrapper written before it.
     // The effect queued after commit runs after it, and the use case answers with its own type, not with the entities.
     assert.deepEqual(lines.slice(0, 6), ["enter StockTransfer", "begin", "commit", "stock changed: north 7, south 3", "leave StockTransfer", "{ fromUnits: 7, toUnits: 3 }"]);
     // The failing transfer rolls back, queues nothing that runs, and its caller translates the kind of its business error.

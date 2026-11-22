@@ -8,7 +8,7 @@
 export type WrapperHandler = (actionHandler: ActionHandler, functionMetadata: FuncMetadata) => ActionHandler;
 ```
 
-Wrapper ditandai `@Wrapper`, boleh dengan data `{"ordinal": <bilangan bulat>}`.
+Wrapper ditandai `@Wrapper`, tanpa data, seperti `@Config` dan `@Action`.
 
 ## Kenapa ada
 
@@ -23,14 +23,14 @@ Wrapper adalah infrastruktur lintas-action. Ia tidak memegang aturan bisnis dan 
 - Wrapper hanya boleh bergantung pada `@Config`.
 - Semua wrapper dibuat sebelum action pertama dibuat.
 - Setiap action dibungkus **semua** wrapper. Wrapper yang mengembalikan `handler` apa adanya berarti tidak membungkus.
-- Urutannya menurut `ordinal` (tanpa `ordinal` dianggap `0`): **angka lebih besar menjadi lapisan lebih luar**. Untuk `ordinal` yang sama, nama wrapper yang lebih akhir menurut urutan teks menjadi lapisan lebih luar.
+- Urutan lapisan adalah urutan penulisan, seperti kulit bawang: wrapper yang ditulis **pertama** menjadi lapisan **terdalam**, yang ditulis terakhir menjadi lapisan terluar. Antarberkas, urutannya mengikuti urutan pemindaian: berkas menurut urutan path, fungsi menurut urutan tulisnya. Wrapper tetap dibuat menurut urutan dependency-nya; hanya pelapisannya yang mengikuti urutan penulisan.
 - Fungsi wrapper, dan setiap pembungkusan, harus menghasilkan fungsi. Hasil lain menghentikan startup dengan pesan yang menyebut wrapper dan action yang sedang dibungkus.
 
 ## Struktur
 
 ```ts
 // src/wrappers.ts (excerpt)
-/** @Wrapper {"ordinal": 10} */
+/** @Wrapper */
 export function implAuditWrapper(logger: Logger): AuditWrapper {
   return (handler, metadata) => {
     // Only what is marked @Audit: the gateways a use case calls are details of it.
@@ -43,7 +43,7 @@ export function implAuditWrapper(logger: Logger): AuditWrapper {
 | --- | --- | --- |
 | Wrapper | `<Marker>Wrapper`, menurut satu penanda tambahan yang dibacanya | `AuditWrapper`, `TransactionWrapper` |
 | Fungsinya | `impl<Wrapper>` | `implAuditWrapper` |
-| Berkas | semua wrapper di `src/wrappers.ts` | |
+| Berkas | semua wrapper di `src/wrappers.ts`, sebagai bawaan opsional (WRP-5) | |
 
 ## Aturan wajib
 
@@ -107,14 +107,9 @@ Gateway mengantrekan efeknya di `ctx.data.afterCommit` (GW-10 di [gateway.md](..
 
 ### WRP-5. Urutan lapisan wrapper adalah urutan penulisannya
 
-> **Rencana, belum terealisasi di kode** (arahan pemilik, 2026-11-22). Pemilik ingin membuang `ordinal` dan memakai urutan penulisan sebagai urutan resmi lapisan, seperti kulit bawang.
->
-> **Yang berlaku sekarang:** urutan ditentukan `ordinal`; angka lebih besar menjadi lapisan lebih luar. Dalam contoh, `AuditWrapper` (ordinal 10) berada di luar `TransactionWrapper` (ordinal 0), dan wrapper pengamat gateway (ordinal -10) berada di dalam keduanya.
+Wrapper yang ditulis **pertama** adalah lapisan **terdalam**, dipasang paling dulu, sehingga berkas dibaca dari inti ke luar. Pada saat dipanggil, urutannya terbalik: lapisan terluar, yang ditulis terakhir, berjalan paling dulu. Dalam contoh README, wrapper pengamat gateway ditulis pertama, lalu `TransactionWrapper`, lalu `AuditWrapper`; maka audit membungkus transaksi, dan transaksi membungkus pengamat.
 
-Rencananya:
-- Semua wrapper wajib berada di satu berkas, `src/wrappers.ts` (KOM-8). Wrapper di berkas lain menjadi kesalahan saat startup, karena urutan antarberkas bergantung pada nama berkas dan itu rapuh.
-- Arahnya belum final. Pemilik condong: wrapper yang ditulis **pertama** adalah lapisan **terdalam**, dipasang paling dulu, sehingga berkas dibaca dari inti ke luar. Pada saat dipanggil, urutannya terbalik: lapisan terluar, yang ditulis terakhir, berjalan paling dulu.
-- `{"ordinal": ...}` dihapus dari kontrak `@Wrapper`. Ini perubahan API (`CLAUDE.md` bagian 4.4 dan 4.7, README, dan tes).
+Skeleto tidak punya aturan tentang berkas tempat wrapper ditulis (keputusan pemilik, 2026-11-22). Urutannya mengikuti pemindaian: berkas menurut urutan path, fungsi menurut urutan tulisnya. Menaruh semua wrapper di satu berkas, `src/wrappers.ts` (KOM-8), adalah bawaan opsional supaya urutan lapisan terbaca di satu tempat; pengembang boleh mengaturnya sendiri. `@Wrapper` tidak membawa data: data apa pun menghentikan startup, dengan pesan yang sama seperti pada `@Config` dan `@Action`.
 
 ### WRP-6. Wrapper pengamat gateway menyerahkan setiap panggilan gateway ke pengamat di context, dan meneruskan panggilannya kalau tidak ada pengamat
 
@@ -127,9 +122,9 @@ export type GatewayObserver = (call: { gateway: string; input: unknown; proceed:
 // src/wrappers.ts (excerpt)
 /**
  * Optional: only an application that lets a tool outside it observe a run needs this wrapper.
- * It is the innermost wrapper, so what it reports is the gateway call itself, without the transaction or the audit around it.
+ * It is written first, which makes it the innermost wrapper, so what it reports is the gateway call itself, without the transaction or the audit around it.
  *
- * @Wrapper {"ordinal": -10}
+ * @Wrapper
  */
 export function implGatewayWrapper(): GatewayWrapper {
   return (handler, metadata) => {
@@ -144,7 +139,7 @@ export function implGatewayWrapper(): GatewayWrapper {
 }
 ```
 
-Wrapper ini hanya dibutuhkan aplikasi yang membiarkan alat luar (misalnya penjejak scenario-explorer) mengamati sebuah jalan. Pengamat dibaca di `ctx.data.gatewayObserver`, satu-satunya kunci yang dilihat alat seperti itu. Pengamat menerima nama gateway, input-nya, dan `proceed`, lalu mengembalikan apa yang diterima pemanggil gateway. Ia memanggil `proceed()` paling banyak sekali dan mengembalikan hasilnya, atau menjawab panggilan itu sendiri tanpa memanggil `proceed()`. Yang kedua hanya boleh dilakukan alat yang menjalankan aplikasi untuk dilihat, tidak pernah di produksi. Pengamat boleh mengukur waktu panggilan atau melihat apa yang kembali. Wrapper ini memakai `ordinal` terendah, sehingga menjadi lapisan terdalam dan melaporkan panggilan gateway itu sendiri, tanpa transaksi atau audit di sekitarnya.
+Wrapper ini hanya dibutuhkan aplikasi yang membiarkan alat luar (misalnya penjejak scenario-explorer) mengamati sebuah jalan. Pengamat dibaca di `ctx.data.gatewayObserver`, satu-satunya kunci yang dilihat alat seperti itu. Pengamat menerima nama gateway, input-nya, dan `proceed`, lalu mengembalikan apa yang diterima pemanggil gateway. Ia memanggil `proceed()` paling banyak sekali dan mengembalikan hasilnya, atau menjawab panggilan itu sendiri tanpa memanggil `proceed()`. Yang kedua hanya boleh dilakukan alat yang menjalankan aplikasi untuk dilihat, tidak pernah di produksi. Pengamat boleh mengukur waktu panggilan atau melihat apa yang kembali. Wrapper ini ditulis pertama, sehingga menjadi lapisan terdalam dan melaporkan panggilan gateway itu sendiri, tanpa transaksi atau audit di sekitarnya.
 
 Alat yang menggambar atau mengukur sebuah jalan perlu melihat setiap panggilan yang keluar dari use case, dan gateway-lah panggilan-panggilan itu. Satu wrapper pada nama penanda utamanya (`Gateway`) menemukan semuanya tanpa mengubah gateway atau use case mana pun. Kesepakatan tentang kunci, signature, dan letaknya di antara wrapper membuat satu alat bisa membaca aplikasi mana pun.
 
@@ -158,13 +153,13 @@ Wrapper bukan alat validasi struktur. Aturan antara use case dan gateway dijaga 
 | --- | --- |
 | Config | satu-satunya dependency yang boleh |
 | Action | membungkus semua jenis action (use case, gateway, action polos); memilih yang dibungkus lewat penanda tambahan di `metadata.additionalDecorators`, atau lewat jenisnya di `metadata.mainDecorator.name` |
-| Wrapper lain | tidak bergantung padanya; urutan antarwrapper ditentukan `ordinal` |
+| Wrapper lain | tidak bergantung padanya; urutan antarwrapper adalah urutan penulisan (WRP-5) |
 | Context | menambah dan menghapus yang dikelolanya |
 
 ## Status implementasi
 
 | Bagian | Status |
 | --- | --- |
-| `@Wrapper`, `ordinal`, dan pembungkusan | terealisasi |
+| `@Wrapper`, urutan penulisan sebagai urutan lapisan, dan pembungkusan | terealisasi |
 | Wrapper transaksi, audit, pengamat gateway | kode contoh di `README.md`, disalin setiap aplikasi |
 | Wrapper siap pakai dari Skeleto | belum diputuskan (`TEMUAN.md`, temuan 12) |

@@ -179,8 +179,5 @@ function checkMainData(decorator: Decorator): string | undefined {
   const data: unknown = decorator.data;
   if (data === undefined) return undefined;
   const written = typeof data === "string" ? data : JSON.stringify(data);
-  if (decorator.name !== "Wrapper") return `@${decorator.name} takes no data, but has ${written}`;
-  const isObject = typeof data === "object" && data !== null && !Array.isArray(data);
-  const isOrdinalOnly = isObject && Object.keys(data).join() === "ordinal" && Number.isInteger((data as { ordinal: unknown }).ordinal);
-  return isOrdinalOnly ? undefined : `@Wrapper takes no data or {"ordinal": <integer>}, but has ${written}`;
+  return `@${decorator.name} takes no data, but has ${written}`;
 }

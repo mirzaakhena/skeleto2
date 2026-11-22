@@ -105,7 +105,7 @@ Why: two people naming the same operation arrive at the same name, so the name c
 | The contracts of the gateways of one entity | `src/gateway/<entity snake>.ts` | `src/gateway/warehouse.ts` |
 | Their implementations in one technology | `src/gateway/<technology>/<entity snake>.ts`, the technology's own name in `<snake>` form | `src/gateway/memory/warehouse.ts` |
 | Every config | `src/config.ts` | |
-| Every wrapper | `src/wrappers.ts` | |
+| Every wrapper, in one file as an optional default; the order written is the layering, the first written innermost (T11) | `src/wrappers.ts` | |
 | The allowed markers | `src/markers.ts` | |
 | The start of the application | `main.ts` at the project root | |
 | The test of a use case | next to it, as `<use case snake>.test.ts` | `src/usecase/stock/stock_transfer.test.ts` |
@@ -153,7 +153,7 @@ Why: without `decorators`, a misspelt `@Transction` is accepted and the use case
 
 ```ts
 // src/wrappers.ts (excerpt)
-/** @Wrapper {"ordinal": 10} */
+/** @Wrapper */
 export function implAuditWrapper(logger: Logger): AuditWrapper {
   return (handler, metadata) => {
     // Only what is marked @Audit: the gateways a use case calls are details of it.
@@ -163,6 +163,8 @@ export function implAuditWrapper(logger: Logger): AuditWrapper {
 A main marker such as `@UseCase` or `@Gateway` is not an additional marker: a wrapper reads it from `metadata.mainDecorator.name`.
 
 Why: Skeleto offers every action to every wrapper. Returning the handler itself adds nothing to the actions the marker is not on, not even a function call. With one wrapper per marker, what a marker means is written in one place, and removing the marker from an action removes exactly that behaviour.
+
+The order in which wrappers are written is their layering: the first written is the innermost, the last written the outermost and the first to run on a call, like the skin of an onion. Keeping every wrapper in `src/wrappers.ts` is an optional default that lets the layering be read in one place; Skeleto does not require it, and wrappers in several files are layered by the scan's order (files in sorted path order, functions as written). `@Wrapper` takes no data.
 
 ### T26. A gateway observer wrapper hands every gateway call to the observer in the context, and passes the call through when there is none (Optional)
 
@@ -175,9 +177,9 @@ export type GatewayObserver = (call: { gateway: string; input: unknown; proceed:
 // src/wrappers.ts (excerpt)
 /**
  * Optional: only an application that lets a tool outside it observe a run needs this wrapper.
- * It is the innermost wrapper, so what it reports is the gateway call itself, without the transaction or the audit around it.
+ * It is written first, which makes it the innermost wrapper, so what it reports is the gateway call itself, without the transaction or the audit around it.
  *
- * @Wrapper {"ordinal": -10}
+ * @Wrapper
  */
 export function implGatewayWrapper(): GatewayWrapper {
   return (handler, metadata) => {
@@ -192,7 +194,7 @@ export function implGatewayWrapper(): GatewayWrapper {
 }
 ```
 
-An application that lets a tool outside it observe a run has this wrapper, named after the `@Gateway` marker (T7, T11). It reads the observer at `ctx.data.gatewayObserver`, the one key every such tool looks at. The observer gets the gateway's name, its input and `proceed`, and returns what the caller of the gateway gets. It either calls `proceed()` at most once and returns its result, and may time the call or look at what comes back, or it answers the call itself without calling `proceed()`, as a tool does that replays a recorded call or supplies a value. An observer used in production always calls `proceed()`: only a tool that runs the application for a look may answer in the gateway's place. With no observer in the context, the wrapper returns the handler's own result and changes nothing. It carries the lowest `ordinal` of all wrappers, so it is the innermost, closest to the gateway. An application that no tool observes does not need it.
+An application that lets a tool outside it observe a run has this wrapper, named after the `@Gateway` marker (T7, T11). It reads the observer at `ctx.data.gatewayObserver`, the one key every such tool looks at. The observer gets the gateway's name, its input and `proceed`, and returns what the caller of the gateway gets. It either calls `proceed()` at most once and returns its result, and may time the call or look at what comes back, or it answers the call itself without calling `proceed()`, as a tool does that replays a recorded call or supplies a value. An observer used in production always calls `proceed()`: only a tool that runs the application for a look may answer in the gateway's place. With no observer in the context, the wrapper returns the handler's own result and changes nothing. It is written first among the wrappers, so it is the innermost, closest to the gateway. An application that no tool observes does not need it.
 
 Why: a tool that draws or measures a run needs to see every call that leaves the use case, and the gateways are exactly those calls. One wrapper on the marker finds them all without a change to any gateway or use case, and agreeing on the key, the signature and the place among the wrappers lets one tool read any application. Innermost, it reports the gateway call itself, not the transaction or the audit that happen around it.
 

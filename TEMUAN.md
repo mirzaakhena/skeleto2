@@ -18,13 +18,13 @@ Dimulai: 2026-11-21.
 | 10 | Pemisahan kode infrastruktur dan kode logika tidak dinyatakan sebagai prinsip | lima poin diterima pemilik |
 | 11 | B1: screen adalah petunjuk, bukan larangan | arahan pemilik; ditulis sebagai DEV-2 di `docs/` |
 | 12 | `@UseCase` dan `@Gateway` sebagai jenis khusus `@Action` | selesai: diimplementasi lewat tiket 261122101201 (main `bcdb4e0`) |
-| 13 | Satu dokumen per komponen, dibuat baru | kekurangan hasil pemeriksaan sudah diisi (2026-11-22); penggantian resmi belum diputuskan |
+| 13 | Satu dokumen per komponen, dibuat baru | selesai: `docs/` satu-satunya sumber aturan (`a7b7917`) |
 | 14 | Kontrak tak tertulis antara Skeleto dan penjejak scenario-explorer | pemilik ingin diteliti lebih dalam |
 | 15 | Celah di praktik transaksi dan locking, dan urusan lintas-use-case lain yang belum diatur | dicatat; dibahas lain waktu |
 | 16 | Proses pengembangan ditulis berurutan, padahal penemuan berjalan bersamaan | disetujui; ditulis di `pengembangan.md`; bounded context belum diputuskan |
 | 17 | Definisi Core, Supporting, Generic menurut pemilik berbeda dari yang tertulis | diputuskan; ditulis di DEV-3 dan DEV-14 |
 | 18 | Aturan dependency use case dan gateway lebih ketat: use case → gateway saja, gateway → config saja | selesai: main `78d4ab8` (tiket 261122113801) |
-| 19 | Hasil review independen kode dan aturan (main `78d4ab8`) | diputuskan; tiket 261122135601, 261122135602, 261122135603 |
+| 19 | Hasil review independen kode dan aturan (main `78d4ab8`) | selesai: tiga tiket digabung (`299895a`, `cd2e5a3`, `a7b7917`) |
 
 ---
 
@@ -315,3 +315,10 @@ Reviewer independen (tidak membaca `TEMUAN.md` dan papan) memeriksa `src/`, tes,
 - Kontradiksi 8: `docs/` menjadi satu-satunya sumber aturan, dan tiga dokumen lama dipensiunkan (261122135603), bersama kontradiksi 7 (semua use case ber-`@Transaction`, termasuk query), 9 (status WRP-5), 10 (aturan nama wrapper), dan penegasan concern 11 di dokumen (wrapper yang urutannya penting ditaruh di satu berkas).
 - Urutan kerja: 261122135601, lalu 261122135602, lalu 261122135603.
 - **Perubahan keputusan (2026-11-22):** setelah dibahas kenapa `@Action` polos ada, pemilik memutuskan: "Ya sudah, hapus saja `@Action`." Tidak ada opsi start. Penanda utama tinggal `@Config`, `@Wrapper`, `@UseCase`, `@Gateway`; setiap action adalah use case atau gateway. Tiket 261122135602 ditulis ulang ("Remove the plain @Action marker").
+
+## Hasil tiket dari temuan 19, 2026-11-22
+
+- 261122135601 (bug ekspor, penanda, parameter; tes config satu per satu; pemisah path `/`) digabung di `299895a`.
+- 261122135602 (`@Action` dihapus; penanda utama tinggal `@Config`, `@Wrapper`, `@UseCase`, `@Gateway`) digabung di `cd2e5a3`.
+- 261122135603 (`docs/` satu-satunya sumber aturan; tiga dokumen lama menjadi penunjuk; `REVIEW_CHECKLIST.md` berbahasa Indonesia dengan nomor baru; UC-16 semua use case ber-`@Transaction`; WRP-5 wajib, WRP-7 baru) digabung di `a7b7917`. Ini menutup temuan 13.
+- Pengingat #1: `src/` sekarang 510 baris.

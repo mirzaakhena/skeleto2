@@ -118,7 +118,7 @@ The line is the line of the code that breaks the rule. A finding without a rule 
 
 ## The architecture test
 
-Skeleto itself refuses a use case that depends on another use case (B8), a gateway that depends on a use case, and a use case or a gateway that depends on a plain `@Action`, all at startup. What it cannot see is a plain `@Action` that an application of use cases and gateways should not have: to Skeleto a plain action is allowed. The test below checks that one thing (B5). Copy this file as it is to the root of your application, next to `main.test.ts` (T21); it reads the same `MARKERS` (T10).
+Skeleto itself refuses a use case that depends on another use case or on a config (B8), a gateway that depends on a use case or on another gateway, and a use case or a gateway that depends on a plain `@Action`, all at startup. What it cannot see is a plain `@Action` that an application of use cases and gateways should not have: to Skeleto a plain action is allowed. The test below checks that one thing (B5). Copy this file as it is to the root of your application, next to `main.test.ts` (T21); it reads the same `MARKERS` (T10).
 
 It fails, naming each action at fault, when the container holds a plain `@Action`. This also catches a forgotten marker: a function marked `@Action` by habit is as good as any to Skeleto.
 

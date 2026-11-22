@@ -30,11 +30,11 @@ Pemilik memilih jenis bawaan, bukan preset, karena tujuan utama Skeleto adalah k
 | --- | --- |
 | `@Config` | `@Config` |
 | `@Wrapper` | `@Config` |
-| `@UseCase` | `@Config`, `@Gateway` |
-| `@Gateway` | `@Config`, `@Gateway` |
+| `@UseCase` | `@Gateway` |
+| `@Gateway` | `@Config` |
 | `@Action` | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
-Keputusan pemilik (2026-11-22): `@UseCase` dan `@Gateway` tidak boleh bergantung pada `@Action` polos, supaya `@Action` polos tidak menjadi jembatan antar use case. Urutan pembuatan: semua gateway, lalu semua use case, lalu semua action polos.
+Keputusan pemilik (2026-11-22): `@UseCase` dan `@Gateway` tidak boleh bergantung pada `@Action` polos, supaya `@Action` polos tidak menjadi jembatan antar use case. Keputusan pemilik (2026-11-22, `TEMUAN.md` temuan 18): strukturnya satu garis lurus, controller -> use case -> gateway -> config. Use case hanya bergantung pada gateway dan gateway hanya pada config. Parameter bisnis sampai ke use case lewat gateway yang membacanya atau menjadi konstanta entity; kode yang dipakai bersama beberapa gateway adalah config atau fungsi biasa yang bukan komponen; gateway yang butuh waktu atau id baru menerimanya di inputnya; pengirim outbox adalah proses terpisah (controller yang memanggil use case). Urutan pembuatan: semua gateway, lalu semua use case, lalu semua action polos.
 
 ## Yang masih terbuka
 

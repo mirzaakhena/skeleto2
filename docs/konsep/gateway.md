@@ -89,7 +89,7 @@ Bukan hanya penyimpanan. Setiap nilai tak terduga punya gateway sendiri:
 | Token acak | `NewToken = ActionHandler<void, string>` |
 | Hash bergaram | `HashSecret = ActionHandler<string, string>` |
 
-Use case memintanya sekali, di awal (UC-10).
+Use case memintanya sekali, di awal (UC-10). Gateway lain yang membutuhkannya menerimanya di inputnya, tidak memanggil gateway ini.
 
 ### GW-3. Kontrak gateway dipisahkan dari implementasinya
 
@@ -197,7 +197,7 @@ Bentuk ini bisa kehilangan efek: kalau proses berhenti di antara commit dan efek
 **Outbox.** Pesan tidak dikirim use case sama sekali:
 1. Gateway use case menulis pesan sebagai rekaman di penyimpanan yang sama, dalam transaksi yang sama dengan perubahan yang dilaporkannya.
 2. Transaksi commit: perubahan dan pesan tersimpan bersama, atau tidak sama sekali.
-3. Proses lain membaca pesan tersimpan yang belum terkirim, lalu mengirim masing-masing.
+3. Proses lain, yaitu controller yang memanggil use case (bukan gateway yang memanggil gateway), membaca pesan tersimpan yang belum terkirim, lalu mengirim masing-masing.
 4. Pesan baru ditandai terkirim setelah penerima menerimanya.
 
 Kalau proses pengirim berhenti di antara langkah 3 dan 4, pesannya dikirim lagi ketika proses menyala kembali. Tidak ada yang hilang, tetapi pesan bisa tiba dua kali.
@@ -206,9 +206,13 @@ Kalau proses pengirim berhenti di antara langkah 3 dan 4, pesannya dikirim lagi 
 
 Outbox menjamin setiap pesan terkirim setidaknya sekali, bukan tepat sekali. Penerima yang bertindak dua kali atas pesan yang sama membayar dua kali atau memindahkan stok dua kali. Setiap pesan membawa kuncinya sendiri, dan penerima mengabaikan kunci yang sudah pernah diprosesnya.
 
-### GW-12. Gateway tidak pernah bergantung pada use case
+### GW-12. Gateway hanya bergantung pada config
 
-Gateway boleh dibangun dari gateway lain, tetapi tidak dari use case. Gateway dipanggil dari dalam use case, sehingga use case di belakang gateway berarti use case yang dipanggil use case lain (UC-4).
+Gateway hanya bergantung pada config: tidak pada gateway lain dan tidak pada use case. Gateway dipanggil dari dalam use case, sehingga use case di belakang gateway berarti use case yang dipanggil use case lain (UC-4). Akibatnya:
+
+- Kode yang dipakai bersama beberapa gateway (klien HTTP, pemetaan) adalah config (kliennya) atau fungsi biasa yang bukan komponen, tidak pernah gateway lain.
+- Gateway yang butuh waktu sekarang atau id baru menerimanya di inputnya; use case memintanya sekali, di awal (UC-10).
+- Satu gateway tidak bisa memanggil gateway lain, misalnya gateway outbox yang memanggil gateway pembayaran. Pengirim outbox adalah proses terpisah: controller yang memanggil use case.
 
 Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor. Gateway juga tidak boleh bergantung pada `@Action` polos.
 
@@ -247,7 +251,7 @@ Entity baru dari `new<Entity>` selalu lewat Insert, tidak pernah lewat Save. Sav
 | Dengan | Hubungannya |
 | --- | --- |
 | Use case | dipanggil olehnya; use case hanya mengenal kontraknya |
-| Gateway lain | boleh bergantung padanya |
+| Gateway lain | tidak pernah (GW-12) |
 | Use case sebagai dependency | tidak pernah (GW-12) |
 | Entity | membaca dan menyimpan entity; tidak menerapkan aturan bisnis |
 | Config | bergantung padanya untuk sumber daya (koneksi lewat context, logger) |

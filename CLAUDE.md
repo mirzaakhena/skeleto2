@@ -124,11 +124,11 @@ Data lain adalah kesalahan, satu pesan untuk semua jenis data: `@Wrapper {"order
 | --- | --- |
 | `@Config` | `@Config` |
 | `@Wrapper` | `@Config` |
-| `@Gateway` | `@Config`, `@Gateway` |
-| `@UseCase` | `@Config`, `@Gateway` |
+| `@Gateway` | `@Config` |
+| `@UseCase` | `@Gateway` |
 | `@Action` | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
-- Pelanggaran adalah kesalahan, dan pesannya menyebut kedua komponen dan jenisnya. Dengan begitu use case tidak pernah bergantung pada use case, gateway tidak pernah bergantung pada use case, dan `@Action` polos tidak bisa menjadi jembatan dari satu use case ke use case lain: use case dan gateway tidak boleh bergantung pada `@Action` polos (keputusan pemilik, 2026-11-22).
+- Pelanggaran adalah kesalahan, dan pesannya menyebut kedua komponen dan jenisnya. Strukturnya satu garis lurus, controller -> use case -> gateway -> config, yang bisa dicek reviewer sekilas: use case hanya bergantung pada gateway (tidak pernah pada config atau use case), gateway hanya bergantung pada config (tidak pernah pada gateway lain atau use case), dan `@Action` polos tidak bisa menjadi jembatan dari satu use case ke use case lain: use case dan gateway tidak boleh bergantung pada `@Action` polos (keputusan pemilik, 2026-11-22). Aturan yang lebih ketat, use case tanpa config dan gateway tanpa gateway lain, juga keputusan pemilik (2026-11-22, `TEMUAN.md` temuan 18); tiap pelanggarannya punya tes di `test/skeleto.test.ts`.
 - Jenis ditentukan oleh nama penanda utama di metadata (`mainDecorator.name`: `Config`, `Wrapper`, `UseCase`, `Gateway`, `Action`); tidak ada field baru. Wrapper membedakan use case dari gateway lewat nama itu, tanpa penanda tambahan.
 - Dependency melingkar adalah kesalahan, dan pesannya menampilkan jalur siklusnya (`A -> B -> A`).
 

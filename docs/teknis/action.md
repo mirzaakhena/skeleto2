@@ -52,9 +52,9 @@ export function implLockWarehouses(database: Database): LockWarehouses {
 | --- | --- | --- |
 | Perannya | mengatur alur satu operasi bisnis | menjangkau dunia luar dan yang tidak deterministik |
 | Isinya | keputusan alur | kode infrastruktur dan logika teknis |
-| Dipanggil oleh | controller | use case, atau gateway lain |
-| Boleh bergantung pada | gateway, config | gateway, config |
-| Tidak boleh bergantung pada | use case lain | use case |
+| Dipanggil oleh | controller | use case |
+| Boleh bergantung pada | gateway | config |
+| Tidak boleh bergantung pada | config, use case lain | gateway lain, use case |
 | Kontraknya | Request dan Response sendiri, di berkas use case-nya | di berkas kontrak tersendiri, terpisah dari implementasinya |
 | Implementasinya | satu | bisa beberapa, satu per teknologi (asli, dummy) |
 | Nama | `<Area><Verb>` (`StockTransfer`) | `<Verb><Entity>` (`LockWarehouses`) |
@@ -66,7 +66,7 @@ export function implLockWarehouses(database: Database): LockWarehouses {
 
 ## Perilaku yang dijamin Skeleto
 
-- `@UseCase` dan `@Gateway` boleh bergantung pada `@Config` dan `@Gateway`. `@Action` polos boleh bergantung pada `@Config`, `@Gateway`, `@UseCase`, dan `@Action`. Dependency lain menghentikan startup, dengan pesan yang menyebut kedua komponen.
+- `@UseCase` hanya boleh bergantung pada `@Gateway`, dan `@Gateway` hanya pada `@Config`: strukturnya satu garis lurus, controller -> use case -> gateway -> config. `@Action` polos boleh bergantung pada `@Config`, `@Gateway`, `@UseCase`, dan `@Action`. Dependency lain menghentikan startup, dengan pesan yang menyebut kedua komponen.
 - Urutan pembuatan: semua gateway, lalu semua use case, lalu semua action polos.
 - Action selalu sinkron di tahap luarnya: return type `Promise<...>` pada fungsi `@UseCase`, `@Gateway`, dan `@Action` adalah kesalahan.
 - Fungsi action harus mengembalikan fungsi. Hasil lain (`undefined`, objek, promise) menghentikan startup dengan pesan yang menyebut action dan fungsinya.
@@ -125,7 +125,7 @@ Data bisnis di context adalah input yang tidak dinyatakan tipe mana pun. Ia memb
 | Dengan | Hubungannya |
 | --- | --- |
 | Config | boleh menjadi dependency |
-| Action lain | boleh menjadi dependency menurut tabel di atas; yang disuntikkan versi yang sudah dibungkus. Skeleto menolak use case yang bergantung pada use case, gateway yang bergantung pada use case, dan use case atau gateway yang bergantung pada `@Action` polos |
+| Action lain | boleh menjadi dependency menurut tabel di atas; yang disuntikkan versi yang sudah dibungkus. Skeleto menolak use case yang bergantung pada config atau use case, gateway yang bergantung pada gateway lain atau use case, dan use case atau gateway yang bergantung pada `@Action` polos |
 | Wrapper | membungkus setiap action; tidak boleh menjadi dependency action |
 
 ## Status implementasi

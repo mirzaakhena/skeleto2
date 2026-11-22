@@ -82,12 +82,14 @@ const VIOLATIONS: [Kind, Kind, string][] = [
   ["Wrapper", "Action", "@Config only"],
   ["Wrapper", "Wrapper", "@Config only"],
   ["Action", "Wrapper", "@Config, @Gateway, @UseCase and @Action only"],
-  ["UseCase", "UseCase", "@Config and @Gateway only"],
-  ["UseCase", "Action", "@Config and @Gateway only"],
-  ["UseCase", "Wrapper", "@Config and @Gateway only"],
-  ["Gateway", "UseCase", "@Config and @Gateway only"],
-  ["Gateway", "Action", "@Config and @Gateway only"],
-  ["Gateway", "Wrapper", "@Config and @Gateway only"],
+  ["UseCase", "Config", "@Gateway only"],
+  ["UseCase", "UseCase", "@Gateway only"],
+  ["UseCase", "Action", "@Gateway only"],
+  ["UseCase", "Wrapper", "@Gateway only"],
+  ["Gateway", "Gateway", "@Config only"],
+  ["Gateway", "UseCase", "@Config only"],
+  ["Gateway", "Action", "@Config only"],
+  ["Gateway", "Wrapper", "@Config only"],
 ];
 
 for (const [kind, dependencyKind, allowed] of VIOLATIONS) {
@@ -108,8 +110,8 @@ test("a use case that depends on a use case, and a gateway that depends on a use
   });
   const lines = problems(error);
   assert.equal(lines.length, 3, error.message);
-  assert.ok(lines.includes("- Transfer: is a @UseCase and depends on Count, which is a @UseCase; a @UseCase may depend on @Config and @Gateway only"), error.message);
-  assert.ok(lines.includes("- Notify: is a @Gateway and depends on Count, which is a @UseCase; a @Gateway may depend on @Config and @Gateway only"), error.message);
+  assert.ok(lines.includes("- Transfer: is a @UseCase and depends on Count, which is a @UseCase; a @UseCase may depend on @Gateway only"), error.message);
+  assert.ok(lines.includes("- Notify: is a @Gateway and depends on Count, which is a @UseCase; a @Gateway may depend on @Config only"), error.message);
   assert.ok(lines.some((line) => /Other: dependency Nowhere is not a known component/.test(line)));
   assert.doesNotMatch(error.message, /module was imported/);
   assert.deepEqual(shared.skeletoTest.calls, []);
@@ -126,15 +128,29 @@ test("a function marked @UseCase alone, or @Gateway alone, is a component that s
   });
 });
 
-test("a plain @Action may depend on a use case, a gateway and another action; a use case and a gateway may depend on gateways and configs", async () => {
+test("a plain @Action may depend on a config, a use case, a gateway and another action; a use case depends on gateways only and a gateway on configs only", async () => {
   reset();
   const files = {
-    "a.ts": component("Config", "Base") + component("Gateway", "Store", ["Base"]) + component("Gateway", "Cache", ["Store", "Base"]),
-    "b.ts": component("UseCase", "Transfer", ["Cache", "Base"]) + component("Action", "Report", ["Transfer", "Store", "Helper", "Base"]) + component("Action", "Helper"),
+    "a.ts": component("Config", "Base") + component("Gateway", "Store", ["Base"]) + component("Gateway", "Cache", ["Base"]),
+    "b.ts": component("UseCase", "Transfer", ["Cache", "Store"]) + component("Action", "Report", ["Transfer", "Store", "Helper", "Base"]) + component("Action", "Helper"),
   };
   await withFixture(files, async (directory) => {
     assert.equal((await Skeleto.start(directory)).getContainer().size, 6);
   });
+});
+
+test("a use case that depends on a config, and a gateway that depends on another gateway, stop startup before any import, together with another mistake", async () => {
+  const boom = `throw new Error("module was imported");\n`;
+  const error = await failure({
+    "a.ts": boom + component("Config", "Settings") + component("UseCase", "Transfer", ["Settings"]) + component("Gateway", "Store") + component("Gateway", "Cache", ["Store"]) + component("Action", "Other", ["Nowhere"]),
+  });
+  const lines = problems(error);
+  assert.equal(lines.length, 3, error.message);
+  assert.ok(lines.includes("- Transfer: is a @UseCase and depends on Settings, which is a @Config; a @UseCase may depend on @Gateway only"), error.message);
+  assert.ok(lines.includes("- Cache: is a @Gateway and depends on Store, which is a @Gateway; a @Gateway may depend on @Config only"), error.message);
+  assert.ok(lines.some((line) => /Other: dependency Nowhere is not a known component/.test(line)));
+  assert.doesNotMatch(error.message, /module was imported/);
+  assert.deepEqual(shared.skeletoTest.calls, []);
 });
 
 test("a use case or a gateway that depends on a plain @Action stops startup, naming both", async () => {
@@ -437,7 +453,7 @@ test("gateways are created before use cases, and use cases before plain actions,
   const state = reset();
   const files = {
     // Written in the opposite order, so that scan order alone would give the wrong result.
-    "a.ts": component("Action", "Plain") + component("UseCase", "Transfer", ["Store"]) + component("UseCase", "Count") + component("Gateway", "Store", ["Cache"]) + component("Gateway", "Cache"),
+    "a.ts": component("Action", "Plain") + component("UseCase", "Transfer", ["Cache"]) + component("UseCase", "Count", ["Store"]) + component("Gateway", "Store", ["Settings"]) + component("Gateway", "Cache", ["Settings"]),
     "b.ts": component("Config", "Settings") + component("Wrapper", "Wrap"),
   };
   await withFixture(files, async (directory) => {

@@ -337,7 +337,8 @@ test("BEST_PRACTICES.md resolves how an entity comes into being apart from how s
 
 test("BEST_PRACTICES.md says Skeleto does not check it and leaves the technical rules to TECHNICAL_PRACTICES.md", () => {
   assert.match(bestPractices, /Skeleto does not check them/);
-  assert.match(bestPractices, /a gateway may still be built from other gateways/i);
+  assert.match(bestPractices, /a use case depends on gateways only, never on a config, and a gateway depends on configs only, never on another gateway/);
+  assert.doesNotMatch(bestPractices, /a gateway may still be built from other gateways/i);
   assert.ok(bestPractices.split("](TECHNICAL_PRACTICES.md)").length > 2, "BEST_PRACTICES.md does not point to TECHNICAL_PRACTICES.md");
   for (const reason of [/already a plain object/, /leaves the old state intact/, /inputs and outputs alone/, /`import \* as Warehouse from /]) assert.match(bestPractices, reason);
 });
@@ -357,7 +358,7 @@ test("BEST_PRACTICES.md opens with the two levels and maps every architectural c
   for (const role of ["use case", "gateway"]) {
     const row = rows.get(role[0]?.toUpperCase() + role.slice(1));
     assert.equal(row?.expressed, `\`@${role === "use case" ? "UseCase" : "Gateway"}\``);
-    assert.match(row?.checked ?? "", new RegExp(`the rules of an action, and that it depends on configs and gateways only`));
+    assert.match(row?.checked ?? "", new RegExp(`the rules of an action, and that it depends on ${role === "use case" ? "gateways" : "configs"} only`));
   }
   assert.equal(rows.get("Resource, such as a database or settings")?.expressed, "`@Config`");
   assert.match(rows.get("Cross-cutting concern, such as logging or transactions")?.expressed ?? "", /^`@Wrapper`, chosen per action by additional markers/);
@@ -716,7 +717,7 @@ test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a r
 test("REVIEW_CHECKLIST.md holds the architecture test and the gap test, and no startup guard", () => {
   assert.deepEqual(Object.keys(example.checklist).sort(), ["architecture.test.ts", "gaps.test.ts"]);
   assert.doesNotMatch(checklist, /startup guard|UseCaseWrapper|use_case_wrapper/);
-  assert.match(checklist, /Skeleto itself refuses a use case that depends on another use case \(B8\)/);
+  assert.match(checklist, /Skeleto itself refuses a use case that depends on another use case or on a config \(B8\)/);
 });
 
 /** The README example with every file the other documents add, and the checklist's tests, as an application would hold them. */

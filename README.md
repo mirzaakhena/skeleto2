@@ -18,11 +18,11 @@ It deliberately does **not** know about HTTP, routing, validation, OpenAPI, data
 | --- | --- | --- |
 | `@Config` | anything: settings, a client, a logger; or a promise of it, which startup waits for | `@Config` |
 | `@Wrapper` | a function that takes an action and returns the action to use instead | `@Config` |
-| `@Gateway` | an async function `(ctx, input) => result` that reaches something outside the application | `@Config`, `@Gateway` |
-| `@UseCase` | an async function `(ctx, input) => result` that carries out one business operation | `@Config`, `@Gateway` |
+| `@Gateway` | an async function `(ctx, input) => result` that reaches something outside the application | `@Config` |
+| `@UseCase` | an async function `(ctx, input) => result` that carries out one business operation | `@Gateway` |
 | `@Action` | an async function `(ctx, input) => result`, without a rule of its own | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
-`@UseCase`, `@Gateway` and `@Action` are all kinds of action: each is wrapped by every wrapper, and what is injected into another component is the wrapped one. A function carries exactly one of the five markers. Any other dependency, and any circular one, stops startup, so a use case never depends on another use case, and a gateway never depends on a use case. Neither depends on a plain `@Action`, since that would bridge one use case to another. Configs are created first, then wrappers, then all gateways, then all use cases, then all plain actions; each is created after what it depends on.
+`@UseCase`, `@Gateway` and `@Action` are all kinds of action: each is wrapped by every wrapper, and what is injected into another component is the wrapped one. A function carries exactly one of the five markers. Any other dependency, and any circular one, stops startup, so the structure is one straight line, controller -> use case -> gateway -> config: a use case depends on gateways only (never on a config or another use case), and a gateway depends on configs only (never on another gateway or a use case). Neither depends on a plain `@Action`, since that would bridge one use case to another. A business parameter (a limit, a fee rate, a feature flag) reaches a use case through a gateway that reads it, or is a constant of the entity. Code shared by several gateways is a config (an HTTP client) or a plain function that is not a component, never another gateway. A gateway that needs the current time or a new id gets it in its input, which the use case asks for once, at its start. One gateway cannot call another: the sender of an outbox is a separate process, a controller that calls a use case. Configs are created first, then wrappers, then all gateways, then all use cases, then all plain actions; each is created after what it depends on.
 
 An application built on use cases and gateways has no use for a plain `@Action`; the architecture test of REVIEW_CHECKLIST.md says so.
 

@@ -69,8 +69,8 @@ Config adalah pengecualian KOM-2 ([komponen.md](komponen.md)): ia boleh membuka 
 | --- | --- |
 | Config lain | boleh menjadi dependency |
 | Wrapper | bergantung pada config (misalnya `TransactionWrapper` pada `Connection`) |
-| Gateway | bergantung pada config untuk sumber dayanya |
-| Use case | boleh bergantung pada config, tetapi biasanya tidak perlu |
+| Gateway | bergantung pada config untuk sumber dayanya, dan hanya pada config; kode bersama beberapa gateway (klien HTTP) adalah config |
+| Use case | tidak boleh bergantung pada config; parameter bisnis sampai lewat gateway yang membacanya, atau menjadi konstanta entity |
 
 ## Status implementasi
 

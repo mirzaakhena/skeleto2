@@ -103,11 +103,11 @@ Tidak ada yang bisa memastikan di mana operasi "sederhana" berakhir dan operasi 
 
 Aturan bisnis yang ditulis di use case hanya dipatuhi use case itu (lihat [entity.md](entity.md)). Use case boleh berisi keputusan alur, tidak boleh berisi aturan bisnis.
 
-### UC-4. Use case tidak pernah bergantung pada use case lain
+### UC-4. Use case tidak pernah bergantung pada use case lain, dan hanya bergantung pada gateway
 
 Use case adalah satu operasi bisnis dengan transaksinya sendiri, audit-nya sendiri, dan error-nya sendiri. Memanggil use case lain menyeret semua itu, menyatukan dua operasi yang berubah karena alasan berbeda, dan lama-lama membentuk rantai yang tidak bisa diikuti. Kalau dua use case berbagi satu langkah, aturan bersamanya masuk fungsi entity dan akses bersamanya masuk gateway.
 
-Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor, bersama kesalahan lain dan dengan pesan yang menyebut kedua use case. Use case juga tidak boleh bergantung pada `@Action` polos, yang bisa menjadi jembatan ke use case lain.
+Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor, bersama kesalahan lain dan dengan pesan yang menyebut kedua use case. Use case juga tidak boleh bergantung pada `@Action` polos, yang bisa menjadi jembatan ke use case lain, dan tidak boleh bergantung pada config. Strukturnya satu garis lurus: controller -> use case -> gateway -> config. Akibatnya, parameter bisnis (batas, tarif, feature flag) sampai ke use case lewat gateway yang membacanya, atau menjadi konstanta entity, tidak pernah lewat config.
 
 ### UC-5. Use case punya tipe Request dan Response sendiri dan tidak mengembalikan entity
 
@@ -131,7 +131,7 @@ Use case yang mengimpor implementasi gateway bergantung pada teknologinya, sehin
 
 ### UC-10. Setiap nilai tak terduga diminta dari gateway sekali, di awal use case
 
-Waktu sekarang, id baru, token acak, dan hash bergaram berbeda di setiap panggilan. Use case yang membuatnya sendiri tidak bisa dites dengan hasil pasti, dan use case yang meminta dua kali bisa mendapat dua "sekarang" yang berbeda dalam satu operasi. Diminta sekali di awal lalu diberikan ke fungsi entity sebagai nilai biasa, nilai-nilai itu membuat setiap fungsi sesudahnya deterministik. Gateway-nya dijelaskan di [gateway.md](gateway.md) (GW-2).
+Waktu sekarang, id baru, token acak, dan hash bergaram berbeda di setiap panggilan. Use case yang membuatnya sendiri tidak bisa dites dengan hasil pasti, dan use case yang meminta dua kali bisa mendapat dua "sekarang" yang berbeda dalam satu operasi. Diminta sekali di awal lalu diberikan ke fungsi entity sebagai nilai biasa, nilai-nilai itu membuat setiap fungsi sesudahnya deterministik. Gateway-nya dijelaskan di [gateway.md](gateway.md) (GW-2). Gateway lain yang butuh nilai itu menerimanya di inputnya, karena gateway tidak boleh memanggil gateway lain (GW-12).
 
 ### UC-11. Use case meneruskan context tanpa pernah membacanya
 
@@ -205,7 +205,7 @@ Use case mendapat data yang dibutuhkannya dari tesnya (lewat fake) atau dari gat
 | Gateway | bergantung padanya lewat tipe kontrak; meneruskan context ke setiap panggilan |
 | Use case lain | tidak pernah |
 | Controller | dipanggil olehnya; tidak tahu siapa yang memanggil |
-| Config | boleh bergantung pada config, tetapi biasanya tidak perlu: sumber daya dipakai gateway |
+| Config | tidak pernah: sumber daya dipakai gateway, dan parameter bisnis datang lewat gateway yang membacanya atau menjadi konstanta entity |
 | Wrapper | dibungkus semua wrapper; penanda tambahan (`@Transaction`, `@Audit`) memilih wrapper mana yang bekerja |
 
 ## Status implementasi

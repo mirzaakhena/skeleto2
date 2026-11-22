@@ -43,7 +43,6 @@ Implementasi, satu berkas per teknologi:
 /**
  * Locks and reads warehouses in the store.
  *
- * @Action
  * @Gateway
  */
 export function implLockWarehouses(database: Database): LockWarehouses {
@@ -77,9 +76,7 @@ Semua gateway satu teknologi untuk satu entity boleh berbagi satu berkas.
 
 ### GW-1. Setiap gateway ditandai sebagai gateway
 
-> **Rencana, belum terealisasi di kode.** `@Gateway` akan menjadi jenis bawaan Skeleto ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)), sehingga gateway cukup ditulis `@Gateway`.
->
-> **Yang berlaku sekarang:** tulis `@Action` lalu `@Gateway` sebagai penanda tambahan, dan daftarkan `Gateway` di `MARKERS`.
+Gateway ditulis dengan penanda utama `@Gateway`, tanpa `@Action` di sampingnya, dan tidak didaftarkan di `MARKERS` ([use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)).
 
 ### GW-2. Semua yang di luar proses dijangkau lewat gateway, termasuk nilai tak terduga
 
@@ -213,7 +210,7 @@ Outbox menjamin setiap pesan terkirim setidaknya sekali, bukan tepat sekali. Pen
 
 Gateway boleh dibangun dari gateway lain, tetapi tidak dari use case. Gateway dipanggil dari dalam use case, sehingga use case di belakang gateway berarti use case yang dipanggil use case lain (UC-4).
 
-> **Rencana, belum terealisasi di kode.** Dengan jenis bawaan, Skeleto akan menolak pelanggaran ini saat startup. **Sekarang** hanya tes arsitektur salinan dari `REVIEW_CHECKLIST.md` yang memeriksanya.
+Skeleto menolak pelanggaran ini saat startup, sebelum berkas aplikasi diimpor. Gateway juga tidak boleh bergantung pada `@Action` polos.
 
 ## Aturan opsional
 
@@ -261,7 +258,7 @@ Entity baru dari `new<Entity>` selalu lewat Insert, tidak pernah lewat Save. Sav
 
 | Bagian | Status |
 | --- | --- |
-| `@Gateway` sebagai jenis bawaan | rencana, belum terealisasi |
-| Penolakan gateway yang bergantung pada use case, saat startup | rencana, belum terealisasi; sekarang lewat tes arsitektur salinan |
+| `@Gateway` sebagai jenis bawaan | terealisasi |
+| Penolakan gateway yang bergantung pada use case, saat startup | terealisasi, dijaga Skeleto |
 | Optimisasi | dipimpin manusia (keputusan pemilik) |
 | Aturan lain di dokumen ini | dijaga reviewer |

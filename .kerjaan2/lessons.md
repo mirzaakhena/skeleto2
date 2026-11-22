@@ -27,3 +27,5 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - The README impl-name check scans the example with scanDirectory; its proving test expects implSaveWarehouses in src/gateway/memory/warehouse.ts
 - A new rule goes where the owner's placement answer puts it, also when that answer is recorded on a sibling ticket the assumption cites; change the numbering test to fit, never the placement to fit the test.
 - Practice-file rules (and their Why) must not cite the evidence of a particular application, even anonymously (e.g. 'a study of one application found 30 of 45 markers'); state the failure generically.
+- Removing or adding a line in the README stock_transfer.ts JSDoc moves the line number cited by the REVIEW_CHECKLIST example finding; test/readme.test.ts checks it
+- CLAUDE.md 1.1 names docs/ as the practice documents: a change to how components are written must update docs/konsep and docs/teknis too, not only BEST_PRACTICES.md and TECHNICAL_PRACTICES.md; grep docs/ for the old form before handing over

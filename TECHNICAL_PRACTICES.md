@@ -122,23 +122,22 @@ Why: Skeleto ignores paths, so nothing but this rule keeps them predictable. Wit
 /**
  * Moves units of stock from one warehouse to another.
  *
- * @Action
  * @UseCase
  * @Transaction
  * @Audit {"level": "info"}
  */
 ```
 
-Why: a marker's data runs on to the next marker, so a sentence after a marker becomes its data: after `@Action` that stops startup, after an additional marker it changes what wrappers read without a word. [Where markers go](README.md#rules-worth-knowing) in the README gives the whole rule.
+Why: a marker's data runs on to the next marker, so a sentence after a marker becomes its data: after `@UseCase` that stops startup, after an additional marker it changes what wrappers read without a word. [Where markers go](README.md#rules-worth-knowing) in the README gives the whole rule.
 
 ### T10. The allowed markers are kept in one exported constant, which is always passed to `Skeleto.start` (Mandatory)
 
-The list holds at least `UseCase`, `Gateway` and `Transaction`, and every other marker the application reads.
+The list holds every additional marker the application reads, `Transaction` for one. `UseCase` and `Gateway` are main markers and are not in it.
 
 ```ts
 // src/markers.ts (excerpt)
 /** The additional markers this application allows. Startup refuses any other, so a misspelt marker cannot pass unnoticed. */
-export const MARKERS = ["UseCase", "Gateway", "Transaction", "Audit"];
+export const MARKERS = ["Transaction", "Audit"];
 ```
 
 ```ts
@@ -161,7 +160,7 @@ export function implAuditWrapper(logger: Logger): AuditWrapper {
     if (!marked(metadata, "Audit")) return handler;
 ```
 
-A marker that only tells use cases from gateways, such as `@UseCase` and `@Gateway`, needs no wrapper.
+A main marker such as `@UseCase` or `@Gateway` is not an additional marker: a wrapper reads it from `metadata.mainDecorator.name`.
 
 Why: Skeleto offers every action to every wrapper. Returning the handler itself adds nothing to the actions the marker is not on, not even a function call. With one wrapper per marker, what a marker means is written in one place, and removing the marker from an action removes exactly that behaviour.
 
@@ -182,7 +181,7 @@ export type GatewayObserver = (call: { gateway: string; input: unknown; proceed:
  */
 export function implGatewayWrapper(): GatewayWrapper {
   return (handler, metadata) => {
-    if (!marked(metadata, "Gateway")) return handler;
+    if (metadata.mainDecorator.name !== "Gateway") return handler;
     return (ctx, input) => {
       const observer: GatewayObserver | undefined = ctx.data.gatewayObserver;
       // Nobody observes: the call goes through untouched.
@@ -307,10 +306,10 @@ Why: the container is looked up by a string and returns an untyped instance. Doi
 
 This is a guarantee of how an application is built, not a rule for its code, so it has no number. A tool that reads or checks an application from outside may learn from its container, after `Skeleto.start` with the application's `MARKERS` (T10), and rely on all of this:
 
-- `getContainer()` lists every component, `@Config`, `@Wrapper` and `@Action`, under its name (T3).
+- `getContainer()` lists every component, `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` and `@Action`, under its name (T3).
 - `getMetadata()` of a component gives its `dependencies`, the names of the components it asks for, in parameter order (T4, T6), and its `additionalDecorators`, the markers with their data.
 - The name of a component is the name of its type (T3), so the tool finds the type of a component by looking the name up in the container.
-- A use case is told from a gateway by its `@UseCase` and `@Gateway` markers (B5), and a wrapper is named after the marker it reads (T7, T11).
+- A use case is told from a gateway by its main marker, `metadata.mainDecorator.name` (B5), and a wrapper is named after the marker it reads (T7, T11).
 - A tool that observes a run finds the observer at `ctx.data.gatewayObserver`, when the application has the wrapper of T26.
 
 A tool takes nothing else from the application, and the container is read once, at its start (T17). The architecture test and the gap test of [REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md) are such tools.
@@ -373,7 +372,7 @@ Why: a test whose input changes from run to run cannot state its expected output
 
 ### T23. During development a gateway may be a dummy, in memory or hardcoded, behind the same contract as the real one (Optional)
 
-A dummy gateway is a real component: it carries `@Action` and `@Gateway`, returns the type of the contract, and Skeleto starts it like any other. It keeps its data in memory or hardcodes it, and it is replaced by the real implementation when the layer behind it is built. A fake of T18 is another thing: it is written by hand inside a test and Skeleto never starts it.
+A dummy gateway is a real component: it carries `@Gateway`, returns the type of the contract, and Skeleto starts it like any other. It keeps its data in memory or hardcodes it, and it is replaced by the real implementation when the layer behind it is built. A fake of T18 is another thing: it is written by hand inside a test and Skeleto never starts it.
 
 Why: core-first development builds the use cases before the stores and services they depend on. A dummy behind the final contract lets the application start and run now, and the use cases are written against the contract they will keep, so replacing the dummy changes no use case. Without it the Core would wait for the layers that depend on it.
 

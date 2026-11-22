@@ -8,16 +8,16 @@ This file is the conceptual half of the practices. The technical half, how to us
 
 An application on Skeleto is described at two levels.
 
-- **The technical level** is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper` and `@Action`, which kind may depend on which, the order in which components are created, and the wrapping of every action by every wrapper. A mistake at this level stops startup.
-- **The architectural level** is what an application builds on top: entities, use cases, gateways. Skeleto does not know about any of them. A use case and a gateway are both `@Action` to it, and an entity is not a component at all.
+- **The technical level** is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` and `@Action`, which kind may depend on which, the order in which components are created, and the wrapping of every action by every wrapper. A mistake at this level stops startup.
+- **The architectural level** is what an application builds on top: entities, use cases, gateways. Skeleto knows use cases and gateways as kinds of action, and guards the two rules between them (B8 and the rule that a gateway never depends on a use case); an entity is not a component at all.
 
-It is a matter of mechanism versus policy: Skeleto provides the mechanism, and the policy, how the application divides its work, is yours. The rest of this file recommends one.
+Skeleto provides the mechanism and one standard structure of actions; the rest of the policy, how the application divides its work, is yours. The rest of this file recommends one.
 
 | Concept | Expressed as | What Skeleto checks |
 | --- | --- | --- |
 | Entity | a plain type and plain functions; no marker, not a component | nothing |
-| Use case | `@Action` | the rules of an action; not that it is a use case |
-| Gateway | `@Action` | the rules of an action; not that it is a gateway |
+| Use case | `@UseCase` | the rules of an action, and that it depends on configs and gateways only |
+| Gateway | `@Gateway` | the rules of an action, and that it depends on configs and gateways only |
 | Resource, such as a database or settings | `@Config` | the rules of a config |
 | Cross-cutting concern, such as logging or transactions | `@Wrapper`, chosen per action by additional markers such as `@Transaction` | the rules of a wrapper, and the additional markers against `decorators` |
 
@@ -71,15 +71,14 @@ Why: bending an existing use case to hand one screen the data it wants puts the 
 
 ## Use cases and gateways
 
-A **use case** is an `@Action` that stands for one business operation of your application: something a user, a job or another system asks for. A **gateway** is an `@Action` that reaches something outside the process (a store, a service, the clock) on the use case's behalf.
+A **use case** is a `@UseCase` that stands for one business operation of your application: something a user, a job or another system asks for. A **gateway** is a `@Gateway` that reaches something outside the process (a store, a service, the clock) on the use case's behalf.
 
-### B5. Mark every use case `@UseCase` and every gateway `@Gateway`, next to `@Action` (Mandatory)
+### B5. Mark every use case `@UseCase` and every gateway `@Gateway`, and write no plain `@Action` (Mandatory)
 
-Why: to Skeleto both are actions, so the difference has to be written down where wrappers, checks and readers can see it. A name or a folder is a convention that drifts; a marker is data that a wrapper reads (a logging wrapper that wraps use cases only, for example) and that a test can count. Every action is exactly one of the two.
+Why: both are kinds of action that Skeleto knows, so the difference is written as the main marker, where Skeleto, wrappers, checks and readers can see it. A name or a folder is a convention that drifts; the marker is data that Skeleto checks and that a wrapper reads from `metadata.mainDecorator.name`. Skeleto still allows a plain `@Action`, free of these rules, and a plain action may depend on a use case; so a plain action between two use cases would bridge them. An application that has use cases and gateways therefore has every action as one of the two.
 
 ```ts
 // src/usecase/stock/stock_transfer.ts (excerpt)
- * @Action
  * @UseCase
  * @Transaction
  * @Audit {"level": "info"}
@@ -91,7 +90,6 @@ Why: to Skeleto both are actions, so the difference has to be written down where
 /**
  * Locks and reads warehouses in the store.
  *
- * @Action
  * @Gateway
  */
 export function implLockWarehouses(database: Database): LockWarehouses {
@@ -134,7 +132,7 @@ The use case decides nothing about stock; `Warehouse.transfer` does (B13).
 
 Why: a use case is one business operation with its own transaction, its own audit and its own errors. Calling another one drags in all of those, joins two operations that change for different reasons, and soon builds a chain nobody can follow. When two use cases share a step, the shared rule belongs in an entity function and the shared access in a gateway.
 
-Skeleto still lets an action depend on another action, and this rule does not change that: a gateway may be built from other gateways. The rule only keeps use cases apart from one another.
+Skeleto refuses this at startup, before any file of the application is imported. A gateway may still be built from other gateways, and a gateway never depends on a use case, since a use case behind a gateway is a use case called by another one.
 
 ### B9. A use case has its own Request and Response types and does not return entities (Mandatory)
 

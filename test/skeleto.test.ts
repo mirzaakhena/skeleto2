@@ -6,7 +6,7 @@ import { DEFAULT_EXCLUDE, FuncInstanceMetadata, Skeleto, newContext } from "../s
 import type { SkeletoOptions } from "../src/index.js";
 import { withFixture } from "./fixture.js";
 
-type Kind = "Config" | "Wrapper" | "Action";
+type Kind = "Config" | "Wrapper" | "Action" | "UseCase" | "Gateway";
 type Shared = { calls: [string, unknown[]][]; raw: Record<string, unknown>; seen: [string, unknown][]; fail?: boolean };
 
 // Fixture files are real modules, so the only way they can report back to a test is a global.
@@ -28,6 +28,8 @@ function component(kind: Kind, name: string, dependencies: string[] = [], result
   const defaults: Record<Kind, string> = {
     Config: `"${name}"`,
     Action: `async (ctx: any) => { ctx.data.trace.push("${name}"); return "${name}"; }`,
+    UseCase: `async (ctx: any) => { ctx.data.trace.push("${name}"); return "${name}"; }`,
+    Gateway: `async (ctx: any) => { ctx.data.trace.push("${name}"); return "${name}"; }`,
     Wrapper: `(handler: any, metadata: any) => { ${S}.seen.push(["${name}", metadata]); return async (ctx: any, request: any) => { ctx.data.trace.push("${name}"); return handler(ctx, request); }; }`,
   };
   const call = `${S}.calls.push(["${name}", [${dependencies.map((_, index) => `p${index}`).join(", ")}]]);`;
@@ -79,7 +81,13 @@ const VIOLATIONS: [Kind, Kind, string][] = [
   ["Config", "Wrapper", "@Config only"],
   ["Wrapper", "Action", "@Config only"],
   ["Wrapper", "Wrapper", "@Config only"],
-  ["Action", "Wrapper", "@Config and @Action only"],
+  ["Action", "Wrapper", "@Config, @Gateway, @UseCase and @Action only"],
+  ["UseCase", "UseCase", "@Config and @Gateway only"],
+  ["UseCase", "Action", "@Config and @Gateway only"],
+  ["UseCase", "Wrapper", "@Config and @Gateway only"],
+  ["Gateway", "UseCase", "@Config and @Gateway only"],
+  ["Gateway", "Action", "@Config and @Gateway only"],
+  ["Gateway", "Wrapper", "@Config and @Gateway only"],
 ];
 
 for (const [kind, dependencyKind, allowed] of VIOLATIONS) {
@@ -92,6 +100,75 @@ for (const [kind, dependencyKind, allowed] of VIOLATIONS) {
     assert.deepEqual(shared.skeletoTest.calls, []);
   });
 }
+
+test("a use case that depends on a use case, and a gateway that depends on a use case, stop startup before any import, together with another mistake", async () => {
+  const boom = `throw new Error("module was imported");\n`;
+  const error = await failure({
+    "a.ts": boom + component("UseCase", "Transfer", ["Count"]) + component("UseCase", "Count") + component("Gateway", "Notify", ["Count"]) + component("Action", "Other", ["Nowhere"]),
+  });
+  const lines = problems(error);
+  assert.equal(lines.length, 3, error.message);
+  assert.ok(lines.includes("- Transfer: is a @UseCase and depends on Count, which is a @UseCase; a @UseCase may depend on @Config and @Gateway only"), error.message);
+  assert.ok(lines.includes("- Notify: is a @Gateway and depends on Count, which is a @UseCase; a @Gateway may depend on @Config and @Gateway only"), error.message);
+  assert.ok(lines.some((line) => /Other: dependency Nowhere is not a known component/.test(line)));
+  assert.doesNotMatch(error.message, /module was imported/);
+  assert.deepEqual(shared.skeletoTest.calls, []);
+});
+
+test("a function marked @UseCase alone, or @Gateway alone, is a component that starts like an action", async () => {
+  const state = reset();
+  const files = { "a.ts": component("Gateway", "Store") + component("UseCase", "Transfer", ["Store"], `async (ctx: any, request: any) => p0(ctx, request)`) };
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual([...container.keys()].sort(), ["Store", "Transfer"]);
+    assert.equal(container.get("Store")?.getInstance(), state.raw["Store"]);
+    assert.deepEqual(await trace(container.get("Transfer")?.getInstance()), ["Store"]);
+  });
+});
+
+test("a plain @Action may depend on a use case, a gateway and another action; a use case and a gateway may depend on gateways and configs", async () => {
+  reset();
+  const files = {
+    "a.ts": component("Config", "Base") + component("Gateway", "Store", ["Base"]) + component("Gateway", "Cache", ["Store", "Base"]),
+    "b.ts": component("UseCase", "Transfer", ["Cache", "Base"]) + component("Action", "Report", ["Transfer", "Store", "Helper", "Base"]) + component("Action", "Helper"),
+  };
+  await withFixture(files, async (directory) => {
+    assert.equal((await Skeleto.start(directory)).getContainer().size, 6);
+  });
+});
+
+test("a use case or a gateway that depends on a plain @Action stops startup, naming both", async () => {
+  const error = await failure({ "a.ts": component("Action", "Plain") + component("UseCase", "Transfer", ["Plain"]) + component("Gateway", "Store", ["Plain"]) });
+  const lines = problems(error);
+  assert.equal(lines.length, 2, error.message);
+  assert.ok(lines.some((line) => /Transfer: is a @UseCase and depends on Plain, which is a @Action/.test(line)), error.message);
+  assert.ok(lines.some((line) => /Store: is a @Gateway and depends on Plain, which is a @Action/.test(line)), error.message);
+});
+
+test("a function with two of @Action, @UseCase and @Gateway is a mistake naming it, reported with the others", async () => {
+  const cases: [string, string][] = [
+    ["@Action\n * @UseCase", "@Action, @UseCase"],
+    ["@UseCase\n * @Gateway", "@UseCase, @Gateway"],
+    ["@Gateway\n * @Action", "@Gateway, @Action"],
+  ];
+  for (const [marker, written] of cases) {
+    const error = await failure({ "a.ts": component("UseCase", "Doubled", [], undefined, marker) + component("Action", "Other", ["Nowhere"]) });
+    const lines = problems(error);
+    assert.equal(lines.length, 2, error.message);
+    assert.ok(lines.some((line) => line.includes("Doubled") && line.includes(`more than one main marker (${written})`)), error.message);
+    assert.ok(lines.some((line) => line.includes("Other: dependency Nowhere")), error.message);
+  }
+});
+
+test("a use case or a gateway that returns a promise, or a result that is not a function, is a mistake like a plain action", async () => {
+  const promised = await failure({ "a.ts": `/** @UseCase */\nexport async function makeLate(): Promise<Late> { return null as any; }\n` + component("Gateway", "Store", [], "undefined") });
+  assert.match(promised.message, /makeLate .*is marked @UseCase but returns Promise<Late>/);
+  const state = reset();
+  await withFixture({ "a.ts": component("Gateway", "Store", [], "undefined") }, async (directory) => {
+    await assert.rejects(Skeleto.start(directory), /Store: function makeStore .* returned undefined; a @Gateway must return a function/);
+  });
+  assert.ok(state.calls.length > 0);
+});
 
 test("every allowed kind of dependency starts", async () => {
   reset();
@@ -213,7 +290,7 @@ test("a bad option on a directory without components reports the directory as we
   const lines = problems(error);
   assert.equal(lines.length, 2, error.message);
   assert.equal(lines[0], "- options.exclude: must be a list of texts, received null");
-  assert.match(lines[1] ?? "", /: no \.ts file with a @Config, @Wrapper or @Action function was found/);
+  assert.match(lines[1] ?? "", /: no \.ts file with a @Config, @Wrapper, @Action, @UseCase or @Gateway function was found/);
 });
 
 test("with a text as options.decorators, a shorter marker name contained in that text is not accepted", async () => {
@@ -320,7 +397,7 @@ test("a directory whose only .ts files are excluded is reported like a directory
   const empty = await failure({ "notes.txt": "@Config" });
   const excluded = await failure({ "a.test.ts": component("Config", "A"), "b.spec.ts": component("Config", "B"), "c.d.ts": declared, "node_modules/d.ts": component("Config", "D") });
   const shape = (error: Error): string => error.message.replace(/\S*skeleto-\w+/g, "<directory>");
-  assert.match(excluded.message, /: no \.ts file with a @Config, @Wrapper or @Action function was found/);
+  assert.match(excluded.message, /: no \.ts file with a @Config, @Wrapper, @Action, @UseCase or @Gateway function was found/);
   assert.equal(shape(excluded), shape(empty));
   assert.deepEqual(shared.skeletoTest.calls, []);
 });
@@ -354,6 +431,48 @@ test("configs are created first, then wrappers, then actions, dependencies first
     assert.equal(reportArguments[1], "Database");
     assert.equal(reportArguments[2], instance("SaveUser"));
   });
+});
+
+test("gateways are created before use cases, and use cases before plain actions, each after its dependencies and otherwise in scan order", async () => {
+  const state = reset();
+  const files = {
+    // Written in the opposite order, so that scan order alone would give the wrong result.
+    "a.ts": component("Action", "Plain") + component("UseCase", "Transfer", ["Store"]) + component("UseCase", "Count") + component("Gateway", "Store", ["Cache"]) + component("Gateway", "Cache"),
+    "b.ts": component("Config", "Settings") + component("Wrapper", "Wrap"),
+  };
+  await withFixture(files, async (directory) => {
+    await Skeleto.start(directory);
+    assert.deepEqual(state.calls.map(([name]) => name), ["Settings", "Wrap", "Cache", "Store", "Transfer", "Count", "Plain"]);
+  });
+});
+
+test("the metadata of a use case and of a gateway tells the kind by its main marker, and a wrapper can read it", async () => {
+  const state = reset();
+  const files = { "a.ts": component("Wrapper", "Audit") + component("Gateway", "Store") + component("UseCase", "Transfer", ["Store"], undefined, "@UseCase\n * @Transaction") + component("Action", "Plain") };
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual(container.get("Store")?.getMetadata().mainDecorator, { name: "Gateway", data: undefined });
+    assert.deepEqual(container.get("Transfer")?.getMetadata().mainDecorator, { name: "UseCase", data: undefined });
+    assert.deepEqual(container.get("Transfer")?.getMetadata().additionalDecorators, [{ name: "Transaction", data: undefined }]);
+    // The wrapper was offered each kind of action, and tells them apart without an additional marker.
+    const offered = state.seen.map(([, metadata]) => [(metadata as any).name, (metadata as any).mainDecorator.name]);
+    assert.deepEqual(offered, [["Store", "Gateway"], ["Transfer", "UseCase"], ["Plain", "Action"]]);
+    // Every kind of action is wrapped, and what is injected is the wrapped one.
+    assert.deepEqual(await trace(container.get("Store")?.getInstance()), ["Audit", "Store"]);
+    assert.deepEqual(await trace(container.get("Transfer")?.getInstance()), ["Audit", "Transfer"]);
+    assert.notEqual(container.get("Store")?.getInstance(), state.raw["Store"]);
+    assert.equal(new Map(state.calls).get("Transfer")?.[0], container.get("Store")?.getInstance());
+  });
+});
+
+test("the new main markers join the other checks of main markers: a lowercase near-marker and a misplaced one stop startup with options.decorators", async () => {
+  const files = {
+    "a.ts": component("UseCase", "Fine") + `/**\n * Counts.\n *\n * @usecase\n */\nexport function countThings(): Counted { return null as any; }\n`,
+    "b.ts": `/** @Gateway */\nexport const makeLost = (): Lost => null as any;\n`,
+  };
+  const error = await failure(files, { decorators: ["Transaction"] });
+  assert.match(error.message, /countThings \(a\.ts\): has the tag @usecase.*write @UseCase/);
+  assert.match(error.message, /makeLost \(b\.ts\): is marked @Gateway .*only top-level function declarations can be components/);
 });
 
 test("every wrapper wraps every action and receives the action's metadata", async () => {
@@ -413,7 +532,7 @@ test("an action injected into another action is the wrapped version", async () =
 
 // ---- container and instances (4.8) ----
 
-test("the container holds every component of all three kinds under its name, with instance and metadata", async () => {
+test("the container holds every component of all kinds under its name, with instance and metadata", async () => {
   const state = reset();
   const files = {
     "config/log.ts": component("Config", "winston.Logger"),

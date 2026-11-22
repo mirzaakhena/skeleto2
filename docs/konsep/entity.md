@@ -157,4 +157,4 @@ Constraint di penyimpanan (nilai tidak boleh negatif, id harus unik) menangkap y
 
 ## Status implementasi
 
-Tidak ada yang bergantung pada rencana jenis bawaan (lihat [use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)). Semua aturan di sini dijaga reviewer, bukan mesin.
+Tidak ada yang bergantung pada jenis bawaan `@UseCase` dan `@Gateway` (lihat [use-case-gateway-bawaan.md](../teknis/use-case-gateway-bawaan.md)). Semua aturan di sini dijaga reviewer, bukan mesin.

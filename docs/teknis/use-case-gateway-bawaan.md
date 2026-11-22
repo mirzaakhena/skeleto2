@@ -1,13 +1,12 @@
 # `@UseCase` dan `@Gateway` sebagai jenis bawaan
 
-> **Seluruh dokumen ini adalah rencana dan belum terealisasi di kode.** Pemilik memutuskan (2026-11-22) bahwa `@UseCase` dan `@Gateway` menjadi bagian inti Skeleto, bukan preset terpisah (`TEMUAN.md`, temuan 12). Sampai kode dibuat, yang berlaku adalah cara sekarang yang disebut di setiap dokumen.
+> **Sudah terealisasi di kode** (tiket 261122101201). `CLAUDE.md` bagian 4.6 dan 4.7 adalah kontraknya; dokumen ini menjelaskan alasannya.
 
 ## Definisi
 
 `@UseCase` dan `@Gateway` adalah **jenis khusus `@Action`** yang dikenal langsung oleh Skeleto. Keduanya action, jadi semua perilaku action berlaku: tahap luar sinkron, menghasilkan handler, dan dibungkus semua wrapper. Bedanya, Skeleto juga menjaga aturan dependency keduanya.
 
 ```ts
-// Rencana, belum bisa dijalankan
 /**
  * Moves units of stock from one warehouse to another.
  *
@@ -21,18 +20,11 @@ export function implStockTransfer(lockWarehouses: LockWarehouses, saveWarehouses
 
 ## Kenapa ada
 
-Aturan inti clean architecture saat ini hanya dijaga dokumen dan kode salinan:
-
-| Aturan | Dijaga oleh, sekarang |
-| --- | --- |
-| Use case tidak bergantung pada use case (UC-4) | tes arsitektur salinan, ditambah wrapper penjaga opsional yang baru menangkapnya setelah impor |
-| Gateway tidak bergantung pada use case (GW-12) | tes arsitektur salinan |
-
-Kode salinan bisa lupa disalin, diubah, atau tertinggal versinya. Kode buatan AI juga tidak deterministik dalam mematuhi dokumen. Dengan jenis bawaan, aturan-aturan itu dijaga mesin: dilaporkan saat startup, sebelum berkas aplikasi diimpor, bersama kesalahan lain.
+Sebelumnya aturan inti clean architecture hanya dijaga dokumen, kode salinan (tes arsitektur), dan wrapper penjaga opsional yang baru menangkap pelanggaran setelah berkas aplikasi diimpor. Kode salinan bisa lupa disalin, diubah, atau tertinggal versinya, dan kode buatan AI tidak deterministik dalam mematuhi dokumen. Dengan jenis bawaan, aturan UC-4 dan GW-12 dijaga mesin: dilaporkan saat startup, sebelum berkas aplikasi diimpor, bersama kesalahan lain.
 
 Pemilik memilih jenis bawaan, bukan preset, karena tujuan utama Skeleto adalah konsistensi (`CLAUDE.md` bagian 1.1): satu cara saja, tanpa konfigurasi tambahan. Mekanisme jenis yang umum juga butuh kode lebih banyak daripada dua jenis tetap.
 
-## Bentuk yang direncanakan
+## Aturan dependency
 
 | Jenis | Boleh bergantung pada |
 | --- | --- |
@@ -40,22 +32,21 @@ Pemilik memilih jenis bawaan, bukan preset, karena tujuan utama Skeleto adalah k
 | `@Wrapper` | `@Config` |
 | `@UseCase` | `@Config`, `@Gateway` |
 | `@Gateway` | `@Config`, `@Gateway` |
-| `@Action` | `@Config`, `@Action` (seperti sekarang; lihat pertanyaan terbuka di bawah) |
+| `@Action` | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
-## Yang belum diputuskan
+Keputusan pemilik (2026-11-22): `@UseCase` dan `@Gateway` tidak boleh bergantung pada `@Action` polos, supaya `@Action` polos tidak menjadi jembatan antar use case. Urutan pembuatan: semua gateway, lalu semua use case, lalu semua action polos.
 
-- **Dependency antara `@Action` polos dan dua jenis baru.** Bolehkah `@Action` polos bergantung pada `@Gateway` atau `@UseCase`, dan sebaliknya?
-- **Kontrak dengan alat luar.** Bagian mana dari kebutuhan penjejak scenario-explorer yang diformalkan di Skeleto (`TEMUAN.md`, temuan 14). Pemilik ingin menelitinya lebih dalam: yang hanya untuk penjejak tidak dibuat di Skeleto, tetapi yang bermanfaat umum boleh diformalkan.
+## Yang masih terbuka
+
+- **Kontrak dengan alat luar.** Bagian mana dari kebutuhan penjejak scenario-explorer yang diformalkan di Skeleto (`TEMUAN.md`, temuan 14). Penjejak itu masih membaca use case sebagai action bertanda `@UseCase` dan perlu tiket sendiri.
 - **Wrapper siap pakai** (transaksi, pengamat gateway): tetap kode contoh di README, atau disediakan Skeleto.
 - **Controller:** apakah Skeleto juga akan mengenalnya (belum dibahas).
 
 `Context` tetap di inti (keputusan pemilik, 2026-11-22).
 
-## Dampak yang harus ditangani saat dibuat
+## Yang berubah saat dibuat
 
-- Prinsip **"Hanya binding"** di `CLAUDE.md` bagian 2 harus ditulis ulang, karena Skeleto akan mengenal konsep use case dan gateway.
-- `metadata.mainDecorator.name` akan berisi `UseCase` atau `Gateway`, bukan `Action`. Wrapper dan alat luar yang membaca nama itu ikut berubah.
-- `UseCase` dan `Gateway` keluar dari `MARKERS` aplikasi.
-- `CLAUDE.md` bagian 4.2, 4.4, dan 4.6, `README.md`, dan tes arsitektur di `REVIEW_CHECKLIST.md` perlu disesuaikan.
-- API publik Skeleto berubah (`CLAUDE.md` bagian 5).
+- Jenis dibaca dari `metadata.mainDecorator.name` (`UseCase`, `Gateway`, `Action`), tanpa field baru. Wrapper membedakan use case dari gateway lewat nama itu.
+- `UseCase` dan `Gateway` tidak ada lagi di `MARKERS` aplikasi.
+- Tes arsitektur di `REVIEW_CHECKLIST.md` tinggal satu pemeriksaan: tidak ada `@Action` polos (B5). Wrapper penjaga dihapus.
 - Ukuran inti bertambah; pemilik sudah minta diingatkan soal ukuran inti (`TEMUAN.md`, temuan 1).

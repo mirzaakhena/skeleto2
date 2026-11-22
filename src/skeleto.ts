@@ -9,8 +9,15 @@ import type { SkeletoOptions, WrapperHandler } from "./type.js";
 
 type Container = Map<string, FuncInstanceMetadata>;
 
-// Creation order of the kinds, and for each kind the kinds it may depend on.
-const ALLOWED_DEPENDENCIES: Record<string, string[]> = { Config: ["Config"], Wrapper: ["Config"], Action: ["Config", "Action"] };
+// Creation order of the kinds, and for each kind the kinds it may depend on. A use case never reaches another use case, and neither kind
+// reaches a plain action, which would bridge two use cases; a plain action is free.
+const ALLOWED_DEPENDENCIES: Record<string, string[]> = {
+  Config: ["Config"],
+  Wrapper: ["Config"],
+  Gateway: ["Config", "Gateway"],
+  UseCase: ["Config", "Gateway"],
+  Action: ["Config", "Gateway", "UseCase", "Action"],
+};
 
 export class Skeleto {
   private static readonly started = new Map<string, Promise<Skeleto>>();
@@ -57,14 +64,15 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
   for (const found of functions) if (!byName.has(found.metadata.name)) byName.set(found.metadata.name, found);
 
   // The scanner returns nothing for a directory without .ts files, and a directory without any component has nothing to bind either.
-  if (functions.length === 0 && scanned.errors.length === 0) errors.push(`${root}: no .ts file with a @Config, @Wrapper or @Action function was found`);
+  if (functions.length === 0 && scanned.errors.length === 0) errors.push(`${root}: no .ts file with a @Config, @Wrapper, @Action, @UseCase or @Gateway function was found`);
   for (const { metadata } of functions) {
     const kind = metadata.mainDecorator.name;
     for (const dependency of metadata.dependencies) {
       const dependencyKind = byName.get(dependency)?.metadata.mainDecorator.name;
       // An unknown dependency is reported by the sorter below.
       if (dependencyKind === undefined || ALLOWED_DEPENDENCIES[kind]?.includes(dependencyKind)) continue;
-      const allowed = ALLOWED_DEPENDENCIES[kind]?.map((name) => `@${name}`).join(" and ");
+      const names = ALLOWED_DEPENDENCIES[kind]?.map((name) => `@${name}`) ?? [];
+      const allowed = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names.at(-1)}` : names.join();
       errors.push(`${metadata.name}: is a @${kind} and depends on ${dependency}, which is a @${dependencyKind}; a @${kind} may depend on ${allowed} only`);
     }
   }
@@ -96,7 +104,7 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
         }
         if (kind !== "Config" && typeof instance !== "function") notFunction = `${at} returned ${describe(instance)}; a @${kind} must return a function`;
         // Applied from the innermost to the outermost: the wrapper applied last is the one a caller enters first.
-        for (const wrapper of kind === "Action" && !notFunction ? wrappers : []) {
+        for (const wrapper of isWrapped(kind) && !notFunction ? wrappers : []) {
           step = `wrapping it with ${wrapper.name}`;
           instance = wrapper.wrap(instance, metadata);
           if (typeof instance === "function") continue;
@@ -117,6 +125,11 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
     if (kind === "Wrapper") wrappers.sort((a, b) => a.ordinal - b.ordinal || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
   }
   return container;
+}
+
+/** Every kind of action is wrapped, and the injected one is the wrapped one. */
+function isWrapped(kind: string): boolean {
+  return kind !== "Config" && kind !== "Wrapper";
 }
 
 function describe(value: unknown): string {

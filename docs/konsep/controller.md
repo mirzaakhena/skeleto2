@@ -84,4 +84,4 @@ Membengkokkan use case yang sudah ada supaya memberi satu screen data yang diing
 
 ## Status implementasi
 
-Controller tidak bergantung pada rencana jenis bawaan. Belum diputuskan apakah Skeleto kelak akan mengenal controller. Semua aturan di sini dijaga reviewer.
+Controller tidak terpengaruh jenis bawaan `@UseCase` dan `@Gateway`. Belum diputuskan apakah Skeleto kelak akan mengenal controller. Semua aturan di sini dijaga reviewer.

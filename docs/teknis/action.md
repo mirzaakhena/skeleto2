@@ -1,4 +1,4 @@
-# Action
+# Action: bentuk bersama use case dan gateway
 
 ## Definisi
 
@@ -20,7 +20,7 @@ Action adalah mekanisme umum untuk "sesuatu yang dipanggil per permintaan". Skel
 | Use case | `@UseCase` |
 | Gateway | `@Gateway` |
 
-Setiap action aplikasi adalah salah satu dari keduanya, sehingga tidak ada action yang lolos dari aturan dependency use case dan gateway.
+Setiap action aplikasi adalah salah satu dari keduanya: operasi bisnis ditandai `@UseCase` dan jalan keluar ditandai `@Gateway`. Hanya ada dua jenis, sehingga tidak ada action yang lolos dari aturan dependency use case dan gateway, dan Skeleto sendiri yang menjaganya saat startup (keputusan pemilik, 2026-11-22). Action yang keduanya sekaligus melanggar UC-4 atau GW-12.
 
 ## Use case dan gateway: struktur sama, konsep berbeda
 
@@ -113,11 +113,7 @@ Action mengikuti aturan umum di [komponen.md](komponen.md). Nama dan berkas use 
 
 ## Aturan wajib
 
-### ACT-1. Setiap action adalah use case atau gateway: operasi bisnis ditulis sebagai use case dan jalan keluar sebagai gateway
-
-Operasi bisnis ditandai `@UseCase` dan jalan keluar ditandai `@Gateway`. Action yang keduanya sekaligus melanggar UC-4 atau GW-12.
-
-Skeleto sendiri yang menjaganya saat startup (keputusan pemilik, 2026-11-22): hanya ada dua jenis action, sehingga tidak ada action yang bisa menjadi jembatan diam-diam dari satu use case ke use case lain dan lolos dari aturan use case dan gateway.
+Nomor 1 dari awalan ACT sudah tidak dipakai (aturannya tinggal kalimat penjelas di bagian "Kenapa ada") dan tidak akan dipakai ulang.
 
 ### ACT-2. Handler hanya menerima context dan input; semua yang lain datang sebagai dependency
 

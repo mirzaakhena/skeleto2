@@ -93,7 +93,7 @@ Selain itu ada satu tanda di dalam teks:
 | B2 | UC-6 | | T2 | KOM-2, CFG-3 | | P2 | DEV-3 |
 | B3 | CTL-4 | | T3 | KOM-3 | | P3 | DEV-4 |
 | B4 | CTL-6 | | T4 | KOM-4 | | P4 | DEV-5 |
-| B5 | UC-1, GW-1, ACT-1 | | T5 | KOM-5 | | P5 | DEV-6 |
+| B5 | UC-1, GW-1 | | T5 | KOM-5 | | P5 | DEV-6 |
 | B6 | UC-2 | | T6 | KOM-6 | | P6 | DEV-7 |
 | B7 | UC-3 | | T7 | KOM-7 | | P7 | DEV-8 |
 | B8 | UC-4, GW-12 | | T8 | KOM-8 | | P8 | DEV-11 |
@@ -126,6 +126,8 @@ Selain itu ada satu tanda di dalam teks:
 | B35 | GW-11 | | | | | | |
 | B36 | ENT-6 | | | | | | |
 | B37 | ENT-7 | | | | | | |
+
+Nomor 1 dari awalan ACT ("setiap action adalah use case atau gateway") dihapus sebagai aturan karena selalu benar dengan sendirinya; nomornya tidak dipakai ulang.
 
 Aturan yang dirumuskan baru dari isi lama: CFG-3 (bagian pengecualian T2), GW-12 (bagian B8), dan UTG-2 (bagian B25). Aturan yang tidak punya padanan lama: ACT-2, ACT-3 (keputusan pemilik tentang context), WRP-5 (urutan lapisan wrapper), WRP-7 (wrapper yang urutannya penting ditulis di satu berkas), dan UC-16 (setiap use case ditandai `@Transaction`). DEV-13 menuliskan keputusan pemilik tentang urutan kerja di dalam satu area.
 

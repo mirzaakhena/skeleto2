@@ -607,7 +607,7 @@ test("REVIEW_CHECKLIST.md lists every rule of docs/ exactly once, with its headi
   // One table for each rule document of docs/.
   for (const [path] of RULE_FILES) assert.ok(checklist.includes(`](${path})`), `REVIEW_CHECKLIST.md has no table for ${path}`);
   // A machine checks only what Skeleto at startup and the gap test check; everything else is left to the reviewer, or, for the process, to the owner.
-  assert.deepEqual(rows.filter(({ checker }) => checker === "Mesin").map(({ number }) => number), ["UC-1", "UC-4", "GW-1", "GW-12", "ACT-1", "WRP-5", "UTG-3"]);
+  assert.deepEqual(rows.filter(({ checker }) => checker === "Mesin").map(({ number }) => number), ["UC-1", "UC-4", "GW-1", "GW-12", "WRP-5", "UTG-3"]);
   assert.deepEqual(rows.filter(({ checker }) => checker === "Proses").map(({ number }) => number).filter((number) => !number.startsWith("DEV-")), []);
   // The rule that a gateway depends on configs only is listed, and so are the rules of 2026-11-22.
   for (const number of ["GW-12", "UC-16", "WRP-7"]) assert.ok(rows.some((row) => row.number === number), `REVIEW_CHECKLIST.md lacks ${number}`);

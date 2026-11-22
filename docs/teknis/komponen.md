@@ -181,6 +181,6 @@ Alat yang membaca atau memeriksa aplikasi dari luar (tes celah, penjejak scenari
 - Use case dibedakan dari gateway lewat nama penanda utamanya (`mainDecorator.name`), dan wrapper dinamai menurut penanda yang dibacanya.
 - Alat yang mengamati sebuah jalan menemukan pengamatnya di `ctx.data.gatewayObserver`, kalau aplikasi punya wrapper pengamat gateway ([wrapper.md](wrapper.md), WRP-6).
 
-Alat tidak mengambil apa pun selain itu dari aplikasi, dan container dibaca sekali, saat alat itu mulai (CTL-5). Tes arsitektur dan tes celah di `REVIEW_CHECKLIST.md` adalah alat seperti itu.
+Alat tidak mengambil apa pun selain itu dari aplikasi, dan container dibaca sekali, saat alat itu mulai (CTL-5). Tes celah di `REVIEW_CHECKLIST.md` adalah alat seperti itu.
 
 > **Akan diteliti (arahan pemilik, 2026-11-22).** Skeleto berperan sebagai *penyedia informasi*: yang hanya dibutuhkan penjejak tidak dibuat di Skeleto, tetapi yang bermanfaat umum boleh diformalkan. Penjejak scenario-explorer ternyata mengandalkan lebih dari daftar di atas: `ctx.data.transaction` dan `ctx.data.afterCommit` dari wrapper transaksi, bentuk `BusinessError` (`name`, `kind`, `gap`), pola teks penanda utang, dan alias `type X = ActionHandler<Input, Output>` yang dibaca isinya. Kontrak itu sekarang tersebar dan sebagian tidak tertulis di sisi Skeleto. Mana yang diformalkan belum diputuskan (`TEMUAN.md`, temuan 14).

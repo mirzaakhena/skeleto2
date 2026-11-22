@@ -181,7 +181,7 @@ test("a function with two main markers is a mistake naming it, reported with the
   }
 });
 
-test("a use case or a gateway that returns a promise, or a result that is not a function, is a mistake like a plain action", async () => {
+test("a use case or a gateway that returns a promise, or a result that is not a function, is a mistake like any other action", async () => {
   const promised = await failure({ "a.ts": `/** @UseCase */\nexport async function makeLate(): Promise<Late> { return null as any; }\n` + component("Gateway", "Store", [], "undefined") });
   assert.match(promised.message, /makeLate .*is marked @UseCase but returns Promise<Late>/);
   const state = reset();

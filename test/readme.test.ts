@@ -408,12 +408,15 @@ test("the README and CLAUDE.md name the exclude option, the constant and every d
 });
 
 test("the README and the practice files stay clear of what Skeleto dropped", () => {
-  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i]) {
+  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /plain `?@Action/i, /plain action/i]) {
     assert.doesNotMatch(readme, banned);
     assert.doesNotMatch(bestPractices, banned);
     assert.doesNotMatch(technicalPractices, banned);
     assert.doesNotMatch(checklist, banned);
   }
+  // CLAUDE.md says "action polos" for the dropped kind; its table of dropped features is the one place that names it.
+  const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
+  assert.doesNotMatch(guide.replace(/^\| `@Action` polos.*$/m, ""), /tiga jenis action|action polos \(|, action polos/);
 });
 
 /**
@@ -725,7 +728,7 @@ function application(changes: Record<string, string> = {}): Record<string, strin
   return { ...installation(), ...example.files, ...example.additions, ...example.checklist, ...changes };
 }
 
-// A second use case and a plain action, for the copies that break the rules.
+// A second use case, for the copies that break the rules.
 const stockCount = `import type { ActionHandler } from "skeleto";
 
 export type StockCount = ActionHandler<string, number>;

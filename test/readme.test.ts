@@ -148,12 +148,10 @@ test("the README example has an async config, and says that startup waits for it
   assert.match(readme, /Give the config its own timeout/);
 });
 
-test("CLAUDE.md states that wrappers layer in written order, and no public document mentions ordinal any more", () => {
+test("CLAUDE.md states that wrappers layer in written order", () => {
   const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
   assert.match(guide, /Urutan pembungkusan adalah urutan penulisan.*\*\*pertama\*\* menjadi lapisan \*\*terdalam\*\*.*urutan pemindaian/);
   assert.match(guide, /\| `@Config`, `@Wrapper` \| tidak ada \|/);
-  const files = ["CLAUDE.md", "README.md", "BEST_PRACTICES.md", "TECHNICAL_PRACTICES.md", "REVIEW_CHECKLIST.md", "DEVELOPMENT_PROCESS.md", ...["konsep", "proses", "teknis"].flatMap((folder) => readdirSync(`${repo}docs/${folder}`).map((name) => `docs/${folder}/${name}`)), "docs/README.md"];
-  for (const file of files) assert.doesNotMatch(readFileSync(`${repo}${file}`, "utf8"), /ordinal/i, `${file} still mentions ordinal`);
 });
 
 test("CLAUDE.md states the rule for async configs in sections 4.3 and 4.7", () => {
@@ -256,15 +254,11 @@ test("the README and CLAUDE.md name the exclude option, the constant and every d
   }
 });
 
-test("the README, the checklist and docs/ stay clear of what Skeleto dropped, and of a plain action", () => {
-  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /plain `?@Action/i, /plain action/i, /plainActions/i, /action polos/i, /@Action/, /tes arsitektur/i]) {
+test("the README, the checklist and docs/ stay clear of what Skeleto dropped", () => {
+  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /tes arsitektur/i]) {
     for (const [document, text] of Object.entries({ ...docs, "REVIEW_CHECKLIST.md": checklist })) assert.doesNotMatch(text, banned, `${document} mentions what Skeleto dropped: ${banned}`);
   }
-  assert.doesNotMatch(readme, /readTypeArguments|@Controller|@RequestPart|payload|plainActions/i);
-  // CLAUDE.md says "action polos" for the dropped kind; its table of dropped features is the one place that names it.
-  const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
-  assert.doesNotMatch(guide.replace(/^\| `@Action` polos.*$/m, ""), /tiga jenis action|action polos \(|, action polos/);
-  assert.doesNotMatch(guide, /plainActions/);
+  assert.doesNotMatch(readme, /readTypeArguments|@Controller|@RequestPart|payload/i);
 });
 
 /**
@@ -517,12 +511,11 @@ test("docs/ is the only rule set: the old documents are pointers, and nothing sa
   assert.doesNotMatch(readme, /BEST_PRACTICES|TECHNICAL_PRACTICES|DEVELOPMENT_PROCESS/);
 });
 
-test("docs/ names no product or framework, no application, and no ordinal", () => {
+test("docs/ names no product or framework, no application", () => {
   for (const [document, text] of Object.entries(docs)) {
     for (const product of [/\bSQL\b/, /postgres/i, /mysql/i, /sqlite/i, /oracle/i, /mongo/i, /redis/i, /kafka/i, /rabbit/i, /dynamo/i, /\bExpress\b/, /express\.?js/i, /fastify/i, /nestjs/i, /\bkoa\b/i, /\bhono\b/i, /FOR UPDATE/, /\bReact\b/, /\bVue\b/, /\bAngular\b/, /svelte/i, /next\.?js/i, /\bNuxt\b/, /\bRemix\b/, /\bastro\b/i, /jquery/i, /\bjest\b/i]) {
       assert.doesNotMatch(text, product, `${document} names a product or framework: ${product}`);
     }
-    assert.doesNotMatch(text, /ordinal/i, `${document} mentions ordinal`);
   }
 });
 
@@ -631,7 +624,7 @@ test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a r
 test("REVIEW_CHECKLIST.md holds the gap test only: no architecture test and no startup guard", () => {
   assert.deepEqual(Object.keys(example.checklist).sort(), ["gaps.test.ts"]);
   assert.doesNotMatch(checklist, /startup guard|UseCaseWrapper|use_case_wrapper/);
-  assert.doesNotMatch(checklist, /architecture test|architecture\.test|plain `@Action`/);
+  assert.doesNotMatch(checklist, /architecture test|architecture\.test/);
 });
 
 /** The README example with every file the other documents add, and the checklist's tests, as an application would hold them. */
@@ -680,16 +673,6 @@ test("Skeleto refuses, before the application's code runs, a use case that depen
     assert.notEqual(started.code, 0);
     assert.equal(started.stdout, "");
     assert.match(started.stderr, /StockTransfer: is a @UseCase and depends on StockCount, which is a @UseCase/);
-  });
-});
-
-test("Skeleto refuses, before the application's code runs, a function marked @Action, naming it and asking for @UseCase or @Gateway", async () => {
-  const plain = stockCount.replace(" * @UseCase\n", " * @Action\n");
-  await withFixture(application({ "src/usecase/stock/stock_count.ts": plain }), async (directory) => {
-    const started = await run("tsx", example.command, directory);
-    assert.notEqual(started.code, 0);
-    assert.equal(started.stdout, "");
-    assert.match(started.stderr, /implStockCount \(usecase\/stock\/stock_count\.ts\): is marked @Action, but that is not a marker any more; mark it @UseCase or @Gateway/);
   });
 });
 

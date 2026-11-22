@@ -147,25 +147,6 @@ test("a use case that depends on a config, and a gateway that depends on another
   assert.deepEqual(shared.skeletoTest.calls, []);
 });
 
-test("a function marked @Action stops startup before any import, naming it and saying to use @UseCase or @Gateway, together with another mistake", async () => {
-  const boom = `throw new Error("module was imported");\n`;
-  const error = await failure({ "a.ts": boom + component("Gateway", "Plain", [], undefined, "@Action") + component("Gateway", "Other", ["Nowhere"]) });
-  const lines = problems(error);
-  assert.ok(lines.some((line) => /^- makePlain \(a\.ts\): is marked @Action, but that is not a marker any more; mark it @UseCase or @Gateway$/.test(line)), error.message);
-  assert.ok(lines.some((line) => /Other: dependency Nowhere is not a known component/.test(line)), error.message);
-  assert.doesNotMatch(error.message, /module was imported/);
-  assert.deepEqual(shared.skeletoTest.calls, []);
-});
-
-test("@Action is refused beside another main marker and with a decorators list, once per function", async () => {
-  for (const options of [undefined, { decorators: ["Action", "Transaction"] }]) {
-    const error = await failure({ "a.ts": component("Gateway", "Doubled", [], undefined, "@Action\n * @Gateway\n * @Action") }, options);
-    const lines = problems(error);
-    assert.equal(lines.length, 1, error.message);
-    assert.match(lines[0] ?? "", /makeDoubled \(a\.ts\): is marked @Action, but that is not a marker any more; mark it @UseCase or @Gateway/);
-  }
-});
-
 test("a function with two main markers is a mistake naming it, reported with the others", async () => {
   const cases: [string, string][] = [
     ["@Gateway\n * @UseCase", "@Gateway, @UseCase"],

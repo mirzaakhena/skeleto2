@@ -23,6 +23,7 @@ Dimulai: 2026-11-21.
 | 15 | Celah di praktik transaksi dan locking, dan urusan lintas-use-case lain yang belum diatur | dicatat; dibahas lain waktu |
 | 16 | Proses pengembangan ditulis berurutan, padahal penemuan berjalan bersamaan | disetujui; ditulis di `pengembangan.md`; bounded context belum diputuskan |
 | 17 | Definisi Core, Supporting, Generic menurut pemilik berbeda dari yang tertulis | diputuskan; ditulis di DEV-3 dan DEV-14 |
+| 18 | Aturan dependency use case dan gateway lebih ketat: use case → gateway saja, gateway → config saja | diputuskan 2026-11-22; `@Action` polos tetap bebas; tiket 261122113801 |
 
 ---
 
@@ -267,3 +268,16 @@ Semua aturan bernomor sudah ada di `docs/`. Yang hilang terutama penjelasan "ken
 - **Tiket 261122101202** (urutan wrapper menurut tulisan, tanpa `ordinal`) digabung di `6c05558`, lulus di putaran 1. Ini menutup WRP-5: arah "ditulis pertama = terdalam" kini berlaku, tanpa aturan satu berkas.
 - **Pengingat #1:** `src/` sekarang 479 baris.
 - **Tindak lanjut untuk temuan 14 (penjejak scenario-explorer):** penjejak kini rusak. Ia mencari use case dengan `mainDecorator.name === "Action"` ditambah penanda `UseCase` (seharusnya `mainDecorator.name === "UseCase"`), dan wrapper contohnya memakai `{"ordinal": -10}` yang kini menghentikan startup ("takes no data"); wrapper pengamat harus ditulis pertama supaya menjadi lapisan terdalam. Dikerjakan di repo scenario-explorer nanti (keputusan pemilik).
+
+## 18. Aturan dependency use case dan gateway lebih ketat
+
+- **Pernyataan pemilik (2026-11-22):** `@UseCase` hanya boleh bergantung pada `@Gateway`, bukan pada `@Config`. `@Gateway` hanya boleh bergantung pada `@Config`, bukan pada `@Gateway`.
+- **Yang berlaku sekarang** (baru diimplementasi lewat tiket 261122101201): use case → config, gateway; gateway → config, gateway. GW-12 dan B8 lama juga menyatakan "gateway boleh dibangun dari gateway lain".
+- **Tanggapan:** setuju. Hasilnya graf berlapis yang paling sederhana: controller → use case → gateway → config. Setiap jenis hanya punya satu jenis di bawahnya, dan reviewer bisa memeriksanya sekilas.
+- **Concern yang perlu diputuskan:**
+  1. **Parameter bisnis** (batas unit, persentase biaya, feature flag) tidak bisa lagi dibaca use case dari config. Jalannya lewat gateway (misalnya `GetTransferPolicy`), atau sebagai konstanta di entity. Ini sejalan dengan "semua di luar proses lewat gateway", tetapi perlu ditulis.
+  2. **Kode bersama antargateway** (klien HTTP, pemetaan) tidak bisa lagi lewat gateway lain. Jalannya lewat config (klien), atau fungsi biasa yang bukan komponen.
+  3. **Gateway yang butuh nilai tak terduga** (jam, id) untuk menulis rekaman tidak bisa memanggil gateway `Now`/`NewId`. Use case memintanya sekali di awal lalu memberikannya lewat input (sudah begitu menurut UC-10).
+  4. **Gateway tak langsung di penjejak scenario-explorer** (contoh: gateway outbox yang memanggil gateway pembayaran setelah commit) tidak lagi mungkin; fiturnya menjadi usang. Pengirim outbox adalah proses lain (controller → use case → gateway), jadi kebutuhannya tetap terpenuhi.
+  5. **`@Action` polos** tetap boleh bergantung pada semua jenis action. Belum jelas apakah ia juga boleh bergantung pada config saja (sekarang boleh).
+- **Dampak:** `CLAUDE.md` 4.6, README (kalimat aturan dan contoh; contoh sekarang sudah patuh: use case hanya ke gateway, gateway hanya ke config), dokumen GW-12, UC, dan tabel di `docs/teknis/use-case-gateway-bawaan.md`, serta tesnya.

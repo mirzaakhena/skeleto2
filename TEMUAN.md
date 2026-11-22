@@ -250,3 +250,13 @@ Semua aturan bernomor sudah ada di `docs/`. Yang hilang terutama penjelasan "ken
 - **WRP-5:** pemilik condong wrapper yang ditulis pertama menjadi lapisan terdalam (kulit bawang, dipasang dari dalam). Ditulis sebagai rencana dengan syarat semua wrapper di satu berkas; arahnya belum final.
 - **#8, kerja paralel:** boleh, tetapi dipertimbangkan sangat matang; baru layak setelah sebagian besar entity terbentuk dan use case Core selesai, terutama untuk Supporting dan Generic.
 - **Pembaruan `docs/`:** kekurangan dari pemeriksaan #13 diisi; keputusan #4 (ACT-3), #6 dan #9 (bagian "Cara mereview" di `docs/README.md`), #7, #8, #16, #17, dan lingkup LLD ditulis. Perubahan tingkat B1 → DEV-2 (Opsional → Wajib) ditandai belum diputuskan. Catatan tabel pemetaan diperbaiki.
+
+## Keputusan pemilik untuk implementasi, 2026-11-22
+
+- **Dependency `@Action` polos:** boleh bergantung pada semua jenis action (`@Action`, `@UseCase`, `@Gateway`), selain `@Config`. Belum diputuskan: apakah `@UseCase` dan `@Gateway` boleh bergantung pada `@Action` polos. Risikonya: `@Action` polos bisa menjadi perantara use case → use case.
+- **Urutan wrapper:** `ordinal` dibuang. Wrapper yang ditulis pertama di `src/wrappers.ts` menjadi lapisan **terdalam**.
+- **Wrapper di luar satu berkas:** kesalahan saat startup.
+- **Cara kerja:** lewat papan kerjaan2.
+- **Dampak di luar repo:** penjejak scenario-explorer mencari use case dengan `mainDecorator.name === "Action"` dan wrapper contohnya memakai `{"ordinal": -10}`; keduanya rusak setelah perubahan ini.
+- **Jawaban lanjutan (2026-11-22):** use case dan gateway tidak boleh bergantung pada `@Action` polos. Jenis dibaca dari nama penanda utama di metadata. Action dibuat dalam tiga kelompok: gateway, lalu use case, lalu `@Action` polos. Tidak ada pemakai lama, jadi tidak perlu kompatibilitas mundur. Tes arsitektur salinan diciutkan menjadi satu pemeriksaan (tidak ada `@Action` polos), dan wrapper penjaga dihapus.
+- **Aturan satu berkas dibatalkan:** pemilik: "Tidak ada aturan khusus secara teknis untuk meletakkan disatu berkas baik itu untuk wrapper, config, action bahkan usecase dan gateway. semua tergantung oleh scanner." Urutan wrapper mengikuti urutan pemindai (berkas menurut path, fungsi menurut tulisan). Satu berkas wrapper hanya default opsional di dokumen praktik. `@Wrapper` tidak menerima data apa pun, dengan pesan yang sama seperti `@Config` dan `@Action`.

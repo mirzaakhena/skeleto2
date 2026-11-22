@@ -6,7 +6,7 @@ import { DEFAULT_EXCLUDE, FuncInstanceMetadata, Skeleto, newContext } from "../s
 import type { SkeletoOptions } from "../src/index.js";
 import { withFixture } from "./fixture.js";
 
-type Kind = "Config" | "Wrapper" | "Action" | "UseCase" | "Gateway";
+type Kind = "Config" | "Wrapper" | "UseCase" | "Gateway";
 type Shared = { calls: [string, unknown[]][]; raw: Record<string, unknown>; seen: [string, unknown][]; fail?: boolean };
 
 // Fixture files are real modules, so the only way they can report back to a test is a global.
@@ -27,7 +27,6 @@ function component(kind: Kind, name: string, dependencies: string[] = [], result
   const parameters = dependencies.map((dependency, index) => `p${index}: ${dependency}`).join(", ");
   const defaults: Record<Kind, string> = {
     Config: `"${name}"`,
-    Action: `async (ctx: any) => { ctx.data.trace.push("${name}"); return "${name}"; }`,
     UseCase: `async (ctx: any) => { ctx.data.trace.push("${name}"); return "${name}"; }`,
     Gateway: `async (ctx: any) => { ctx.data.trace.push("${name}"); return "${name}"; }`,
     Wrapper: `(handler: any, metadata: any) => { ${S}.seen.push(["${name}", metadata]); return async (ctx: any, request: any) => { ctx.data.trace.push("${name}"); return handler(ctx, request); }; }`,
@@ -77,18 +76,13 @@ async function trace(handler: (ctx: any, request: any) => Promise<unknown>): Pro
 // ---- checks before any import (4.6, 4.8) ----
 
 const VIOLATIONS: [Kind, Kind, string][] = [
-  ["Config", "Action", "@Config only"],
   ["Config", "Wrapper", "@Config only"],
-  ["Wrapper", "Action", "@Config only"],
   ["Wrapper", "Wrapper", "@Config only"],
-  ["Action", "Wrapper", "@Config, @Gateway, @UseCase and @Action only"],
   ["UseCase", "Config", "@Gateway only"],
   ["UseCase", "UseCase", "@Gateway only"],
-  ["UseCase", "Action", "@Gateway only"],
   ["UseCase", "Wrapper", "@Gateway only"],
   ["Gateway", "Gateway", "@Config only"],
   ["Gateway", "UseCase", "@Config only"],
-  ["Gateway", "Action", "@Config only"],
   ["Gateway", "Wrapper", "@Config only"],
 ];
 
@@ -106,7 +100,7 @@ for (const [kind, dependencyKind, allowed] of VIOLATIONS) {
 test("a use case that depends on a use case, and a gateway that depends on a use case, stop startup before any import, together with another mistake", async () => {
   const boom = `throw new Error("module was imported");\n`;
   const error = await failure({
-    "a.ts": boom + component("UseCase", "Transfer", ["Count"]) + component("UseCase", "Count") + component("Gateway", "Notify", ["Count"]) + component("Action", "Other", ["Nowhere"]),
+    "a.ts": boom + component("UseCase", "Transfer", ["Count"]) + component("UseCase", "Count") + component("Gateway", "Notify", ["Count"]) + component("Gateway", "Other", ["Nowhere"]),
   });
   const lines = problems(error);
   assert.equal(lines.length, 3, error.message);
@@ -128,21 +122,21 @@ test("a function marked @UseCase alone, or @Gateway alone, is a component that s
   });
 });
 
-test("a plain @Action may depend on a config, a use case, a gateway and another action; a use case depends on gateways only and a gateway on configs only", async () => {
+test("a use case depends on gateways only and a gateway on configs only, and such an application starts", async () => {
   reset();
   const files = {
     "a.ts": component("Config", "Base") + component("Gateway", "Store", ["Base"]) + component("Gateway", "Cache", ["Base"]),
-    "b.ts": component("UseCase", "Transfer", ["Cache", "Store"]) + component("Action", "Report", ["Transfer", "Store", "Helper", "Base"]) + component("Action", "Helper"),
+    "b.ts": component("UseCase", "Transfer", ["Cache", "Store"]) + component("UseCase", "Count", ["Store"]),
   };
   await withFixture(files, async (directory) => {
-    assert.equal((await Skeleto.start(directory)).getContainer().size, 6);
+    assert.equal((await Skeleto.start(directory)).getContainer().size, 5);
   });
 });
 
 test("a use case that depends on a config, and a gateway that depends on another gateway, stop startup before any import, together with another mistake", async () => {
   const boom = `throw new Error("module was imported");\n`;
   const error = await failure({
-    "a.ts": boom + component("Config", "Settings") + component("UseCase", "Transfer", ["Settings"]) + component("Gateway", "Store") + component("Gateway", "Cache", ["Store"]) + component("Action", "Other", ["Nowhere"]),
+    "a.ts": boom + component("Config", "Settings") + component("UseCase", "Transfer", ["Settings"]) + component("Gateway", "Store") + component("Gateway", "Cache", ["Store"]) + component("Gateway", "Other", ["Nowhere"]),
   });
   const lines = problems(error);
   assert.equal(lines.length, 3, error.message);
@@ -153,22 +147,33 @@ test("a use case that depends on a config, and a gateway that depends on another
   assert.deepEqual(shared.skeletoTest.calls, []);
 });
 
-test("a use case or a gateway that depends on a plain @Action stops startup, naming both", async () => {
-  const error = await failure({ "a.ts": component("Action", "Plain") + component("UseCase", "Transfer", ["Plain"]) + component("Gateway", "Store", ["Plain"]) });
+test("a function marked @Action stops startup before any import, naming it and saying to use @UseCase or @Gateway, together with another mistake", async () => {
+  const boom = `throw new Error("module was imported");\n`;
+  const error = await failure({ "a.ts": boom + component("Gateway", "Plain", [], undefined, "@Action") + component("Gateway", "Other", ["Nowhere"]) });
   const lines = problems(error);
-  assert.equal(lines.length, 2, error.message);
-  assert.ok(lines.some((line) => /Transfer: is a @UseCase and depends on Plain, which is a @Action/.test(line)), error.message);
-  assert.ok(lines.some((line) => /Store: is a @Gateway and depends on Plain, which is a @Action/.test(line)), error.message);
+  assert.ok(lines.some((line) => /^- makePlain \(a\.ts\): is marked @Action, but that is not a marker any more; mark it @UseCase or @Gateway$/.test(line)), error.message);
+  assert.ok(lines.some((line) => /Other: dependency Nowhere is not a known component/.test(line)), error.message);
+  assert.doesNotMatch(error.message, /module was imported/);
+  assert.deepEqual(shared.skeletoTest.calls, []);
 });
 
-test("a function with two of @Action, @UseCase and @Gateway is a mistake naming it, reported with the others", async () => {
+test("@Action is refused beside another main marker and with a decorators list, once per function", async () => {
+  for (const options of [undefined, { decorators: ["Action", "Transaction"] }]) {
+    const error = await failure({ "a.ts": component("Gateway", "Doubled", [], undefined, "@Action\n * @Gateway\n * @Action") }, options);
+    const lines = problems(error);
+    assert.equal(lines.length, 1, error.message);
+    assert.match(lines[0] ?? "", /makeDoubled \(a\.ts\): is marked @Action, but that is not a marker any more; mark it @UseCase or @Gateway/);
+  }
+});
+
+test("a function with two main markers is a mistake naming it, reported with the others", async () => {
   const cases: [string, string][] = [
-    ["@Action\n * @UseCase", "@Action, @UseCase"],
+    ["@Gateway\n * @UseCase", "@Gateway, @UseCase"],
     ["@UseCase\n * @Gateway", "@UseCase, @Gateway"],
-    ["@Gateway\n * @Action", "@Gateway, @Action"],
+    ["@Gateway\n * @Config", "@Gateway, @Config"],
   ];
   for (const [marker, written] of cases) {
-    const error = await failure({ "a.ts": component("UseCase", "Doubled", [], undefined, marker) + component("Action", "Other", ["Nowhere"]) });
+    const error = await failure({ "a.ts": component("UseCase", "Doubled", [], undefined, marker) + component("Gateway", "Other", ["Nowhere"]) });
     const lines = problems(error);
     assert.equal(lines.length, 2, error.message);
     assert.ok(lines.some((line) => line.includes("Doubled") && line.includes(`more than one main marker (${written})`)), error.message);
@@ -176,7 +181,7 @@ test("a function with two of @Action, @UseCase and @Gateway is a mistake naming 
   }
 });
 
-test("a use case or a gateway that returns a promise, or a result that is not a function, is a mistake like a plain action", async () => {
+test("a use case or a gateway that returns a promise, or a result that is not a function, is a mistake like any other action", async () => {
   const promised = await failure({ "a.ts": `/** @UseCase */\nexport async function makeLate(): Promise<Late> { return null as any; }\n` + component("Gateway", "Store", [], "undefined") });
   assert.match(promised.message, /makeLate .*is marked @UseCase but returns Promise<Late>/);
   const state = reset();
@@ -190,25 +195,25 @@ test("every allowed kind of dependency starts", async () => {
   reset();
   const files = {
     "a.ts": component("Config", "Base") + component("Config", "OnConfig", ["Base"]) + component("Wrapper", "Wrap", ["Base"]),
-    "b.ts": component("Action", "First", ["Base"]) + component("Action", "Second", ["First", "OnConfig"]),
+    "b.ts": component("Gateway", "First", ["Base"]) + component("Gateway", "Second", ["OnConfig"]) + component("UseCase", "Third", ["First", "Second"]),
   };
   await withFixture(files, async (directory) => {
-    assert.equal((await Skeleto.start(directory)).getContainer().size, 5);
+    assert.equal((await Skeleto.start(directory)).getContainer().size, 6);
   });
 });
 
 test("a missing dependency is a mistake naming the component and the dependency, once", async () => {
-  const error = await failure({ "a.ts": component("Action", "SaveUser", ["Database"]) });
+  const error = await failure({ "a.ts": component("Gateway", "SaveUser", ["Database"]) });
   assert.deepEqual(problems(error), ["- SaveUser: dependency Database is not a known component"]);
 });
 
 test("a missing dependency named in two parameters gets one line, and two functions missing the same one get one line each", async () => {
-  const error = await failure({ "a.ts": component("Action", "SaveUser", ["Database", "Database"]) + component("Action", "FindUser", ["Database"]) });
+  const error = await failure({ "a.ts": component("Gateway", "SaveUser", ["Database", "Database"]) + component("Gateway", "FindUser", ["Database"]) });
   assert.deepEqual(problems(error), ["- SaveUser: dependency Database is not a known component", "- FindUser: dependency Database is not a known component"]);
 });
 
 test("a cycle is a mistake whose message shows its path", async () => {
-  const error = await failure({ "a.ts": component("Action", "A", ["B"]) + component("Action", "B", ["C"]) + component("Action", "C", ["A"]) });
+  const error = await failure({ "a.ts": component("Config", "A", ["B"]) + component("Config", "B", ["C"]) + component("Config", "C", ["A"]) });
   const lines = problems(error);
   assert.equal(lines.length, 1, error.message);
   assert.match(lines[0] ?? "", /circular dependency: A -> B -> C -> A/);
@@ -222,20 +227,20 @@ test("a component that needs itself is a cycle", async () => {
 test("all mistakes are thrown as one error before any application file is imported", async () => {
   const boom = `throw new Error("module was imported");\n`;
   const error = await failure({
-    "a.ts": boom + `/** @Action */\nfunction makeHidden(): Hidden { return null as any; }\n`,
-    "b.ts": boom + component("Config", "Settings", ["SaveUser"]) + component("Action", "SaveUser", ["Nowhere"]),
+    "a.ts": boom + `/** @Gateway */\nfunction makeHidden(): Hidden { return null as any; }\n`,
+    "b.ts": boom + component("Config", "Settings", ["SaveUser"]) + component("Gateway", "SaveUser", ["Nowhere"]),
   });
   assert.doesNotMatch(error.message, /module was imported/);
   assert.equal(error.cause, undefined);
   const lines = problems(error);
   assert.equal(lines.length, 3, error.message);
   assert.match(lines[0] ?? "", /makeHidden \(a\.ts\): .*not exported/);
-  assert.match(lines[1] ?? "", /Settings: is a @Config and depends on SaveUser, which is a @Action/);
+  assert.match(lines[1] ?? "", /Settings: is a @Config and depends on SaveUser, which is a @Gateway/);
   assert.match(lines[2] ?? "", /SaveUser: dependency Nowhere is not a known component/);
 });
 
 test("a marker outside options.decorators stops startup, and without the option any marker is accepted", async () => {
-  const files = { "a.ts": component("Action", "SaveUser", [], undefined, "@Action\n * @Transction") };
+  const files = { "a.ts": component("Gateway", "SaveUser", [], undefined, "@Gateway\n * @Transction") };
   const error = await failure(files, { decorators: ["Transaction"] });
   assert.match(error.message, /makeSaveUser.*@Transction is not an allowed marker/);
   await withFixture(files, async (directory) => {
@@ -250,17 +255,17 @@ test("with options.decorators, misspelt and misplaced markers stop startup in on
   const files = {
     // The wrapper that would silently be missing from every action.
     "a.ts": `/** @Wraper */\nexport function makeAudit(): Audit { return ((handler: any) => handler) as any; }\n`,
-    "b.ts": `/** @Action */\nexport const makeLost = (): Lost => null as any;\nexport namespace inner {\n  /** @Wrapper */\n  export function makeDeep(): Deep { return null as any; }\n}\n`,
-    "c.ts": flagged + component("Action", "SaveUser", [], undefined, "@Action\n * @transaction"),
+    "b.ts": `/** @Gateway */\nexport const makeLost = (): Lost => null as any;\nexport namespace inner {\n  /** @Wrapper */\n  export function makeDeep(): Deep { return null as any; }\n}\n`,
+    "c.ts": flagged + component("Gateway", "SaveUser", [], undefined, "@Gateway\n * @transaction"),
     "d.ts": `/** @wrapper */\nexport function makeTrace(): Trace { return null as any; }\n`,
   };
-  const error = await failure({ ...files, "e.ts": boom + component("Action", "Other", ["Nowhere"]) }, { decorators: ["Transaction"] });
+  const error = await failure({ ...files, "e.ts": boom + component("Gateway", "Other", ["Nowhere"]) }, { decorators: ["Transaction"] });
   assert.doesNotMatch(error.message, /module was imported/);
   assert.deepEqual(shared.skeletoTest.calls, []);
   const lines = problems(error);
   assert.equal(lines.length, 6, error.message);
   assert.match(lines[0] ?? "", /makeAudit \(a\.ts\): .*@Wraper.*no main marker/);
-  assert.match(lines[1] ?? "", /makeLost \(b\.ts\): is marked @Action .*only top-level function declarations can be components/);
+  assert.match(lines[1] ?? "", /makeLost \(b\.ts\): is marked @Gateway .*only top-level function declarations can be components/);
   assert.match(lines[2] ?? "", /makeDeep \(b\.ts\): is marked @Wrapper .*namespace inner.*only top-level function declarations can be components/);
   assert.match(lines[3] ?? "", /makeSaveUser \(c\.ts\): .*@transaction.*write @Transaction/);
   assert.match(lines[4] ?? "", /makeTrace \(d\.ts\): .*@wrapper.*write @Wrapper/);
@@ -284,7 +289,7 @@ for (const option of ["decorators", "exclude"] as const) {
   for (const [label, value, shown] of notLists) {
     test(`options.${option} given as ${label} stops startup naming the option, with the other mistakes and before any import`, async () => {
       const boom = `throw new Error("module was imported");\n`;
-      const files = { "a.ts": boom + component("Action", "SaveUser", ["Nowhere"], undefined, "@Action\n * @Logging"), "b.test.ts": boom + component("Config", "Skipped", ["Nowhere"]) };
+      const files = { "a.ts": boom + component("Gateway", "SaveUser", ["Nowhere"], undefined, "@Gateway\n * @Logging"), "b.test.ts": boom + component("Config", "Skipped", ["Nowhere"]) };
       const error = await failure(files, { [option]: value } as SkeletoOptions);
       assert.doesNotMatch(error.message, /module was imported/);
       assert.equal(error.cause, undefined);
@@ -306,18 +311,18 @@ test("a bad option on a directory without components reports the directory as we
   const lines = problems(error);
   assert.equal(lines.length, 2, error.message);
   assert.equal(lines[0], "- options.exclude: must be a list of texts, received null");
-  assert.match(lines[1] ?? "", /: no \.ts file with a @Config, @Wrapper, @Action, @UseCase or @Gateway function was found/);
+  assert.match(lines[1] ?? "", /: no \.ts file with a @Config, @Wrapper, @UseCase or @Gateway function was found/);
 });
 
 test("with a text as options.decorators, a shorter marker name contained in that text is not accepted", async () => {
-  const files = { "a.ts": component("Action", "SaveUser", [], undefined, "@Action\n * @Log") };
+  const files = { "a.ts": component("Gateway", "SaveUser", [], undefined, "@Gateway\n * @Log") };
   const error = await failure(files, { decorators: "Logging" } as unknown as SkeletoOptions);
   assert.deepEqual(problems(error), ["- options.decorators: must be a list of texts, received 'Logging'"]);
   assert.deepEqual(shared.skeletoTest.calls, []);
 });
 
 test("an option left out or passed as undefined behaves as no option: any marker is accepted and the default exclusions hold", async () => {
-  const files = { "a.ts": component("Action", "SaveUser", [], undefined, "@Action\n * @Anything"), "b.test.ts": `throw new Error("module was imported");\n` + component("Config", "Skipped") };
+  const files = { "a.ts": component("Gateway", "SaveUser", [], undefined, "@Gateway\n * @Anything"), "b.test.ts": `throw new Error("module was imported");\n` + component("Config", "Skipped") };
   for (const options of [undefined, {}, { decorators: undefined, exclude: undefined }] as (SkeletoOptions | undefined)[]) {
     reset();
     await withFixture(files, async (directory) => {
@@ -384,7 +389,7 @@ test("with an empty options.exclude a marked declaration in a .d.ts file is a co
 for (const entry of ["generated/models", "foo*", "*.test.*", "**/x", "*", ""]) {
   test(`options.exclude with ${JSON.stringify(entry)} stops startup naming the entry, with the other mistakes and before any import`, async () => {
     const boom = `throw new Error("module was imported");\n`;
-    const error = await failure({ "a.ts": boom + component("Action", "SaveUser", ["Nowhere"]), "b.ts": boom + component("Config", "Settings") }, { exclude: [...DEFAULT_EXCLUDE, entry] });
+    const error = await failure({ "a.ts": boom + component("Gateway", "SaveUser", ["Nowhere"]), "b.ts": boom + component("Config", "Settings") }, { exclude: [...DEFAULT_EXCLUDE, entry] });
     assert.doesNotMatch(error.message, /module was imported/);
     assert.equal(error.cause, undefined);
     const lines = problems(error);
@@ -413,7 +418,7 @@ test("a directory whose only .ts files are excluded is reported like a directory
   const empty = await failure({ "notes.txt": "@Config" });
   const excluded = await failure({ "a.test.ts": component("Config", "A"), "b.spec.ts": component("Config", "B"), "c.d.ts": declared, "node_modules/d.ts": component("Config", "D") });
   const shape = (error: Error): string => error.message.replace(/\S*skeleto-\w+/g, "<directory>");
-  assert.match(excluded.message, /: no \.ts file with a @Config, @Wrapper, @Action, @UseCase or @Gateway function was found/);
+  assert.match(excluded.message, /: no \.ts file with a @Config, @Wrapper, @UseCase or @Gateway function was found/);
   assert.equal(shape(excluded), shape(empty));
   assert.deepEqual(shared.skeletoTest.calls, []);
 });
@@ -429,8 +434,8 @@ test("configs are created first, then wrappers, then actions, dependencies first
   const state = reset();
   const files = {
     // Sorted file order and source order are the opposite of the order that the dependencies need.
-    "a.ts": component("Action", "Report", ["FindUser", "Database", "SaveUser"]) + component("Action", "SaveUser", ["Database", "Clock"]),
-    "b.ts": component("Wrapper", "Audit", ["Database"]) + component("Action", "FindUser", ["Database"]),
+    "a.ts": component("UseCase", "Report", ["FindUser", "SaveUser"]) + component("Gateway", "SaveUser", ["Database", "Clock"]),
+    "b.ts": component("Wrapper", "Audit", ["Database"]) + component("Gateway", "FindUser", ["Database"]),
     "c.ts": component("Config", "Database", ["Settings", "Clock"]) + component("Config", "Clock") + component("Config", "Settings"),
   };
   await withFixture(files, async (directory) => {
@@ -442,29 +447,28 @@ test("configs are created first, then wrappers, then actions, dependencies first
     assert.deepEqual(callsByName.get("Audit"), ["Database"]);
     assert.deepEqual(callsByName.get("SaveUser"), ["Database", "Clock"]);
     const reportArguments = callsByName.get("Report") ?? [];
-    assert.equal(reportArguments.length, 3);
+    assert.equal(reportArguments.length, 2);
     assert.equal(reportArguments[0], instance("FindUser"));
-    assert.equal(reportArguments[1], "Database");
-    assert.equal(reportArguments[2], instance("SaveUser"));
+    assert.equal(reportArguments[1], instance("SaveUser"));
   });
 });
 
-test("gateways are created before use cases, and use cases before plain actions, each after its dependencies and otherwise in scan order", async () => {
+test("gateways are created before use cases, each after its dependencies and otherwise in scan order", async () => {
   const state = reset();
   const files = {
     // Written in the opposite order, so that scan order alone would give the wrong result.
-    "a.ts": component("Action", "Plain") + component("UseCase", "Transfer", ["Cache"]) + component("UseCase", "Count", ["Store"]) + component("Gateway", "Store", ["Settings"]) + component("Gateway", "Cache", ["Settings"]),
+    "a.ts": component("UseCase", "Transfer", ["Cache"]) + component("UseCase", "Count", ["Store"]) + component("Gateway", "Store", ["Settings"]) + component("Gateway", "Cache", ["Settings"]),
     "b.ts": component("Config", "Settings") + component("Wrapper", "Wrap"),
   };
   await withFixture(files, async (directory) => {
     await Skeleto.start(directory);
-    assert.deepEqual(state.calls.map(([name]) => name), ["Settings", "Wrap", "Cache", "Store", "Transfer", "Count", "Plain"]);
+    assert.deepEqual(state.calls.map(([name]) => name), ["Settings", "Wrap", "Cache", "Store", "Transfer", "Count"]);
   });
 });
 
 test("the metadata of a use case and of a gateway tells the kind by its main marker, and a wrapper can read it", async () => {
   const state = reset();
-  const files = { "a.ts": component("Wrapper", "Audit") + component("Gateway", "Store") + component("UseCase", "Transfer", ["Store"], undefined, "@UseCase\n * @Transaction") + component("Action", "Plain") };
+  const files = { "a.ts": component("Wrapper", "Audit") + component("Gateway", "Store") + component("UseCase", "Transfer", ["Store"], undefined, "@UseCase\n * @Transaction") };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
     assert.deepEqual(container.get("Store")?.getMetadata().mainDecorator, { name: "Gateway", data: undefined });
@@ -472,7 +476,7 @@ test("the metadata of a use case and of a gateway tells the kind by its main mar
     assert.deepEqual(container.get("Transfer")?.getMetadata().additionalDecorators, [{ name: "Transaction", data: undefined }]);
     // The wrapper was offered each kind of action, and tells them apart without an additional marker.
     const offered = state.seen.map(([, metadata]) => [(metadata as any).name, (metadata as any).mainDecorator.name]);
-    assert.deepEqual(offered, [["Store", "Gateway"], ["Transfer", "UseCase"], ["Plain", "Action"]]);
+    assert.deepEqual(offered, [["Store", "Gateway"], ["Transfer", "UseCase"]]);
     // Every kind of action is wrapped, and what is injected is the wrapped one.
     assert.deepEqual(await trace(container.get("Store")?.getInstance()), ["Audit", "Store"]);
     assert.deepEqual(await trace(container.get("Transfer")?.getInstance()), ["Audit", "Transfer"]);
@@ -495,12 +499,12 @@ test("every wrapper wraps every action and receives the action's metadata", asyn
   const state = reset();
   const files = {
     "a.ts": component("Wrapper", "Audit") + component("Wrapper", "Timing"),
-    "b.ts": component("Action", "FindUser", [], undefined, "@Action\n * @Logging {\"level\": \"debug\"}") + component("Action", "SaveUser", ["FindUser"]),
+    "b.ts": component("Gateway", "FindUser", [], undefined, "@Gateway\n * @Logging {\"level\": \"debug\"}") + component("UseCase", "SaveUser", ["FindUser"]),
   };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
-    const find = { name: "FindUser", dependencies: [], mainDecorator: { name: "Action", data: undefined }, additionalDecorators: [{ name: "Logging", data: { level: "debug" } }] };
-    const save = { name: "SaveUser", dependencies: ["FindUser"], mainDecorator: { name: "Action", data: undefined }, additionalDecorators: [] };
+    const find = { name: "FindUser", dependencies: [], mainDecorator: { name: "Gateway", data: undefined }, additionalDecorators: [{ name: "Logging", data: { level: "debug" } }] };
+    const save = { name: "SaveUser", dependencies: ["FindUser"], mainDecorator: { name: "UseCase", data: undefined }, additionalDecorators: [] };
     assert.deepEqual(state.seen, [["Audit", find], ["Timing", find], ["Audit", save], ["Timing", save]]);
     assert.deepEqual(await trace(container.get("FindUser")?.getInstance()), ["Timing", "Audit", "FindUser"]);
     assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["Timing", "Audit", "SaveUser"]);
@@ -513,7 +517,7 @@ test("wrappers written in one file layer from the first written (innermost) to t
   reset();
   const files = {
     "a.ts": component("Wrapper", "Zebra") + component("Wrapper", "apple") + component("Wrapper", "Middle"),
-    "b.ts": component("Action", "SaveUser"),
+    "b.ts": component("Gateway", "SaveUser"),
   };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
@@ -526,7 +530,7 @@ test("wrappers in two files: those of the file first in path order are inside th
   const files = {
     "b.ts": component("Wrapper", "OuterOne") + component("Wrapper", "OuterTwo"),
     "a.ts": component("Wrapper", "InnerOne") + component("Wrapper", "InnerTwo"),
-    "c.ts": component("Action", "SaveUser"),
+    "c.ts": component("Gateway", "SaveUser"),
   };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
@@ -537,7 +541,7 @@ test("wrappers in two files: those of the file first in path order are inside th
 test("the layering follows the written order even when a wrapper is created later because of its dependency", async () => {
   reset();
   const files = {
-    "a.ts": component("Wrapper", "First", ["Late"]) + component("Wrapper", "Second") + component("Config", "Late") + component("Action", "SaveUser"),
+    "a.ts": component("Wrapper", "First", ["Late"]) + component("Wrapper", "Second") + component("Config", "Late") + component("Gateway", "SaveUser"),
   };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
@@ -547,7 +551,7 @@ test("the layering follows the written order even when a wrapper is created late
 
 test("a wrapper that returns the handler unchanged adds no layer", async () => {
   const state = reset();
-  const files = { "a.ts": component("Wrapper", "Skip", [], "(handler: any) => handler") + component("Action", "SaveUser") };
+  const files = { "a.ts": component("Wrapper", "Skip", [], "(handler: any) => handler") + component("Gateway", "SaveUser") };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
     assert.equal(container.get("SaveUser")?.getInstance(), state.raw["SaveUser"]);
@@ -558,7 +562,7 @@ test("a wrapper that returns the handler unchanged adds no layer", async () => {
 test("an action injected into another action is the wrapped version", async () => {
   const state = reset();
   const outer = `async (ctx: any, request: any) => { ctx.data.trace.push("Report"); return p0(ctx, request); }`;
-  const files = { "a.ts": component("Wrapper", "Audit") + component("Action", "Report", ["FindUser"], outer) + component("Action", "FindUser") };
+  const files = { "a.ts": component("Wrapper", "Audit") + component("UseCase", "Report", ["FindUser"], outer) + component("Gateway", "FindUser") };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
     const injected = new Map(state.calls).get("Report")?.[0];
@@ -575,7 +579,7 @@ test("the container holds every component of all kinds under its name, with inst
   const files = {
     "config/log.ts": component("Config", "winston.Logger"),
     "wrap.ts": component("Wrapper", "Audit", ["winston.Logger"], "(handler: any) => handler"),
-    "user/save.ts": component("Action", "SaveUser", ["winston.Logger"], undefined, "@Action\n * @Transaction"),
+    "user/save.ts": component("Gateway", "SaveUser", ["winston.Logger"], undefined, "@Gateway\n * @Transaction"),
   };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
@@ -589,7 +593,7 @@ test("the container holds every component of all kinds under its name, with inst
     assert.deepEqual(container.get("SaveUser")?.getMetadata(), {
       name: "SaveUser",
       dependencies: ["winston.Logger"],
-      mainDecorator: { name: "Action", data: undefined },
+      mainDecorator: { name: "Gateway", data: undefined },
       additionalDecorators: [{ name: "Transaction", data: undefined }],
     });
   });
@@ -597,7 +601,7 @@ test("the container holds every component of all kinds under its name, with inst
 
 test("a directory has one instance, also for other spellings of its path, for concurrent calls and for later options", async () => {
   const state = reset();
-  const files = { "a.ts": component("Config", "Settings") + component("Action", "SaveUser", ["Settings"]) };
+  const files = { "a.ts": component("Config", "Settings") + component("Gateway", "SaveUser", ["Settings"]) };
   await withFixture(files, async (directory) => {
     await withFixture(files, async (otherDirectory) => {
       const spellings = [directory, `${directory}/`, join(directory, "sub", ".."), relative(process.cwd(), directory)];
@@ -617,7 +621,7 @@ test("a directory has one instance, also for other spellings of its path, for co
 
 test("concurrent calls for a directory that fails all reject, and the next start scans again", async () => {
   reset();
-  await withFixture({ "a.ts": component("Action", "SaveUser", ["Database"]) }, async (directory) => {
+  await withFixture({ "a.ts": component("Gateway", "SaveUser", ["Database"]) }, async (directory) => {
     const results = await Promise.allSettled([Skeleto.start(directory), Skeleto.start(directory)]);
     assert.deepEqual(results.map((result) => result.status), ["rejected", "rejected"]);
     await assert.rejects(Skeleto.start(directory), /SaveUser: dependency Database is not a known component/);
@@ -636,7 +640,7 @@ test("a component function that throws stops startup at once with an error namin
   const breaking = `(() => { if (${S}.fail) throw new TypeError("no connection"); return "Database"; })()`;
   const files = {
     "a.ts": component("Config", "Clock") + component("Config", "Database", ["Clock"], breaking),
-    "b.ts": component("Config", "Settings") + component("Action", "SaveUser", ["Database"]),
+    "b.ts": component("Config", "Settings") + component("Gateway", "SaveUser", ["Database"]),
   };
   await withFixture(files, async (directory) => {
     const error: Error = await Skeleto.start(directory).then(() => assert.fail("startup should have failed"), (reason: Error) => reason);
@@ -647,7 +651,7 @@ test("a component function that throws stops startup at once with an error namin
     assert.deepEqual(state.calls.map(([name]) => name), ["Clock", "Database"]);
 
     state.fail = false;
-    await writeFile(join(directory, "c.ts"), component("Action", "FindUser", ["Database"]));
+    await writeFile(join(directory, "c.ts"), component("Gateway", "FindUser", ["Database"]));
     const container = (await Skeleto.start(directory)).getContainer();
     assert.deepEqual([...container.keys()].sort(), ["Clock", "Database", "FindUser", "SaveUser", "Settings"]);
   });
@@ -658,7 +662,7 @@ test("a file that fails to import stops startup at once with an error naming com
   const files = {
     "a.ts": component("Config", "Clock"),
     "b.ts": `throw new RangeError("module broke");\n` + component("Config", "Database"),
-    "c.ts": component("Action", "SaveUser", ["Clock"]),
+    "c.ts": component("Gateway", "SaveUser", ["Clock"]),
   };
   await withFixture(files, async (directory) => {
     const error: Error = await Skeleto.start(directory).then(() => assert.fail("startup should have failed"), (reason: Error) => reason);
@@ -673,7 +677,7 @@ test("a file that fails to import stops startup at once with an error naming com
 });
 
 test("a wrapper that throws while wrapping stops startup with an error naming the action, its function and the wrapper", async () => {
-  const error = await failure({ "a.ts": component("Wrapper", "Audit", [], `() => { throw new Error("cannot wrap"); }`) + component("Action", "SaveUser") });
+  const error = await failure({ "a.ts": component("Wrapper", "Audit", [], `() => { throw new Error("cannot wrap"); }`) + component("Gateway", "SaveUser") });
   assert.match(error.message, /^SaveUser: function makeSaveUser \(.*a\.ts\) failed while wrapping it with Audit: cannot wrap$/);
   assert.equal((error.cause as Error).message, "cannot wrap");
 });
@@ -694,7 +698,7 @@ async function failsThenScansAgain(files: Record<string, string>, check: (error:
     const error: Error = await Skeleto.start(directory).then(() => assert.fail("startup should have failed"), (reason: Error) => reason);
     check(error, directory, state);
     state.fail = false;
-    await writeFile(join(directory, "later.ts"), component("Action", "AddedLater"));
+    await writeFile(join(directory, "later.ts"), component("Gateway", "AddedLater"));
     const container = (await Skeleto.start(directory)).getContainer();
     assert.ok(container.has("AddedLater"));
     for (const [name, entry] of container) if (entry.getMetadata().mainDecorator.name !== "Config") assert.equal(typeof entry.getInstance(), "function", name);
@@ -705,9 +709,9 @@ const handlerSource = `async (ctx: any) => { ctx.data.trace.push("SaveUser"); re
 
 for (const [written, described] of [["undefined", "undefined"], ["null", "null"], [`{ run() {} }`, "object"], [`"text"`, "string"], ["Promise.resolve(() => 1)", "a promise"]] as const) {
   test(`an action function that returns ${written} stops startup with an error naming the action and its function, and the next start scans again`, async () => {
-    const files = { "a.ts": component("Wrapper", "Audit") + component("Action", "SaveUser", [], `${S}.fail ? ${written} : ${handlerSource}`) + component("Action", "Report", ["SaveUser"]) };
+    const files = { "a.ts": component("Wrapper", "Audit") + component("Gateway", "SaveUser", [], `${S}.fail ? ${written} : ${handlerSource}`) + component("UseCase", "Report", ["SaveUser"]) };
     await failsThenScansAgain(files, (error, directory, state) => {
-      assert.equal(error.message, `SaveUser: function makeSaveUser (${join(directory, "a.ts")}) returned ${described}; a @Action must return a function`);
+      assert.equal(error.message, `SaveUser: function makeSaveUser (${join(directory, "a.ts")}) returned ${described}; a @Gateway must return a function`);
       // No wrapper was handed the bad result, and nothing that needs the action was created.
       assert.deepEqual(state.seen, []);
       assert.deepEqual(state.calls.map(([name]) => name), ["Audit", "SaveUser"]);
@@ -716,7 +720,7 @@ for (const [written, described] of [["undefined", "undefined"], ["null", "null"]
 
   test(`a wrapper function that returns ${written} stops startup with an error naming the wrapper and its function, not an action, and the next start scans again`, async () => {
     const good = `(handler: any) => handler`;
-    const files = { "a.ts": component("Wrapper", "Audit", [], `${S}.fail ? ${written} : ${good}`) + component("Action", "SaveUser") };
+    const files = { "a.ts": component("Wrapper", "Audit", [], `${S}.fail ? ${written} : ${good}`) + component("Gateway", "SaveUser") };
     await failsThenScansAgain(files, (error, directory, state) => {
       assert.equal(error.message, `Audit: function makeAudit (${join(directory, "a.ts")}) returned ${described}; a @Wrapper must return a function`);
       assert.ok(!error.message.includes("SaveUser"), error.message);
@@ -726,7 +730,7 @@ for (const [written, described] of [["undefined", "undefined"], ["null", "null"]
 
   test(`a wrapper that returns ${written} for an action stops startup with an error naming the wrapper, its function and the action, and the next start scans again`, async () => {
     const wrap = `(handler: any) => (${S}.fail ? ${written} : handler)`;
-    const files = { "w.ts": component("Wrapper", "Audit", [], wrap), "a.ts": component("Action", "SaveUser") + component("Action", "Report", ["SaveUser"]) };
+    const files = { "w.ts": component("Wrapper", "Audit", [], wrap), "a.ts": component("Gateway", "SaveUser") + component("UseCase", "Report", ["SaveUser"]) };
     await failsThenScansAgain(files, (error, directory, state) => {
       assert.equal(error.message, `Audit: function makeAudit (${join(directory, "w.ts")}) returned ${described} when wrapping SaveUser; a wrapper must return a function for every action`);
       assert.deepEqual(state.calls.map(([name]) => name), ["Audit", "SaveUser"]);
@@ -738,7 +742,7 @@ test("a wrapper that returns the handler only for actions with a certain marker 
   const wrap = `(handler: any, metadata: any) => { ${S}.seen.push(["Transactional", metadata.name]); if (metadata.additionalDecorators.some((marker: any) => marker.name === "Transaction")) return handler; }`;
   const files = {
     "w.ts": component("Wrapper", "Transactional", [], wrap) + component("Wrapper", "Outer"),
-    "a.ts": component("Action", "FindUser", [], undefined, "@Action\n * @Transaction") + component("Action", "SaveUser", ["FindUser"]),
+    "a.ts": component("Gateway", "FindUser", [], undefined, "@Gateway\n * @Transaction") + component("UseCase", "SaveUser", ["FindUser"]),
   };
   const error = await failure(files);
   assert.match(error.message, /^Transactional: function makeTransactional \(.*w\.ts\) returned undefined when wrapping SaveUser; a wrapper must return a function for every action$/);
@@ -748,7 +752,7 @@ test("a wrapper that returns the handler only for actions with a certain marker 
 
 test("a wrapper that returns the handler unchanged and one that returns a new function work together", async () => {
   reset();
-  const files = { "a.ts": component("Wrapper", "Skip", [], "(handler: any) => handler") + component("Wrapper", "Audit") + component("Action", "SaveUser") };
+  const files = { "a.ts": component("Wrapper", "Skip", [], "(handler: any) => handler") + component("Wrapper", "Audit") + component("Gateway", "SaveUser") };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
     assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["Audit", "SaveUser"]);
@@ -760,7 +764,7 @@ test("a wrapper that returns the handler unchanged and one that returns a new fu
 test("an async config is waited for: what depends on it is created after it has finished, and receives the finished value under the plain name", async () => {
   const state = reset();
   const files = {
-    "a.ts": component("Action", "SaveUser", ["Database"]) + component("Wrapper", "Audit", ["Database"]) + component("Config", "Pool", ["Database"]),
+    "a.ts": component("Gateway", "SaveUser", ["Database"]) + component("Wrapper", "Audit", ["Database"]) + component("Config", "Pool", ["Database"]),
     "b.ts": asyncConfig("Database", ["Settings"]) + component("Config", "Settings"),
   };
   await withFixture(files, async (directory) => {
@@ -784,7 +788,7 @@ test("an async config is waited for: what depends on it is created after it has 
 
 test("startup is still pending while an async config has not finished", async () => {
   const state = reset();
-  await withFixture({ "a.ts": asyncConfig("Database", [], undefined, 60) + component("Action", "SaveUser", ["Database"]) }, async (directory) => {
+  await withFixture({ "a.ts": asyncConfig("Database", [], undefined, 60) + component("Gateway", "SaveUser", ["Database"]) }, async (directory) => {
     let done = false;
     const started = Skeleto.start(directory).then((skeleto) => ((done = true), skeleto));
     await new Promise((resolve) => setTimeout(resolve, 30));
@@ -799,7 +803,7 @@ test("an async config needed by other configs, a wrapper and several actions is 
   const state = reset();
   const files = {
     "a.ts": asyncConfig("Database") + component("Config", "Users", ["Database"]) + asyncConfig("Cache", ["Database", "Users"], undefined, 5),
-    "b.ts": component("Wrapper", "Audit", ["Database"]) + component("Action", "FindUser", ["Database", "Cache"]) + component("Action", "SaveUser", ["FindUser", "Database"]),
+    "b.ts": component("Wrapper", "Audit", ["Database"]) + component("Gateway", "FindUser", ["Database", "Cache"]) + component("UseCase", "SaveUser", ["FindUser"]),
   };
   await withFixture(files, async (directory) => {
     const [first, second] = await Promise.all([Skeleto.start(directory), Skeleto.start(directory)]);
@@ -815,7 +819,6 @@ test("an async config needed by other configs, a wrapper and several actions is 
     assert.equal(callsByName.get("Cache")?.[0], database);
     assert.equal(callsByName.get("Audit")?.[0], database);
     assert.equal(callsByName.get("FindUser")?.[0], database);
-    assert.equal(callsByName.get("SaveUser")?.[1], database);
     // An async config that itself needs an async config gets the finished value too, and is finished in its turn.
     assert.equal(callsByName.get("FindUser")?.[1], state.raw["Cache"]);
     assert.deepEqual(state.raw["Cache"], { id: "Cache" });
@@ -834,7 +837,7 @@ test("a config declared Promise<X> that returns a plain value, or is not written
   const state = reset();
   const plain = `/** @Config */\nexport function makeClock(): Promise<Clock> {\n  return "tick" as any;\n}\n`;
   const thenable = `/** @Config */\nexport function makeDatabase(): Promise<Database> {\n  return new Promise((resolve) => setTimeout(() => resolve("db" as any), 10));\n}\n`;
-  await withFixture({ "a.ts": plain + thenable + component("Action", "SaveUser", ["Clock", "Database"]) }, async (directory) => {
+  await withFixture({ "a.ts": plain + thenable + component("Gateway", "SaveUser", ["Clock", "Database"]) }, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
     assert.equal(container.get("Clock")?.getInstance(), "tick");
     assert.equal(container.get("Database")?.getInstance(), "db");
@@ -860,7 +863,7 @@ test("an async config that fails stops startup with an error naming component an
   const breaking = `(() => { if (${S}.fail) throw new TypeError("no connection"); return { id: "Database" }; })()`;
   const files = {
     "a.ts": component("Config", "Clock") + asyncConfig("Database", ["Clock"], breaking),
-    "b.ts": component("Config", "Settings", ["Database"]) + component("Wrapper", "Audit") + component("Action", "SaveUser", ["Database"]),
+    "b.ts": component("Config", "Settings", ["Database"]) + component("Wrapper", "Audit") + component("Gateway", "SaveUser", ["Database"]),
   };
   await withFixture(files, async (directory) => {
     const error: Error = await Skeleto.start(directory).then(() => assert.fail("startup should have failed"), (reason: Error) => reason);
@@ -875,7 +878,7 @@ test("an async config that fails stops startup with an error naming component an
     assert.deepEqual(state.calls.map(([name]) => name), ["Clock", "Database", "Clock", "Database"]);
 
     state.fail = false;
-    await writeFile(join(directory, "c.ts"), component("Action", "FindUser", ["Database"]));
+    await writeFile(join(directory, "c.ts"), component("Gateway", "FindUser", ["Database"]));
     const container = (await Skeleto.start(directory)).getContainer();
     assert.deepEqual([...container.keys()].sort(), ["Audit", "Clock", "Database", "FindUser", "SaveUser", "Settings"]);
     assert.equal(container.get("Database")?.getInstance(), state.raw["Database"]);
@@ -884,7 +887,7 @@ test("an async config that fails stops startup with an error naming component an
 
 test("an async config that throws before its first await, or rejects with something that is not an Error, is reported the same way", async () => {
   const early = `/** @Config */\nexport async function makeEarly(): Promise<Early> {\n  throw new RangeError("at once");\n}\n`;
-  const first = await failure({ "a.ts": early + component("Action", "SaveUser", ["Early"]) });
+  const first = await failure({ "a.ts": early + component("Gateway", "SaveUser", ["Early"]) });
   assert.match(first.message, /^Early: function makeEarly \(.*a\.ts\) failed while waiting for it: at once$/);
   assert.ok(first.cause instanceof RangeError);
   assert.deepEqual(shared.skeletoTest.calls, []);
@@ -906,14 +909,14 @@ test("two configs, one returning X and one returning Promise<X>, stop startup as
   assert.deepEqual(shared.skeletoTest.calls, []);
 });
 
-for (const kind of ["Wrapper", "Action"] as const) {
+for (const kind of ["Wrapper", "Gateway"] as const) {
   test(`a @${kind} declared Promise<X> is a mistake naming the function, reported with the other mistakes and before any application file is imported`, async () => {
     const boom = `throw new Error("module was imported");\n`;
     const late = component(kind, "Late").replace("): Late {", "): Promise<Late> {").replace("export function", "export async function");
     const error = await failure({
       "a.ts": boom + late,
       // Whatever needs Late is not reported a second time as needing something unknown.
-      "b.ts": boom + component("Action", "SaveUser", ["Late", "Nowhere"]) + `/** @Action */\nfunction makeHidden(): Hidden { return null as any; }\n`,
+      "b.ts": boom + component("UseCase", "SaveUser", ["Late", "Nowhere"]) + `/** @Gateway */\nfunction makeHidden(): Hidden { return null as any; }\n`,
     });
     assert.doesNotMatch(error.message, /module was imported/);
     assert.equal(error.cause, undefined);
@@ -935,7 +938,7 @@ for (const kind of ["Wrapper", "Action"] as const) {
 for (const [entry, suggestion] of [["logging", "Logging"], ["@Logging", "Logging"]] as const) {
   test(`options.decorators entry ${JSON.stringify(entry)} is an option mistake naming the entry, reported with the others and before any import`, async () => {
     const boom = `throw new Error("module was imported");\n`;
-    const error = await failure({ "a.ts": boom + component("Action", "SaveUser", ["Nowhere"]) }, { decorators: [entry, "Transaction"] });
+    const error = await failure({ "a.ts": boom + component("Gateway", "SaveUser", ["Nowhere"]) }, { decorators: [entry, "Transaction"] });
     assert.doesNotMatch(error.message, /module was imported/);
     const lines = problems(error);
     assert.equal(lines.length, 2, error.message);
@@ -950,7 +953,7 @@ test("a marked declare function, an export list, and a class method stop startup
   const files = {
     "a.ts": boom + `/** @Config */\nexport declare function makeAmbient(): Ambient;\n`,
     "b.ts": `/** @Config */\nfunction makeListed(): Listed { return null as any; }\nexport { makeListed };\n`,
-    "c.ts": `export class Holder {\n  /** @Action */\n  static makeIt(): Item { return null as any; }\n}\n`,
+    "c.ts": `export class Holder {\n  /** @Gateway */\n  static makeIt(): Item { return null as any; }\n}\n`,
   };
   const error = await failure({ ...files, "d.ts": component("Config", "Ok") }, { decorators: ["Logging"] });
   assert.doesNotMatch(error.message, /module was imported/);
@@ -958,7 +961,7 @@ test("a marked declare function, an export list, and a class method stop startup
   assert.equal(lines.length, 3, error.message);
   assert.match(lines[0] ?? "", /makeAmbient \(a\.ts\): .*declare/);
   assert.match(lines[1] ?? "", /makeListed \(b\.ts\): .*export list.*"export function makeListed"/);
-  assert.match(lines[2] ?? "", /Holder\.makeIt \(c\.ts\): .*@Action.*method/);
+  assert.match(lines[2] ?? "", /Holder\.makeIt \(c\.ts\): .*@Gateway.*method/);
   assert.deepEqual(shared.skeletoTest.calls, []);
 });
 
@@ -973,7 +976,7 @@ test("a this parameter is not passed: the arguments are the dependencies in orde
 
 test("wrapper layering compares paths with / as separator: a wrapper in a/ is inside one in a0.ts, as on every operating system", async () => {
   reset();
-  const files = { "a0.ts": component("Wrapper", "Outer"), "a/b.ts": component("Wrapper", "Inner"), "z.ts": component("Action", "SaveUser") };
+  const files = { "a0.ts": component("Wrapper", "Outer"), "a/b.ts": component("Wrapper", "Inner"), "z.ts": component("Gateway", "SaveUser") };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
     assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["Outer", "Inner", "SaveUser"]);

@@ -10,13 +10,12 @@ import type { SkeletoOptions, WrapperHandler } from "./type.js";
 type Container = Map<string, FuncInstanceMetadata>;
 
 // Creation order of the kinds, and for each kind the kinds it may depend on. The structure is one straight line, use case -> gateway -> config:
-// a use case reaches gateways only, a gateway configs only, and neither reaches a plain action, which would bridge two use cases; a plain action is free.
+// a use case reaches gateways only and a gateway configs only. There is no kind with free rules: every action is a use case or a gateway.
 const ALLOWED_DEPENDENCIES: Record<string, string[]> = {
   Config: ["Config"],
   Wrapper: ["Config"],
   Gateway: ["Config"],
   UseCase: ["Gateway"],
-  Action: ["Config", "Gateway", "UseCase", "Action"],
 };
 
 export class Skeleto {
@@ -74,7 +73,7 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
   for (const found of functions) if (!byName.has(found.metadata.name)) byName.set(found.metadata.name, found);
 
   // The scanner returns nothing for a directory without .ts files, and a directory without any component has nothing to bind either.
-  if (functions.length === 0 && scanned.errors.length === 0) errors.push(`${root}: no .ts file with a @Config, @Wrapper, @Action, @UseCase or @Gateway function was found`);
+  if (functions.length === 0 && scanned.errors.length === 0) errors.push(`${root}: no .ts file with a @Config, @Wrapper, @UseCase or @Gateway function was found`);
   for (const { metadata } of functions) {
     const kind = metadata.mainDecorator.name;
     for (const dependency of metadata.dependencies) {

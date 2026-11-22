@@ -308,13 +308,13 @@ Why: the container is looked up by a string and returns an untyped instance. Doi
 
 This is a guarantee of how an application is built, not a rule for its code, so it has no number. A tool that reads or checks an application from outside may learn from its container, after `Skeleto.start` with the application's `MARKERS` (T10), and rely on all of this:
 
-- `getContainer()` lists every component, `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` and `@Action`, under its name (T3).
+- `getContainer()` lists every component, `@Config`, `@Wrapper`, `@UseCase` and `@Gateway`, under its name (T3).
 - `getMetadata()` of a component gives its `dependencies`, the names of the components it asks for, in parameter order (T4, T6), and its `additionalDecorators`, the markers with their data.
 - The name of a component is the name of its type (T3), so the tool finds the type of a component by looking the name up in the container.
 - A use case is told from a gateway by its main marker, `metadata.mainDecorator.name` (B5), and a wrapper is named after the marker it reads (T7, T11).
 - A tool that observes a run finds the observer at `ctx.data.gatewayObserver`, when the application has the wrapper of T26.
 
-A tool takes nothing else from the application, and the container is read once, at its start (T17). The architecture test and the gap test of [REVIEW_CHECKLIST.md](REVIEW_CHECKLIST.md) are such tools.
+A tool takes nothing else from the application, and the container is read once, at its start (T17).
 
 ## Tests
 

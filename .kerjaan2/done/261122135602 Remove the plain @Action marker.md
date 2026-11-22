@@ -21,11 +21,11 @@ On 2026-11-22 the owner first chose a start option to refuse plain actions, then
 
 ## Done when
 
-- [ ] A function marked `@Action` stops startup before any application file is imported, naming the function and saying to mark it `@UseCase` or `@Gateway`.
-- [ ] An application with only configs, wrappers, use cases and gateways starts as before, and every use case and gateway is still wrapped by every wrapper.
-- [ ] Nothing in Skeleto's behaviour or public types still offers a plain action as a kind of component.
-- [ ] `CLAUDE.md` lists four main markers and no plain action, with tests; the README and its example no longer use `@Action`.
-- [ ] The copied architecture test and its text are removed from `REVIEW_CHECKLIST.md`, and the practice documents (`docs/` and, while they exist, the old ones) no longer describe a plain `@Action`.
+- [x] A function marked `@Action` stops startup before any application file is imported, naming the function and saying to mark it `@UseCase` or `@Gateway`.
+- [x] An application with only configs, wrappers, use cases and gateways starts as before, and every use case and gateway is still wrapped by every wrapper.
+- [x] Nothing in Skeleto's behaviour or public types still offers a plain action as a kind of component.
+- [x] `CLAUDE.md` lists four main markers and no plain action, with tests; the README and its example no longer use `@Action`.
+- [x] The copied architecture test and its text are removed from `REVIEW_CHECKLIST.md`, and the practice documents (`docs/` and, while they exist, the old ones) no longer describe a plain `@Action`.
 
 ## Out of scope
 
@@ -68,6 +68,25 @@ On 2026-11-22 the owner first chose a start option to refuse plain actions, then
 - Lane standard: a new start option and its check in src/skeleto.ts, plus document edits; no data, login or money, cheap to undo
 - Not solo, waits for nothing open: blocked_by 261122135601 is already in main. 261122135603 waits for this one.
 - Lane standard (scope now removal of @Action): changes the main markers and kinds in src/, tests and documents; no data, login or money, and no existing users, so cheap to undo from git
+
+## Handoff
+@Action is no longer a marker. scanner.ts drops it from MAIN_DECORATORS and reports one line per function marked @Action (with or without options.decorators, also beside another main marker, lowercase @action with decorators, and misplaced on constants/namespaces/methods with decorators), advising @UseCase or @Gateway. skeleto.ts drops the Action kind from ALLOWED_DEPENDENCIES and from the empty-directory message. Tests that used @Action as a generic action now use @Gateway/@UseCase. The copied architecture test is gone from REVIEW_CHECKLIST.md; B5 heading and row now read 'Mark every use case @UseCase and every gateway @Gateway', checked by Skeleto at startup. Docs, README and CLAUDE.md updated. Must not break: the four-kind dependency table and the heading/row match.
+
+## Review
+- 2026-11-22 standard, round 1, at 610395e: sent back.
+  1: met. Ran (k2 test, spec reporter, 49 pass): skeleto.test 'a function marked @Action stops startup before any import...' (module-level throw not hit), scanner.test 'the removed @Action marker' section, readme.test 'Skeleto refuses ... a function marked @Action'.
+  2: met. skeleto.test 'every wrapper wraps every action...' (Gateway and UseCase each traced through both wrappers) and readme.test 'the README examples start and print exactly the output' pass.
+  3: met. ALLOWED_DEPENDENCIES and MAIN_DECORATORS hold four kinds; src/type.ts unchanged; grep of src finds Action only as REMOVED_MARKER.
+  4,5 FAIL, kind: docs still describing a plain action or the removed test. Found by grep -rn -i -E 'plain action|action polos|@action\b|tes arsitektur|tiga jenis' CLAUDE.md README.md docs. (a) CLAUDE.md:39 'Skeleto hanya mengenal tiga jenis action (use case, gateway, action polos)' -> two kinds. (b) docs/teknis/wrapper.md:112 'dengan pesan yang sama seperti pada @Config dan @Action' -> @Config, @UseCase, @Gateway. (c) docs/teknis/komponen.md:184 'Tes arsitektur dan tes celah di REVIEW_CHECKLIST.md' -> gap test only.
+  4 (same kind, cont.): (d) CLAUDE.md:119 and README.md:441 give '@action' as a lowercase tag that equals a main marker; Action is no longer one (use e.g. @usecase, or say @action gets the @UseCase/@Gateway advice). (e) CLAUDE.md:118 and README.md:440 give '@Actions' as a misspelled main marker; use e.g. @Gatway. Not instances: docs/README.md:131 and use-case-gateway-bawaan.md:23,50 (history); TEMUAN.md (findings log).
+  note: test/skeleto.test.ts:184 is named '... like a plain action'; rename. The test 'the README and the practice files stay clear of what Skeleto dropped' missed (a)-(c); consider extending it. Repo has no checks beyond typecheck/test/build (no CI).
+- 2026-11-22 standard, round 2, at 79f8cc7: passed.
+  1: carried; src/ and its tests untouched since 610395e (only 79f8cc7, docs and two test edits). Re-ran: skeleto.test and readme.test @Action-before-import tests pass.
+  2: carried; 'every wrapper wraps every action...' re-run, passes.
+  3: carried; src/ unchanged since round 1.
+  4: round-1 findings (a),(d),(e) fixed: CLAUDE.md:39 says 'dua jenis action'; CLAUDE.md:118-119 and README.md:440-441 use @Gatway/@usecase. Round-1 grep now finds only removal and history lines. Extended 'stay clear of what Skeleto dropped' test passes.
+  5: findings (b),(c) fixed: wrapper.md:112 names @Config, @UseCase, @Gateway; komponen.md:184 names the gap test only. Remaining 'tes arsitektur' hits are history (docs/README.md:131, use-case-gateway-bawaan.md:23,50).
+  note: no checks beyond typecheck/test/build exist in the repo (no CI).
 
 ## Follow-ups
 - F1 [declined] Overturned A1: A wrong value is anything other than true, false or undefined (also the text "false", 0 and null). It is reported as options.<name>: must be true or false, received <value>, in the same Error as the other option and scan mistakes and before them, and the option is then treated as not given, so plain actions are allowed and the scan still runs.

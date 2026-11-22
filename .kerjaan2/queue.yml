@@ -1,4 +1,3 @@
 goal: Remove plain @Action, then make docs/ the only rule set (TEMUAN finding 19)
 order:
-  - 261122135602   # Remove the plain @Action marker
   - 261122135603   # Make docs the only rule set and retire the old practice documents

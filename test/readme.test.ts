@@ -64,7 +64,7 @@ type Example = {
   output: string;
   /** Files another document adds to the example at paths of their own, such as its tests; they are type-checked with it, and run when they are `*.test.ts`. */
   additions: Record<string, string>;
-  /** Files REVIEW_CHECKLIST.md shows for applications to copy: the architecture test and the gap test. */
+  /** Files REVIEW_CHECKLIST.md shows for applications to copy: the gap test. */
   checklist: Record<string, string>;
 };
 
@@ -155,7 +155,7 @@ test("CLAUDE.md states the rule for async configs in sections 4.3 and 4.7", () =
   const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
   const section = (number: string): string => new RegExp(`^### ${number.replace(".", "\\.")} [\\s\\S]*?(?=^###? )`, "m").exec(guide)?.[0] ?? "";
   assert.match(section("4.3"), /`Promise<X>`[\s\S]*nama komponennya `X`/);
-  assert.match(section("4.3"), /`@Wrapper`, `@UseCase`, `@Gateway`, dan `@Action` selalu sinkron/);
+  assert.match(section("4.3"), /`@Wrapper`, `@UseCase`, dan `@Gateway` selalu sinkron/);
   assert.match(section("4.7"), /\*\*ditunggu\*\*/);
   assert.match(section("4.7"), /tidak memasang batas waktu/);
 });
@@ -230,12 +230,12 @@ test("the README example keeps business rules in plain entity functions, and no 
       const { dependencies, additionalDecorators } = JSON.parse(match[3] ?? "{}");
       components.set(match[1] ?? "", { kind: match[2] ?? "", dependencies, markers: additionalDecorators.map((marker: { name: string }) => marker.name) });
     }
-    // Use cases and gateways are told apart by their main marker, never by their names or folders, and the example has no plain action.
+    // Use cases and gateways are told apart by their main marker, never by their names or folders, and every component of the example is one of the four kinds.
     const useCases = [...components].filter(([, component]) => component.kind === "UseCase").map(([name]) => name);
     const gateways = [...components].filter(([, component]) => component.kind === "Gateway").map(([name]) => name);
     assert.deepEqual(useCases, ["StockTransfer"]);
     assert.deepEqual(gateways.sort(), ["LockWarehouses", "NotifyWarehouses", "SaveWarehouses"]);
-    assert.ok(![...components.values()].some((component) => component.kind === "Action"), "the example has a plain @Action");
+    assert.ok(![...components.values()].some((component) => ["Config", "Wrapper", "UseCase", "Gateway"].includes(component.kind) === false), "the example has a component of an unknown kind");
     // Skeleto itself keeps a use case away from other use cases, so the example has to start; it is checked here too.
     for (const useCase of useCases) {
       assert.ok(components.get(useCase)?.markers.includes("Transaction"), `use case ${useCase} carries no @Transaction`);
@@ -346,7 +346,7 @@ test("BEST_PRACTICES.md says Skeleto does not check it and leaves the technical 
 test("BEST_PRACTICES.md opens with the two levels and maps every architectural concept to what expresses it and what Skeleto checks", () => {
   const opening = bestPractices.slice(0, bestPractices.indexOf("### B1."));
   assert.match(opening, /^## Two levels$/m);
-  assert.match(opening, /\*\*The technical level\*\* is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` and `@Action`/);
+  assert.match(opening, /\*\*The technical level\*\* is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper`, `@UseCase` and `@Gateway`,/);
   assert.match(opening, /\*\*The architectural level\*\*[^\n]*entities, use cases, gateways\. Skeleto knows use cases and gateways as kinds of action/);
   assert.match(opening, /one standard structure of actions/);
   const rows = new Map(
@@ -408,12 +408,15 @@ test("the README and CLAUDE.md name the exclude option, the constant and every d
 });
 
 test("the README and the practice files stay clear of what Skeleto dropped", () => {
-  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i]) {
+  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /plain `?@Action/i, /plain action/i]) {
     assert.doesNotMatch(readme, banned);
     assert.doesNotMatch(bestPractices, banned);
     assert.doesNotMatch(technicalPractices, banned);
     assert.doesNotMatch(checklist, banned);
   }
+  // CLAUDE.md says "action polos" for the dropped kind; its table of dropped features is the one place that names it.
+  const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
+  assert.doesNotMatch(guide.replace(/^\| `@Action` polos.*$/m, ""), /tiga jenis action|action polos \(|, action polos/);
 });
 
 /**
@@ -693,7 +696,7 @@ test("REVIEW_CHECKLIST.md lists every rule of the three practice files exactly o
     "REVIEW_CHECKLIST.md does not list every rule exactly once, in order",
   );
   for (const { number, text, level } of rows) assert.deepEqual({ text, level }, rules.get(number), `REVIEW_CHECKLIST.md states ${number} differently from its practice file`);
-  // A machine checks only what the architecture test checks; everything else is left to the reviewer.
+  // A machine checks only what Skeleto at startup and the gap test check; everything else is left to the reviewer.
   assert.deepEqual(rows.filter(({ checker }) => checker === "Machine").map(({ number }) => number), ["B5", "B8", "T27"]);
   // Of the process rules, only those that leave a file in the repository can be read by a reviewer; the rest are checked with the owner.
   assert.deepEqual(rows.filter(({ number }) => number.startsWith("P") && checkerOf(number) === "Reviewer").map(({ number }) => number), ["P4", "P5", "P9", "P10", "P12", "P13", "P14"]);
@@ -714,10 +717,10 @@ test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a r
   assert.match(example.files[path]?.split("\n")[Number(line) - 1] ?? "", /^export function implStockTransfer\(/, `${path}:${line} is not the line the example finding is about`);
 });
 
-test("REVIEW_CHECKLIST.md holds the architecture test and the gap test, and no startup guard", () => {
-  assert.deepEqual(Object.keys(example.checklist).sort(), ["architecture.test.ts", "gaps.test.ts"]);
+test("REVIEW_CHECKLIST.md holds the gap test only: no architecture test and no startup guard", () => {
+  assert.deepEqual(Object.keys(example.checklist).sort(), ["gaps.test.ts"]);
   assert.doesNotMatch(checklist, /startup guard|UseCaseWrapper|use_case_wrapper/);
-  assert.match(checklist, /Skeleto itself refuses a use case that depends on another use case or on a config \(B8\)/);
+  assert.doesNotMatch(checklist, /architecture test|architecture\.test|plain `@Action`/);
 });
 
 /** The README example with every file the other documents add, and the checklist's tests, as an application would hold them. */
@@ -725,7 +728,7 @@ function application(changes: Record<string, string> = {}): Record<string, strin
   return { ...installation(), ...example.files, ...example.additions, ...example.checklist, ...changes };
 }
 
-// A second use case and a plain action, for the copies that break the rules.
+// A second use case, for the copies that break the rules.
 const stockCount = `import type { ActionHandler } from "skeleto";
 
 export type StockCount = ActionHandler<string, number>;
@@ -750,14 +753,10 @@ function stockTransferOn(type: string): Record<string, string> {
   return { [path]: source };
 }
 
-test("the checklist's architecture test type-checks with the example, passes on it, and leaves its behaviour alone", async () => {
+test("the checklist's gap test type-checks with the example, and the example's behaviour is left alone", async () => {
   await withFixture(application(), async (directory) => {
     const checked = await run("tsc", ["-p", "."], directory);
     assert.equal(checked.code, 0, checked.stdout + checked.stderr);
-    const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
-    assert.equal(tested.code, 0, tested.stdout + tested.stderr);
-    assert.match(tested.stdout, /pass 1\b/);
-    assert.match(tested.stdout, /fail 0\b/);
     const started = await run("tsx", example.command, directory);
     assert.equal(started.code, 0, started.stderr);
     assert.deepEqual(started.stdout.split("\n"), example.output.split("\n"));
@@ -773,14 +772,13 @@ test("Skeleto refuses, before the application's code runs, a use case that depen
   });
 });
 
-test("the architecture test fails, naming it, when the application has a plain @Action", async () => {
+test("Skeleto refuses, before the application's code runs, a function marked @Action, naming it and asking for @UseCase or @Gateway", async () => {
   const plain = stockCount.replace(" * @UseCase\n", " * @Action\n");
   await withFixture(application({ "src/usecase/stock/stock_count.ts": plain }), async (directory) => {
-    const tested = await run("tsx", ["--test", "architecture.test.ts"], directory);
-    assert.notEqual(tested.code, 0);
-    assert.match(tested.stdout, /fail 1\b/);
-    assert.match(tested.stdout, /not ok \d+ - B5: no action is a plain @Action/);
-    assert.match(tested.stdout, /StockCount/);
+    const started = await run("tsx", example.command, directory);
+    assert.notEqual(started.code, 0);
+    assert.equal(started.stdout, "");
+    assert.match(started.stderr, /implStockCount \(usecase\/stock\/stock_count\.ts\): is marked @Action, but that is not a marker any more; mark it @UseCase or @Gateway/);
   });
 });
 

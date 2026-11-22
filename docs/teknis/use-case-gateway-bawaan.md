@@ -4,7 +4,7 @@
 
 ## Definisi
 
-`@UseCase` dan `@Gateway` adalah **jenis khusus `@Action`** yang dikenal langsung oleh Skeleto. Keduanya action, jadi semua perilaku action berlaku: tahap luar sinkron, menghasilkan handler, dan dibungkus semua wrapper. Bedanya, Skeleto juga menjaga aturan dependency keduanya.
+`@UseCase` dan `@Gateway` adalah **dua jenis action** yang dikenal langsung oleh Skeleto; tidak ada jenis action lain. Keduanya action, jadi semua perilaku action berlaku: tahap luar sinkron, menghasilkan handler, dan dibungkus semua wrapper. Bedanya, Skeleto juga menjaga aturan dependency keduanya.
 
 ```ts
 /**
@@ -16,7 +16,7 @@
 export function implStockTransfer(lockWarehouses: LockWarehouses, saveWarehouses: SaveWarehouses): StockTransfer {
 ```
 
-`@Action` polos tetap ada dan boleh dipakai. Aturannya bebas: hanya aturan mekanisme Skeleto yang berlaku untuknya (lihat [action.md](action.md)).
+`@Action` bukan penanda lagi (keputusan pemilik, 2026-11-22): fungsi yang bertanda itu menghentikan startup, dengan saran memakai `@UseCase` atau `@Gateway` (lihat [action.md](action.md)).
 
 ## Kenapa ada
 
@@ -32,9 +32,8 @@ Pemilik memilih jenis bawaan, bukan preset, karena tujuan utama Skeleto adalah k
 | `@Wrapper` | `@Config` |
 | `@UseCase` | `@Gateway` |
 | `@Gateway` | `@Config` |
-| `@Action` | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
-Keputusan pemilik (2026-11-22): `@UseCase` dan `@Gateway` tidak boleh bergantung pada `@Action` polos, supaya `@Action` polos tidak menjadi jembatan antar use case. Keputusan pemilik (2026-11-22, `TEMUAN.md` temuan 18): strukturnya satu garis lurus, controller -> use case -> gateway -> config. Use case hanya bergantung pada gateway dan gateway hanya pada config. Parameter bisnis sampai ke use case lewat gateway yang membacanya atau menjadi konstanta entity; kode yang dipakai bersama beberapa gateway adalah config atau fungsi biasa yang bukan komponen; gateway yang butuh waktu atau id baru menerimanya di inputnya; pengirim outbox adalah proses terpisah (controller yang memanggil use case). Urutan pembuatan: semua gateway, lalu semua use case, lalu semua action polos.
+Keputusan pemilik (2026-11-22, `TEMUAN.md` temuan 18): strukturnya satu garis lurus, controller -> use case -> gateway -> config. Use case hanya bergantung pada gateway dan gateway hanya pada config. Parameter bisnis sampai ke use case lewat gateway yang membacanya atau menjadi konstanta entity; kode yang dipakai bersama beberapa gateway adalah config atau fungsi biasa yang bukan komponen; gateway yang butuh waktu atau id baru menerimanya di inputnya; pengirim outbox adalah proses terpisah (controller yang memanggil use case). Urutan pembuatan: semua gateway, lalu semua use case.
 
 ## Yang masih terbuka
 
@@ -46,7 +45,7 @@ Keputusan pemilik (2026-11-22): `@UseCase` dan `@Gateway` tidak boleh bergantung
 
 ## Yang berubah saat dibuat
 
-- Jenis dibaca dari `metadata.mainDecorator.name` (`UseCase`, `Gateway`, `Action`), tanpa field baru. Wrapper membedakan use case dari gateway lewat nama itu.
+- Jenis dibaca dari `metadata.mainDecorator.name` (`Config`, `Wrapper`, `UseCase`, `Gateway`), tanpa field baru. Wrapper membedakan use case dari gateway lewat nama itu.
 - `UseCase` dan `Gateway` tidak ada lagi di `MARKERS` aplikasi.
-- Tes arsitektur di `REVIEW_CHECKLIST.md` tinggal satu pemeriksaan: tidak ada `@Action` polos (B5). Wrapper penjaga dihapus.
+- Tes arsitektur salinan di `REVIEW_CHECKLIST.md` dihapus: tidak ada lagi action polos yang perlu dicari (B5). Wrapper penjaga dihapus.
 - Ukuran inti bertambah; pemilik sudah minta diingatkan soal ukuran inti (`TEMUAN.md`, temuan 1).

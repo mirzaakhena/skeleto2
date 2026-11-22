@@ -8,7 +8,7 @@
 export type WrapperHandler = (actionHandler: ActionHandler, functionMetadata: FuncMetadata) => ActionHandler;
 ```
 
-Wrapper ditandai `@Wrapper`, tanpa data, seperti `@Config` dan `@Action`.
+Wrapper ditandai `@Wrapper`, tanpa data, seperti `@Config`, `@UseCase`, dan `@Gateway`.
 
 ## Kenapa ada
 
@@ -109,7 +109,7 @@ Gateway mengantrekan efeknya di `ctx.data.afterCommit` (GW-10 di [gateway.md](..
 
 Wrapper yang ditulis **pertama** adalah lapisan **terdalam**, dipasang paling dulu, sehingga berkas dibaca dari inti ke luar. Pada saat dipanggil, urutannya terbalik: lapisan terluar, yang ditulis terakhir, berjalan paling dulu. Dalam contoh README, wrapper pengamat gateway ditulis pertama, lalu `TransactionWrapper`, lalu `AuditWrapper`; maka audit membungkus transaksi, dan transaksi membungkus pengamat.
 
-Skeleto tidak punya aturan tentang berkas tempat wrapper ditulis (keputusan pemilik, 2026-11-22). Urutannya mengikuti pemindaian: berkas menurut urutan path, fungsi menurut urutan tulisnya. Menaruh semua wrapper di satu berkas, `src/wrappers.ts` (KOM-8), adalah bawaan opsional supaya urutan lapisan terbaca di satu tempat; pengembang boleh mengaturnya sendiri. `@Wrapper` tidak membawa data: data apa pun menghentikan startup, dengan pesan yang sama seperti pada `@Config` dan `@Action`.
+Skeleto tidak punya aturan tentang berkas tempat wrapper ditulis (keputusan pemilik, 2026-11-22). Urutannya mengikuti pemindaian: berkas menurut urutan path, fungsi menurut urutan tulisnya. Menaruh semua wrapper di satu berkas, `src/wrappers.ts` (KOM-8), adalah bawaan opsional supaya urutan lapisan terbaca di satu tempat; pengembang boleh mengaturnya sendiri. `@Wrapper` tidak membawa data: data apa pun menghentikan startup, dengan pesan yang sama seperti pada `@Config`, `@UseCase`, dan `@Gateway`.
 
 ### WRP-6. Wrapper pengamat gateway menyerahkan setiap panggilan gateway ke pengamat di context, dan meneruskan panggilannya kalau tidak ada pengamat
 
@@ -152,7 +152,7 @@ Wrapper bukan alat validasi struktur. Aturan antara use case dan gateway dijaga 
 | Dengan | Hubungannya |
 | --- | --- |
 | Config | satu-satunya dependency yang boleh |
-| Action | membungkus semua jenis action (use case, gateway, action polos); memilih yang dibungkus lewat penanda tambahan di `metadata.additionalDecorators`, atau lewat jenisnya di `metadata.mainDecorator.name` |
+| Action | membungkus semua jenis action (use case dan gateway); memilih yang dibungkus lewat penanda tambahan di `metadata.additionalDecorators`, atau lewat jenisnya di `metadata.mainDecorator.name` |
 | Wrapper lain | tidak bergantung padanya; urutan antarwrapper adalah urutan penulisan (WRP-5) |
 | Context | menambah dan menghapus yang dikelolanya |
 

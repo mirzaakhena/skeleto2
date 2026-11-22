@@ -23,7 +23,10 @@ export type ScanResult = {
   errors: string[];
 };
 
-const MAIN_DECORATORS = ["Config", "Wrapper", "Action", "UseCase", "Gateway"];
+const MAIN_DECORATORS = ["Config", "Wrapper", "UseCase", "Gateway"];
+// No longer a marker: a plain action passed every use case and gateway rule unchecked, so it is refused wherever it is written.
+const REMOVED_MARKER = "Action";
+const REMOVED_ADVICE = "that is not a marker any more; mark it @UseCase or @Gateway";
 
 /**
  * Reads every `.ts` file under the directory that is not excluded, as text, and returns its components. No file is imported or run, and
@@ -107,14 +110,18 @@ function readFunction(
   if (!jsDoc) return undefined;
   const { decorators, tags, problems } = readDecorators(jsDoc.getText());
   const [mainDecorator, ...otherMains] = decorators.filter((decorator) => MAIN_DECORATORS.includes(decorator.name));
+  // Refused with or without the list, and also beside another main marker, so that it never passes silently as a component or as an additional marker.
+  if (decorators.some((decorator) => decorator.name === REMOVED_MARKER)) report(`is marked @Action, but ${REMOVED_ADVICE}`);
   // Without the list nobody has said which markers exist, so a function without a main marker is left alone in silence.
   if (allowedDecorators) {
     for (const tag of tags) {
       const meant = [...MAIN_DECORATORS, ...allowedDecorators].find((name) => String(name).toLowerCase() === tag.toLowerCase());
-      if (meant) report(`has the tag @${tag}, which is read as a standard JSDoc tag and ignored; a marker starts with an uppercase letter, write @${meant}`);
+      if (tag.toLowerCase() === REMOVED_MARKER.toLowerCase()) report(`has the tag @${tag}, but ${REMOVED_ADVICE}`);
+      else if (meant) report(`has the tag @${tag}, which is read as a standard JSDoc tag and ignored; a marker starts with an uppercase letter, write @${meant}`);
     }
-    if (!mainDecorator && decorators.length > 0) {
-      report(`has ${decorators.map((decorator) => `@${decorator.name}`).join(", ")} but no main marker; exactly one of ${MAIN_DECORATORS.map((name) => `@${name}`).join(", ")} is needed`);
+    const unplaced = decorators.filter((decorator) => decorator.name !== REMOVED_MARKER);
+    if (!mainDecorator && unplaced.length > 0) {
+      report(`has ${unplaced.map((decorator) => `@${decorator.name}`).join(", ")} but no main marker; exactly one of ${MAIN_DECORATORS.map((name) => `@${name}`).join(", ")} is needed`);
     }
   }
   if (!mainDecorator) return undefined;
@@ -126,7 +133,7 @@ function readFunction(
   const dataProblem = checkMainData(mainDecorator);
   if (dataProblem) report(dataProblem);
 
-  const additionalDecorators = decorators.filter((decorator) => !MAIN_DECORATORS.includes(decorator.name));
+  const additionalDecorators = decorators.filter((decorator) => !MAIN_DECORATORS.includes(decorator.name) && decorator.name !== REMOVED_MARKER);
   for (const decorator of additionalDecorators) {
     if (allowedDecorators && !allowedDecorators.includes(decorator.name)) {
       report(`@${decorator.name} is not an allowed marker (allowed: ${allowedDecorators.map((name) => `@${name}`).join(", ") || "none"})`);
@@ -172,7 +179,7 @@ function readFunction(
  */
 function reportMisplaced(sourceFile: SourceFile, report: (name: string, message: string) => void): void {
   function check(node: JSDocableNode, name: string, what: string): void {
-    const marker = readDecorators(node.getJsDocs().at(-1)?.getText() ?? "").decorators.find((decorator) => MAIN_DECORATORS.includes(decorator.name));
+    const marker = readDecorators(node.getJsDocs().at(-1)?.getText() ?? "").decorators.find((decorator) => [...MAIN_DECORATORS, REMOVED_MARKER].includes(decorator.name));
     if (marker) report(name, `is marked @${marker.name} but is ${what}; only top-level function declarations can be components`);
   }
   function enter(namespace: ModuleDeclaration): void {

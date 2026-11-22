@@ -30,7 +30,7 @@ test("FuncInstanceMetadata returns the instance and the metadata it was given", 
   const metadata: FuncMetadata = {
     name: "SaveUser",
     dependencies: ["Database"],
-    mainDecorator: { name: "Action", data: undefined },
+    mainDecorator: { name: "UseCase", data: undefined },
     additionalDecorators: [{ name: "Transaction", data: undefined }],
   };
 

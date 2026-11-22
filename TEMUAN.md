@@ -1,0 +1,176 @@
+# Temuan peninjauan konsep
+
+Catatan hasil mengulik ulang Skeleto terhadap konsep dasarnya (`CLAUDE.md` bagian 1–2). Setiap butir berisi apa yang ditemukan, letaknya, dan kenapa layak dibahas. Butir di sini **belum** keputusan; statusnya diisi setelah dibahas dengan pemilik.
+
+Dimulai: 2026-11-21.
+
+| No | Temuan | Status |
+| --- | --- | --- |
+| 1 | Ukuran inti di atas patokan | belum dibahas |
+| 2 | Dokumen praktik di luar "hanya binding" | belum dibahas |
+| 3 | README memuat konsep bisnis | belum dibahas |
+| 4 | `Context` dan `newContext()` di API publik | belum dibahas |
+| 5 | Tujuan sebenarnya tidak tertulis di mana pun | belum dibahas |
+| 6 | Pembaca kodenya tetap manusia | belum dibahas |
+| 7 | Belum ada jalur resmi untuk optimisasi | belum dibahas |
+| 8 | Urutan menulis kode di dalam Core tidak tertulis | belum dibahas |
+| 9 | Jumlah aturan sangat besar dibanding kodenya | belum dibahas |
+| 10 | Pemisahan kode infrastruktur dan kode logika tidak dinyatakan sebagai prinsip | lima poin diterima pemilik |
+| 11 | B1: screen adalah petunjuk, bukan larangan | belum dibahas |
+| 12 | `@UseCase` dan `@Gateway` sebagai jenis khusus `@Action` | arah dipilih: paket bawaan tambahan; rincian belum dibahas |
+| 13 | Satu dokumen per komponen, dibuat baru | rancangan dibuat di `docs/`; penggantian belum diputuskan |
+| 14 | Kontrak tak tertulis antara Skeleto dan penjejak scenario-explorer | belum dibahas |
+| 15 | Celah di praktik transaksi dan locking, dan urusan lintas-use-case lain yang belum diatur | belum dibahas |
+
+---
+
+## 1. Ukuran inti di atas patokan
+
+- **Fakta:** `src/` sekarang 468 baris (`scanner.ts` 186, `skeleto.ts` 124, `decorator.ts` 58, `type.ts` 51, `dependency.ts` 46, `index.ts` 3). Patokannya sekitar 400.
+- **Kenapa dibahas:** patokan ini bukan batas, tetapi alasan untuk bertanya "kenapa ini harus ada di framework?". Kelebihan sekitar 17% layak ditelusuri: bagian mana yang tumbuh dan apakah semuanya memang milik framework.
+
+## 2. Dokumen praktik di luar "hanya binding"
+
+- **Fakta:** selain `README.md` dan `CLAUDE.md`, repo memuat `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md`, `DEVELOPMENT_PROCESS.md`, dan `REVIEW_CHECKLIST.md`. README merujuk keempatnya. Isinya mencakup cara menyusun aplikasi (use case per berkas, aturan bisnis di entity), proses pengembangan (Core lebih dulu), serta tes arsitektur dan tes celah untuk disalin.
+- **Kenapa dibahas:** prinsip lite menyatakan Skeleto tidak tahu apa pun di luar binding. Dokumen-dokumen ini tidak menambah kode, tetapi menjadikan repo framework sekaligus panduan arsitektur aplikasi dan proses kerja. Perlu diputuskan apakah semuanya memang milik repo ini atau lebih tepat dipindah ke repo atau paket terpisah.
+
+## 3. README memuat konsep bisnis
+
+- **Fakta:** contoh di README (pemindahan stok antargudang) memuat `BusinessError` dengan `kind` `"validation" | "not_found" | "conflict" | "tech_debt"` dan field `gap`.
+- **Kenapa dibahas:** contoh yang kaya konsep aplikasi membuat pembaca bisa mengira konsep itu bagian dari Skeleto. Contoh untuk framework yang "hanya binding" mungkin cukup menunjukkan config, wrapper, dan action.
+
+## 4. `Context` dan `newContext()` di API publik
+
+- **Fakta:** `src/type.ts` mendefinisikan `Context` (`data`, `traceId`, `date`) dan `newContext()`, keduanya diekspor `src/index.ts`. `ActionHandler` ditetapkan sebagai `(ctx: Context, request) => Promise<response>`. README memakai keduanya.
+- **Kenapa dibahas:** `traceId` dan "satu permintaan" adalah konsep eksekusi permintaan, bukan binding. Skeleto sendiri tidak pernah membuat atau membaca `Context`; ia hanya mewajibkan bentuknya lewat tipe. Ini bertentangan dengan semangat "tidak tahu apa pun tentang request". Di sisi lain, ini bagian API publik (`CLAUDE.md` bagian 5), jadi mengubahnya butuh keputusan pemilik dan merusak kode pemakai.
+
+- **Catatan setelah membaca scenario-explorer (2026-11-21):** `Context.data` ternyata dipakai sebagai saluran antara aplikasi dan alat luar (`ctx.data.gatewayObserver`, `ctx.data.transaction`, `ctx.data.afterCommit`; lihat temuan 14). Jadi `Context` bukan sisa yang tidak sengaja. Pertanyaannya bergeser: apakah konsep ini milik inti, atau milik preset clean architecture (temuan 12).
+
+## 5. Tujuan sebenarnya tidak tertulis di mana pun
+
+- **Fakta:** pemilik menyatakan (2026-11-21) bahwa tujuan Skeleto adalah **konsistensi struktur kode**: karena kode ditulis AI yang tidak deterministik, harus ada satu struktur pegangan standar supaya developer bisa mereview dengan cepat tanpa mempelajari struktur dari awal. Strukturnya tidak harus yang ini; yang penting ada satu standar. Tujuan ini tidak tercantum di `CLAUDE.md` maupun `README.md`. `CLAUDE.md` bagian 1 hanya menjelaskan *apa* yang dikerjakan (binding), bukan *untuk apa*.
+- **Kenapa dibahas:** setiap sesi AI membaca `CLAUDE.md` dan mengambil keputusan dari sana. Tanpa tujuan tertulis, AI menilai setiap perubahan dengan ukuran "apakah ini binding?", bukan "apakah ini membuat struktur lebih seragam dan mudah direview?". Kemungkinan inilah sumber arah pengembangan yang terasa melenceng.
+- **Daftar tujuan (disusun bersama pemilik, 2026-11-21, belum final):**
+  1. Merangkai kode secara otomatis (binding dengan dependency injection).
+  2. Menjaga kode mudah dibaca lewat struktur yang konsisten dan konsep yang teruji (clean architecture).
+  3. Memandu proses dan tahapan pengembangan.
+  4. Menunjukkan bagian mana yang layak didahulukan (Core lebih dulu).
+  5. Menjadi pagar otomatis bagi kode buatan AI: pelanggaran struktur ditolak mesin saat startup, bukan bergantung pada ketelitian reviewer.
+  6. Mempercepat review: setiap berkas punya peran yang jelas, jadi reviewer tahu harus mencari apa dan di mana.
+  7. Memisahkan logika dari infrastruktur, supaya aturan bisnis bisa dites tanpa database atau jaringan, dan infrastruktur bisa diganti tanpa menyentuh logika.
+  8. Menjadikan pekerjaan yang belum selesai terlihat: celah, stub, dan utang ditandai dan bisa dihitung.
+  9. Menyimpan keputusan dan bahasa bisnis di repo (`AREAS.md`, `GLOSSARY.md`, `CORE.md`), bukan di percakapan.
+  10. Memungkinkan frontend dan backend dikerjakan bersamaan lewat kontrak use case.
+  11. Membuat aplikasi bisa dibaca dan diamati alat lain (container, metadata, observer).
+- **Akibat bagi temuan 2 dan 3:** dengan tujuan ini, dokumen praktik dan contoh README bisa jadi bukan penyimpangan, melainkan bagian terpenting, karena merekalah yang mendefinisikan struktur standarnya. Yang perlu diputuskan bukan "buang atau tidak", tetapi di mana batasnya: aturan mana yang dijaga **mesin** (kode Skeleto, gagal saat startup) dan mana yang hanya **tulisan** (dokumen, dijaga reviewer).
+
+## 6. Pembaca kodenya tetap manusia
+
+- **Fakta:** pemilik menyatakan (2026-11-21) bahwa Skeleto lahir dari clean architecture untuk menyeragamkan kode tim. Struktur itu terlalu rumit bagi pemula, tetapi sekarang penulisnya AI, sehingga biaya belajar dianggap hilang.
+- **Kenapa dibahas:** biaya belajar penulis memang hilang, tetapi **reviewer tetap manusia**. Clean architecture menghasilkan lebih banyak berkas dan lapisan per fitur, dan setiap berkas tambahan harus dibaca reviewer. Biayanya berpindah dari *menulis* ke *membaca*. Struktur standar ini perlu dinilai juga dari sisi reviewer: berapa banyak yang harus dibaca untuk satu fitur, dan apakah polanya bisa dikenali sekilas.
+
+## 7. Belum ada jalur resmi untuk optimisasi
+
+- **Fakta:** pemilik menghindari premature optimization: yang penting logikanya benar, optimisasi belakangan, misalnya satu gateway dengan satu query gabungan menggantikan bolak-balik use case dan gateway. Dokumen praktik tidak memuat kata "optimization" atau "performance" sama sekali. Satu aturan malah secara tegas menutup satu jenis optimisasi: `BEST_PRACTICES.md` B37 menyatakan query yang menyaring status turunan "does not add a status column to answer the query faster".
+- **Kenapa dibahas:** menunda optimisasi itu tepat. Masalahnya, saat optimisasi akhirnya dibutuhkan, tidak ada aturan tentang **bentuk** kode yang dioptimasi. AI akan mengarang bentuknya sendiri, dan setiap optimisasi menjadi pengecualian yang berbeda. Akibatnya konsistensi, yaitu tujuan utamanya (temuan 5), justru rusak di bagian yang paling perlu direview dengan teliti. Perlu ada aturan seperti "optimisasi dilakukan di dalam gateway, kontrak tetap sama, dan diberi tanda X", supaya kode yang sudah dioptimasi pun tetap berpola.
+
+## 8. Urutan menulis kode di dalam Core tidak tertulis
+
+- **Fakta:** `DEVELOPMENT_PROCESS.md` mengatur urutan proses dengan rinci (P1–P14: wawancara, `AREAS.md`, `GLOSSARY.md`, `CORE.md`, scenario map, lalu kode). Untuk kodenya sendiri, P8 hanya menulis "its entities, its use cases and their tests". Urutan yang lebih rinci (entity → kontrak gateway → use case + tes dengan fake → dummy gateway → wrapper dan config → start dan tes integrasi) hanya bisa **disimpulkan** dari aturan B dan T yang tersebar, tidak tertulis sebagai urutan.
+- **Kenapa dibahas:** tujuan utamanya konsistensi (temuan 5). Kalau urutan menulis kode tidak tertulis, dua sesi AI bisa memulai dari ujung yang berbeda, misalnya satu dari gateway dan satu dari use case. Hasil akhirnya mungkin sama bentuknya, tetapi riwayat perubahan dan potongan yang direview akan berbeda.
+
+- **Usulan urutan (dibahas 2026-11-21, belum diputuskan):** rancang dari atas, bangun dari bawah, satu use case setiap kali:
+  1. tulis **kontrak use case** (Request, Response, kontrak gateway yang dibutuhkan) dan sketsa alurnya, dari scenario map;
+  2. tulis **fungsi entity** yang dibutuhkan alur itu, beserta tesnya;
+  3. tulis **`impl` use case** beserta tesnya dengan fake.
+
+  Alasannya: use case menunjukkan aturan entity mana yang benar-benar dibutuhkan, sehingga tidak ada fungsi entity yang dibuat "untuk jaga-jaga". Entity tetap ditulis sebelum `impl` use case karena use case memanggilnya. Ini sedikit berbeda dari P8 ("its entities, its use cases and their tests"), yang terbaca seperti semua entity lebih dulu.
+
+## 9. Jumlah aturan sangat besar dibanding kodenya
+
+- **Fakta:** ada 78 aturan bernomor (B 37, T 27, P 14) dalam sekitar 1.150 baris dokumen praktik, ditambah `REVIEW_CHECKLIST.md` (255 baris). Kode framework-nya 468 baris. `DEVELOPMENT_PROCESS.md` mewajibkan enam artefak dokumen di repo aplikasi (`AREAS.md`, `GLOSSARY.md`, `CORE.md`, `docs/scenarios/*.json`, penanda utang T25, tes celah T27) sebelum dan selama menulis kode.
+- **Kenapa dibahas:** bagi AI, jumlah ini bukan masalah. Bagi reviewer manusia (temuan 6), 78 aturan terlalu banyak untuk diingat saat mereview. Kalau reviewer tidak bisa memegang standarnya di kepala, review cepat (tujuan temuan 5) tidak tercapai. Perlu dipilah: aturan mana yang inti (sedikit, dihafal reviewer), mana yang bisa dijaga mesin (tes arsitektur, Skeleto), dan mana yang cukup menjadi rujukan.
+
+## 10. Pemisahan kode infrastruktur dan kode logika tidak dinyatakan sebagai prinsip
+
+- **Pernyataan pemilik (2026-11-21):** kode infrastruktur (I/O, database, file, HTTP) hidup di gateway; kode logika (algoritma, perhitungan, keputusan) hidup di use case dan entity; use case adalah orkestrator entity dan gateway.
+- **Fakta:** isinya tersebar di beberapa aturan (B7 use case hanya mengatur alur, B21 semua yang di luar proses lewat gateway, B22 nilai tak terduga lewat gateway, B15 gateway baca tanpa aturan bisnis, B17 entity tidak mengimpor apa pun di luar entity). Kata "infrastructure" hanya muncul sekali (B36), dan kata "logic" tidak muncul. Tidak ada satu kalimat prinsip yang menjadi induk aturan-aturan itu.
+- **Yang belum tercakup atau berbeda dari pernyataan pemilik:**
+  1. **Logika di use case.** Dokumen (B7) lebih ketat: aturan bisnis hanya di entity, dan use case "decides nothing". Perlu dibedakan **aturan bisnis** (entity) dari **keputusan alur** (use case: urutan langkah, cabang menurut hasil entity atau gateway).
+  2. **Nilai tak terduga** (jam, id baru, angka acak) bukan I/O, tetapi tetap harus lewat gateway (B22). Batasnya lebih tepat disebut "tidak deterministik", bukan "I/O".
+  3. **HTTP masuk bukan gateway.** Gateway adalah jalan *keluar* (memanggil sesuatu). Server HTTP, job, dan CLI adalah *caller* (B27): membuat context, memeriksa bentuk input (B24), menerjemahkan error (B26), dan memanggil use case.
+  4. **Gateway boleh berlogika teknis.** Contohnya pemetaan data, query, penguncian (B29), dan optimisasi (temuan 7). Yang dilarang hanya aturan bisnis.
+  5. **Wrapper dan config tidak disebut.** Infrastruktur lintas-action (transaksi, logging) hidup di wrapper, dan sumber daya (koneksi, pengaturan) hidup di config.
+- **Tanggapan pemilik (2026-11-21):** kelima poin diterima. Rumusan prinsip yang pertama diusulkan mencampur konsep (gateway, use case, entity) dengan mekanisme Skeleto (action, wrapper, config). Rumusan dua lapis:
+  - **Lapis konsep (arsitektur):** *caller* adalah pintu masuk; *use case* mengatur alur; *entity* memegang aturan bisnis; *gateway* menjangkau dunia luar dan semua yang tidak deterministik. Urusan lintas-use-case (transaksi, logging) dan sumber daya (koneksi, pengaturan) adalah infrastruktur di luar keempatnya.
+  - **Lapis mekanisme (Skeleto):** use case dan gateway ditulis sebagai `@Action`; urusan lintas-use-case sebagai `@Wrapper`; sumber daya sebagai `@Config`; entity dan caller bukan komponen.
+
+## 11. B1: screen adalah petunjuk, bukan larangan
+
+- **Pernyataan pemilik (2026-11-21):** isi B1 benar, tetapi manusia hampir selalu menjelaskan kebutuhannya lewat screen ("saya ingin yang seperti ini"). Banyak orang awam juga berpikir "kalau screennya selesai, aplikasinya selesai". Screen hanya memberi petunjuk.
+- **Fakta:** B1 berbunyi "Start from the list of use cases, not from the list of screens" (Optional). Penjelasan gunung es di bagian "Built from use cases" sudah ada, tetapi ditujukan kepada agent dan pembaca teknis.
+- **Usulan:** B1 dirumuskan sebagai **petunjuk kerja**: terima screen sebagai bahan, gali use case dari setiap screen (apa yang diputuskan, apa yang bisa gagal, siapa lagi yang memanggil), lalu tunjukkan kepada pemilik bahwa screen hanya puncak gunung es. Perlu juga penjelasan untuk orang awam (bukan untuk agent) bahwa screen yang selesai belum berarti aplikasi selesai.
+
+## 12. `@UseCase` dan `@Gateway` sebagai jenis khusus `@Action`
+
+- **Usulan pemilik (2026-11-21):** `@UseCase` dan `@Gateway` menjadi jenis khusus `@Action`, sehingga tidak perlu menulis `@Action` bersama `@UseCase` atau `@Gateway` (B5). `@Action` tetap ada untuk yang tidak memakai konsep use case dan gateway.
+- **Fakta:** sekarang Skeleto hanya mengenal tiga penanda utama, `ALLOWED_DEPENDENCIES` di `src/skeleto.ts` berisi tiga jenis itu, dan `BEST_PRACTICES.md` menyatakan Skeleto tidak tahu apa pun tentang use case dan gateway. B8 (use case tidak bergantung pada use case) dan B18 hanya dijaga dokumen dan tes arsitektur salinan.
+- **Tanggapan:** idenya bagus, karena aturan yang sekarang hanya tertulis bisa dijaga mesin: use case tidak boleh bergantung pada use case (B8), gateway tidak boleh bergantung pada use case, dan setiap action harus salah satu dari dua (B5). Ada dua cara:
+  1. **Ditanam di Skeleto** (`@UseCase` dan `@Gateway` menjadi penanda utama bawaan). Paling sederhana dipakai, tetapi memasukkan konsep clean architecture ke inti dan melanggar prinsip "tidak tahu use case" yang tertulis.
+  2. **Didefinisikan aplikasi lewat opsi**, misalnya `kinds: { UseCase: { is: "Action", dependsOn: ["Config", "Gateway"] }, Gateway: { is: "Action", dependsOn: ["Config", "Gateway"] } }`. Inti tetap netral, aturan dependency bisa dipilih aplikasi, dan konsep clean architecture menjadi preset yang ditulis di dokumen. Biayanya, inti bertambah besar dan API publik berubah.
+- **Fakta tambahan (diperiksa 2026-11-21):** di `src/` tidak ada satu baris pun yang menyebut `UseCase` atau `Gateway`. Bagi Skeleto keduanya hanya penanda tambahan biasa di `additionalDecorators`. Semua "logika" untuk keduanya ada di sisi aplikasi, sebagai kode yang **disalin** oleh setiap aplikasi:
+  - `REVIEW_CHECKLIST.md`, bagian "The architecture test": tes yang menyalakan Skeleto lalu memeriksa container untuk B5 (tepat satu dari `@UseCase`/`@Gateway`), B8 (use case tidak bergantung pada use case), dan gateway yang tidak boleh bergantung pada use case. Tes ini hanya berjalan saat tes dijalankan.
+  - `REVIEW_CHECKLIST.md`: `implUseCaseWrapper` (Optional), sebuah wrapper yang menghentikan startup kalau B8 dilanggar. Ini memakai wrapper sebagai alat validasi. Akibatnya pelanggaran baru ketahuan **setelah** berkas aplikasi diimpor dan config dibuat, bertentangan dengan semangat "gagal sebelum impor". Cara ini juga bergantung pada urutan pembuatan internal Skeleto.
+  - README: `implGatewayWrapper` membaca penanda `@Gateway` untuk observer.
+  - `test/readme.test.ts` menguji semua salinan di atas.
+- **Akibat:** aturan inti clean architecture dijaga oleh kode salinan yang bisa lupa disalin, diubah, atau tertinggal versinya. Ini memperkuat alasan usulan pemilik: kalau Skeleto mengenal jenisnya (cara 1 atau 2), ketiga pemeriksaan itu berpindah ke inti dan dilaporkan sebelum impor bersama kesalahan lain.
+- **Arah pemilik (2026-11-21):** `@UseCase` dan `@Gateway` diperkenalkan langsung di Skeleto sebagai **paket bawaan tambahan**. Ini jalan tengah antara cara 1 dan 2: inti tetap netral dengan mekanisme umum (cara 2), dan Skeleto ikut mengirim satu preset siap pakai untuk clean architecture, misalnya `import { cleanArchitecture } from "skeleto/clean"` lalu `Skeleto.start("src", { ...cleanArchitecture })`. Yang perlu diputuskan nanti:
+  - preset ini **opt-in** (harus dipasang) atau aktif bawaan. Usulan: opt-in, supaya `@Action` polos tetap berjalan untuk yang tidak memakai konsep ini;
+  - isi preset: hanya jenis dan aturan dependency-nya (B5, B8, gateway tidak bergantung pada use case), atau juga wrapper siap pakai (transaksi, observer gateway);
+  - bentuknya: subpath export di paket yang sama (`skeleto/clean`) atau paket npm terpisah. Subpath tetap memenuhi aturan "satu dependency runtime".
+- **Dampak yang perlu diperiksa:** `mainDecorator.name` akan berisi `UseCase` atau `Gateway`, bukan `Action`, sehingga wrapper dan alat luar yang membaca nama itu ikut berubah. `CLAUDE.md` bagian 4.4 dan 4.6, README, B5, dan tes arsitektur di `REVIEW_CHECKLIST.md` perlu disesuaikan.
+
+## 13. Satu dokumen per komponen, dibuat baru
+
+- **Pernyataan pemilik (2026-11-21):** `BEST_PRACTICES.md` mencampur banyak konsep, Mandatory dan Optional, serta semua komponen dalam satu dokumen. Lebih baik satu berkas per komponen (misalnya gateway), yang membahas definisi, alasan keberadaannya, struktur, konvensi nama komponen, nama berkas, yang boleh dan tidak boleh, dan hubungannya dengan komponen lain.
+- **Fakta:** nomor aturan (`B5`, `T25`, `P13`, ...) dirujuk di `DEVELOPMENT_PROCESS.md`, `TECHNICAL_PRACTICES.md`, `REVIEW_CHECKLIST.md`, `test/readme.test.ts`, dan banyak tiket `.kerjaan2/`. Karena itu pemilik memilih membuat dokumen baru daripada mengubah yang ada.
+- **Catatan:** saat dokumen baru dibuat, perlu diputuskan nasib dokumen lama (dibekukan, diberi tanda usang, atau dipetakan nomor lama ke bagian baru). Kalau tidak, akan ada dua sumber aturan, dan AI bisa memakai yang mana saja. Itu bertentangan dengan tujuan konsistensi.
+- **Status:** ditunda atas keputusan pemilik; dicatat dulu.
+- **Pembaruan (2026-11-21):** atas permintaan pemilik, rancangan pengganti dibuat di `docs/` (bahasa Indonesia; konsep, teknis, proses; dengan tabel pemetaan nomor lama ke baru di `docs/README.md`). Dokumen lama tidak diubah dan masih berlaku sampai pemilik memutuskan. Rencana preset ditulis sebagai konsep dan ditandai "belum terealisasi"; temuan yang belum diputuskan ditandai "usulan". Contoh kode di `docs/` belum diperiksa tes seperti contoh di dokumen lama.
+- **Catatan untuk temuan 9:** jumlah aturan bernomor naik dari 78 menjadi 87. Sebagian besar karena satu aturan lama dipecah ke dua dokumen (misalnya B5 menjadi UC-1, GW-1, ACT-1), dan sebagian karena aturan yang sebelumnya hanya ada di tes (GW-12) atau aturan usulan baru (WRP-5, DEV-13). Per dokumen, reviewer hanya perlu memegang 2 sampai 15 aturan.
+
+## 14. Kontrak tak tertulis antara Skeleto dan penjejak scenario-explorer
+
+- **Fakta:** repo `~/Workspace/scenario-explorer` berisi dua bagian:
+  - **Engine peta skenario** (`engine/`, `schema/`, `bin/`, skill `scenario-explorer`). Peta interaktif satu proses bisnis: state, pilihan per aktor, waktu, dan celah (`pos`, `cabang`, `celah`, `ditunda`). Tanpa dependency dan tidak tahu Skeleto. Inilah alat untuk P10 (`docs/scenarios/<proses>.json`, array `gaps`).
+  - **Penjejak use case** (`tracer/`, sekitar 1.800 baris TypeScript). Menjalankan use case sungguhan dari container Skeleto, menggambar diagram urutan (input, panggilan gateway, begin/commit/rollback, efek setelah commit, output atau error), merekam dan memutar ulang jawaban gateway, dan menjalankan pilihan peta yang bertautan ke use case untuk menghitung cakupan (dekat dengan definisi "selesai" P12). Ia memakai Skeleto (`vendor/skeleto-0.1.0.tgz`, peer `>=0.1.0`) dan ts-morph.
+- **Hubungannya:** peta menunjukkan apa yang *seharusnya* terjadi; penjejak menunjukkan apa yang *benar-benar* terjadi di kode Skeleto. Bersama Skeleto, keduanya membentuk rangkaian: rancang proses (peta) → tulis kode (Skeleto) → buktikan kode sesuai peta (penjejak).
+- **Masalah:** `TECHNICAL_PRACTICES.md`, bagian "What a tool outside the application may rely on", menjamin hanya container, metadata, nama komponen, penanda `@UseCase`/`@Gateway`, dan `ctx.data.gatewayObserver`, lalu menyatakan "A tool takes nothing else from the application". Penjejak ternyata bergantung pada lebih banyak hal:
+  - `ctx.data.transaction` (dengan `commit()`/`rollback()`) dan `ctx.data.afterCommit` dari wrapper transaksi;
+  - bentuk `BusinessError` (`name`, `kind`, `gap`) dan jenisnya;
+  - pola teks penanda utang T25 di kode;
+  - alias tipe `type X = ActionHandler<Input, Output>`, yang dibaca isinya dengan ts-morph;
+  - wrapper pengamat T26 yang disalin aplikasi.
+- **Kenapa dibahas:** kontrak ini tersebar di tiga tempat (dokumen Skeleto, README penjejak, kode salinan aplikasi), dan sebagian tidak tertulis di sisi Skeleto. Perubahan kecil di dokumen Skeleto, misalnya nama field di context, bisa merusak penjejak tanpa ada tes yang gagal di repo Skeleto. Ini juga menjelaskan asal temuan 3 dan 4: `BusinessError`, `kind`/`gap`, dan `Context` ada karena dibutuhkan rangkaian alat ini. Kalau preset clean architecture jadi dibuat (temuan 12), kontrak ini sebaiknya dimiliki preset itu: satu tempat, tertulis, dan dites.
+
+## 15. Celah di praktik transaksi dan locking, dan urusan lintas-use-case lain yang belum diatur
+
+- **Fakta:** inti Skeleto tidak menangani transaksi maupun locking sama sekali (tidak ada kode tentang keduanya di `src/`). Transaksi ditangani wrapper contoh (WRP-2 sampai WRP-4, dulu T12–T15). Locking adalah tanggung jawab gateway (GW-6 sampai GW-8 dan GW-13, dulu B28–B32). Contoh README memakai kunci di memori yang tidak re-entrant, diambil terurut menurut id, yang di database setara `SELECT ... FOR UPDATE`.
+- **Yang belum diatur di praktik transaksi dan locking:**
+  1. **Percobaan ulang setelah `conflict` atau deadlock.** Dulu B29 hanya menyebut "its caller may retry from the start". Tidak ditetapkan siapa yang mengulang (controller atau wrapper), berapa kali, dan untuk use case apa saja.
+  2. **Batas waktu kunci dan transaksi.** Kunci yang menunggu tanpa batas membuat permintaan menggantung. Hanya config asinkron saat startup yang diatur batas waktunya (CFG-1).
+  3. **Pilihan antara kunci pesimis dan versi (optimis).** Keduanya disebut sebagai contoh, tetapi tidak ada panduan kapan memakai yang mana.
+  4. **Tingkat isolasi transaksi** tidak disebut.
+  5. **Panggilan lambat di dalam transaksi.** Efek luar sudah diatur (setelah commit atau outbox), tetapi membaca layanan luar yang lambat sambil memegang kunci belum diatur.
+  6. **Lebih dari satu proses.** Kunci di memori hanya berlaku di satu proses. Dokumen tidak menyatakan bahwa kunci harus milik penyimpanan bersama ketika aplikasi berjalan di beberapa instance.
+- **Urusan lain yang belum diatur sama sekali:**
+  1. **Identitas dan otorisasi.** Tidak ada aturan di mana "siapa pengguna ini" disimpan dan siapa yang memeriksa haknya. UC-11 melarang use case membaca context, jadi identitas harus datang lewat Request atau gateway, tetapi itu tidak tertulis. Aturan hak ("hanya pemilik gudang boleh memindahkan stok") adalah aturan bisnis, jadi seharusnya di entity.
+  2. **Idempotensi permintaan masuk.** GW-11 hanya mengatur penerima pesan outbox. Permintaan ganda dari controller (tombol ditekan dua kali, retry HTTP) belum diatur.
+  3. **Batas waktu dan percobaan ulang panggilan keluar** (HTTP ke pihak ketiga) di gateway.
+  4. **Error program** (bukan `BusinessError`): bagaimana controller menjawab dan mencatatnya.
+  5. **Siklus hidup sumber daya.** Skeleto tidak punya mekanisme shutdown, sehingga config yang membuka koneksi tidak pernah ditutup secara teratur. README hanya memperingatkan kebocoran saat startup diulang.
+  6. **Proses bisnis yang melewati beberapa use case** (saga, kompensasi ketika langkah berikutnya gagal). UC-4 melarang use case memanggil use case, tetapi tidak ada panduan pengganti.
+  7. **Observabilitas.** Audit dan pengamat gateway ada sebagai contoh, tetapi logging, trace id (field `traceId` di context), dan metrik belum punya aturan.
+  8. **Cache dan invalidasinya.** Disebut sebagai efek setelah commit, tetapi cara membaca dari cache tidak diatur.
+  9. **Event-driven (dibahas 2026-11-22).** Yang sudah ada: menerbitkan event adalah efek lewat gateway, setelah commit atau lewat outbox (GW-9, GW-10), dan penerima tahan duplikat (GW-11). Yang belum diatur: nama gateway penerbit dan isi event (usulan: dinamai menurut fakta bisnis, misalnya `PublishStockTransferred`, bukan menurut pendengarnya seperti `NotifyEmailService`); bahwa konsumen event di dalam aplikasi yang sama adalah **controller** yang memanggil use case; dan larangan bus event di dalam proses yang membuat gateway memanggil use case lain secara langsung, karena itu menyembunyikan pelanggaran UC-4 dan GW-12.
+- **Kenapa dibahas:** setiap hal yang tidak diatur akan dikarang AI dengan bentuk yang berbeda-beda, dan itu bertentangan dengan tujuan konsistensi (temuan 5). Tidak semuanya harus diatur sekarang. Usulan prioritas: identitas dan otorisasi, idempotensi permintaan masuk, percobaan ulang setelah `conflict`, dan error program, karena keempatnya muncul di hampir setiap aplikasi.

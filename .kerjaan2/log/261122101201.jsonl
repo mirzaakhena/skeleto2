@@ -1,0 +1,13 @@
+{"t":"2026-11-22 10:12:23","event":"created","status":"backlog","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 10:14:29","event":"question","key":"Q1","blocking":true,"session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:a86166739ad1b0bea"}
+{"t":"2026-11-22 10:14:29","event":"question","key":"Q2","blocking":true,"session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:a86166739ad1b0bea"}
+{"t":"2026-11-22 10:14:29","event":"question","key":"Q3","blocking":true,"session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:a86166739ad1b0bea"}
+{"t":"2026-11-22 10:14:29","event":"question","key":"Q4","blocking":true,"session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:a86166739ad1b0bea"}
+{"t":"2026-11-22 10:14:29","event":"question","key":"Q5","blocking":true,"session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:a86166739ad1b0bea"}
+{"t":"2026-11-22 10:14:39","event":"assumption","key":"A1","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:a86166739ad1b0bea"}
+{"t":"2026-11-22 10:14:39","event":"assumption","key":"A2","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"planner:a86166739ad1b0bea"}
+{"t":"2026-11-22 10:35:47","event":"answer","key":"Q1","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 10:35:47","event":"answer","key":"Q2","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 10:35:47","event":"answer","key":"Q3","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 10:35:47","event":"answer","key":"Q4","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 10:35:47","event":"answer","key":"Q5","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}

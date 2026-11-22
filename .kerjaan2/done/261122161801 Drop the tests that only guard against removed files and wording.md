@@ -28,10 +28,15 @@ The repository's tests check what the code and the documents say now, and no tes
 
 ## Done when
 
-- [ ] Every test or assertion whose only purpose is to keep a removed file, feature or old wording absent is removed, including the examples in Background.
-- [ ] Tests that check current rules and structure (rule format, numbering, citations, checklist sync, code excerpts, the example's behaviour) stay and still pass.
-- [ ] The repository's tests pass.
+- [x] Every test or assertion whose only purpose is to keep a removed file, feature or old wording absent is removed, including the examples in Background.
+- [x] Tests that check current rules and structure (rule format, numbering, citations, checklist sync, code excerpts, the example's behaviour) stay and still pass.
+- [x] The repository's tests pass.
 
 ## Out of scope
 
 - The dropped-features table in `CLAUDE.md` section 3.
+
+<!-- k2:record — written by k2 only; do not edit by hand -->
+
+## Handoff
+Removed from test/readme.test.ts the tests and assertions that only kept removed files, features or old wording absent: the dropped-features test, deleted-practice-file and old-wording checks, the 'tanpa @Transaction' and pengembangan note checks, and the checklist startup guard/architecture assertions. Positive checks (rule format, numbering, citations, checklist sync, excerpts, example behaviour) stay. Two tests were renamed to match what they now check. CLAUDE.md untouched.

@@ -1,1 +1,9 @@
 {"t":"2026-11-22 16:18:36","event":"created","status":"todo","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:18:49","event":"started","branch":"k2/261122161801-drop-the-tests-that","base":"4e0e2a6","contract":"9fd3a67af69c","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:18:56","event":"agent","role":"worker","agent":"a97f823a335c24cfd","step":"first:1:0:0","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:19:29","event":"test","by":"worker:a97f823a335c24cfd","exit":0,"seconds":10,"fingerprint":"6fd59e6288cc4e2890f551ddd918630659010b52","command":"npm run typecheck && npm test && npm run build","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:19:35","event":"check","n":1,"evidence":"Removed the dropped-features test, the deleted-files and old-wording assertions, the tanpa @Transaction and pengembangan assertions, and the startup guard/architecture test assertions from test/readme.test.ts; grep finds no other absence-only guard","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a97f823a335c24cfd"}
+{"t":"2026-11-22 16:19:35","event":"check","n":2,"evidence":"Rule format, numbering, citation, checklist sync, excerpt and example tests untouched","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a97f823a335c24cfd"}
+{"t":"2026-11-22 16:19:35","event":"check","n":3,"evidence":"k2 test: typecheck, tests, build passed","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a97f823a335c24cfd"}
+{"t":"2026-11-22 16:19:36","event":"submitted","commit":"e89ac0c","lane":"light","to":"review","passed":true,"files":1,"fingerprint":"6fd59e6288cc4e2890f551ddd918630659010b52","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"worker:a97f823a335c24cfd"}
+{"t":"2026-11-22 16:19:51","event":"landed","branch":"k2/261122161801-drop-the-tests-that","files":["test/readme.test.ts"],"session":"3581ac0f-c58f-4349-b833-c978731fcea8"}

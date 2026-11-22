@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DEFAULT_EXCLUDE } from "../src/index.js";
@@ -254,13 +254,6 @@ test("the README and CLAUDE.md name the exclude option, the constant and every d
   }
 });
 
-test("the README, the checklist and docs/ stay clear of what Skeleto dropped", () => {
-  for (const banned of [/readTypeArguments/i, /@Controller/i, /@RequestPart/i, /payload/i, /tes arsitektur/i]) {
-    for (const [document, text] of Object.entries({ ...docs, "REVIEW_CHECKLIST.md": checklist })) assert.doesNotMatch(text, banned, `${document} mentions what Skeleto dropped: ${banned}`);
-  }
-  assert.doesNotMatch(readme, /readTypeArguments|@Controller|@RequestPart|payload/i);
-});
-
 /**
  * Fails unless every component of the files is a function named `impl` followed by its component's name. It reads the files with the
  * scanner Skeleto itself uses, so a marked function written in any form Skeleto accepts is checked, and a scanner error fails it too.
@@ -489,12 +482,8 @@ test("every old rule number in the table of docs/README.md maps to rules that ex
   for (const [, old, replacement] of rows) for (const [number] of (replacement ?? "").matchAll(/[A-Z]+-\d+/g)) assert.ok(known.has(number), `${old} maps to ${number}, which does not exist`);
 });
 
-test("docs/ is the only rule set: the old documents are deleted, and nothing says they still apply", () => {
-  for (const file of ["BEST_PRACTICES.md", "TECHNICAL_PRACTICES.md", "DEVELOPMENT_PROCESS.md"]) assert.equal(existsSync(`${repo}${file}`), false, `${file} must stay deleted`);
+test("docs/ is stated as the only rule set, and the README links it on one line", () => {
   const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
-  for (const [document, text] of Object.entries({ ...docs, "README.md": readme, "CLAUDE.md": guide, "REVIEW_CHECKLIST.md": checklist })) {
-    assert.doesNotMatch(text, /masih berlaku|untuk sementara|rancangan pengganti|dokumen lama|Rencana, belum terealisasi|still apply|until the owner decides/i, `${document} suggests that the old documents still apply`);
-  }
   assert.match(guide, /`docs\/`, satu-satunya rangkaian aturan/);
   assert.match(docs["docs/README.md"] ?? "", /satu-satunya rangkaian aturan/);
   const lines = readme.split("\n").filter((line) => line.includes("(docs/README.md)"));
@@ -502,7 +491,6 @@ test("docs/ is the only rule set: the old documents are deleted, and nothing say
   assert.match(lines[0] ?? "", /only rule set/);
   assert.match(lines[0] ?? "", /Indonesian/);
   assert.match(lines[0] ?? "", /\(REVIEW_CHECKLIST\.md\)/);
-  assert.doesNotMatch(readme, /BEST_PRACTICES|TECHNICAL_PRACTICES|DEVELOPMENT_PROCESS/);
 });
 
 test("docs/ names no product or framework, no application", () => {
@@ -517,7 +505,6 @@ test("docs/ states the decisions of 2026-11-22: every use case carries @Transact
   const rule = (number: string): Rule => allRules.find((candidate) => candidate.number === number) ?? assert.fail(`${number} does not exist`);
   assert.match(rule("UC-16").text, /Setiap use case ditandai `@Transaction`, termasuk query/);
   assert.match(rule("UC-7").text, /^Query tidak pernah menulis: ia hanya bergantung pada gateway yang kontraknya membaca$/);
-  for (const { number, text } of allRules) assert.doesNotMatch(text, /tanpa `@Transaction`/, `${number} says that a use case may go without @Transaction`);
   assert.equal(rule("WRP-5").level, "Wajib");
   assert.equal(rule("WRP-7").level, "Wajib");
   assert.match(rule("WRP-7").text, /urutannya penting ditulis di satu berkas/);
@@ -529,7 +516,6 @@ test("docs/ states the decisions of 2026-11-22: every use case carries @Transact
   assert.match(rule("WRP-1").text, /Satu wrapper per penanda yang dibacanya/);
   assert.match(wrapper, /`GatewayWrapper` membaca `Gateway`/);
   assert.equal(rule("DEV-2").level, "Wajib");
-  assert.doesNotMatch(docs["docs/proses/pengembangan.md"] ?? "", /belum diputuskan pemilik\.\*\* Dirumuskan|perubahan tingkat ini belum diputuskan/);
   assert.match(rule("GW-12").text, /^Gateway hanya bergantung pada config$/);
 });
 
@@ -615,10 +601,8 @@ test("REVIEW_CHECKLIST.md shows the form of a finding, and its example cites a r
   assert.match(example.files[path]?.split("\n")[Number(line) - 1] ?? "", /^export function implStockTransfer\(/, `${path}:${line} is not the line the example finding is about`);
 });
 
-test("REVIEW_CHECKLIST.md holds the gap test only: no architecture test and no startup guard", () => {
+test("REVIEW_CHECKLIST.md holds the gap test only", () => {
   assert.deepEqual(Object.keys(example.checklist).sort(), ["gaps.test.ts"]);
-  assert.doesNotMatch(checklist, /startup guard|UseCaseWrapper|use_case_wrapper/);
-  assert.doesNotMatch(checklist, /architecture test|architecture\.test/);
 });
 
 /** The README example with every file the other documents add, and the checklist's tests, as an application would hold them. */

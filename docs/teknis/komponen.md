@@ -24,8 +24,8 @@ Skeleto tidak pernah membuka definisi tipe. Dependency dicocokkan dengan nama ko
 | --- | --- |
 | `@Config` | `@Config` |
 | `@Wrapper` | `@Config` |
-| `@Gateway` | `@Config`, `@Gateway` |
-| `@UseCase` | `@Config`, `@Gateway` |
+| `@Gateway` | `@Config` |
+| `@UseCase` | `@Gateway` |
 | `@Action` | `@Config`, `@Gateway`, `@UseCase`, `@Action` |
 
 Kontrak lengkap perilaku Skeleto ada di `CLAUDE.md` bagian 4 dan di `README.md`.

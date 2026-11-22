@@ -16,7 +16,7 @@ Skeleto memberi kode buatan AI satu struktur standar yang dijaga mesin, supaya m
 
 | Lapis | Isi | Siapa yang menjaga |
 | --- | --- | --- |
-| **Konsep** (arsitektur) | entity, use case, gateway, controller | dokumen, reviewer, tes salinan; dua aturan antara use case dan gateway dijaga Skeleto lewat jenis bawaan `@UseCase`, `@Gateway` |
+| **Konsep** (arsitektur) | entity, use case, gateway, controller | dokumen, reviewer, tes salinan; aturan antara use case, gateway, dan config dijaga Skeleto lewat jenis bawaan `@UseCase`, `@Gateway` |
 | **Mekanisme** (Skeleto) | `@UseCase`, `@Gateway`, `@Action`, `@Wrapper`, `@Config`, container | kode Skeleto, saat startup |
 
 Hubungan keduanya:

@@ -9,15 +9,15 @@ This file is the conceptual half of the practices. The technical half, how to us
 An application on Skeleto is described at two levels.
 
 - **The technical level** is what Skeleto recognises and enforces: the markers `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` and `@Action`, which kind may depend on which, the order in which components are created, and the wrapping of every action by every wrapper. A mistake at this level stops startup.
-- **The architectural level** is what an application builds on top: entities, use cases, gateways. Skeleto knows use cases and gateways as kinds of action, and guards the two rules between them (B8 and the rule that a gateway never depends on a use case); an entity is not a component at all.
+- **The architectural level** is what an application builds on top: entities, use cases, gateways. Skeleto knows use cases and gateways as kinds of action, and guards the rules between them (B8, a use case depends on gateways only, and a gateway on configs only); an entity is not a component at all.
 
 Skeleto provides the mechanism and one standard structure of actions; the rest of the policy, how the application divides its work, is yours. The rest of this file recommends one.
 
 | Concept | Expressed as | What Skeleto checks |
 | --- | --- | --- |
 | Entity | a plain type and plain functions; no marker, not a component | nothing |
-| Use case | `@UseCase` | the rules of an action, and that it depends on configs and gateways only |
-| Gateway | `@Gateway` | the rules of an action, and that it depends on configs and gateways only |
+| Use case | `@UseCase` | the rules of an action, and that it depends on gateways only |
+| Gateway | `@Gateway` | the rules of an action, and that it depends on configs only |
 | Resource, such as a database or settings | `@Config` | the rules of a config |
 | Cross-cutting concern, such as logging or transactions | `@Wrapper`, chosen per action by additional markers such as `@Transaction` | the rules of a wrapper, and the additional markers against `decorators` |
 
@@ -132,7 +132,12 @@ The use case decides nothing about stock; `Warehouse.transfer` does (B13).
 
 Why: a use case is one business operation with its own transaction, its own audit and its own errors. Calling another one drags in all of those, joins two operations that change for different reasons, and soon builds a chain nobody can follow. When two use cases share a step, the shared rule belongs in an entity function and the shared access in a gateway.
 
-Skeleto refuses this at startup, before any file of the application is imported. A gateway may still be built from other gateways, and a gateway never depends on a use case, since a use case behind a gateway is a use case called by another one.
+Skeleto refuses this at startup, before any file of the application is imported. The structure is one straight line, controller -> use case -> gateway -> config, so a reviewer checks it at a glance: a use case depends on gateways only, never on a config, and a gateway depends on configs only, never on another gateway or a use case (a use case behind a gateway is a use case called by another one). The consequences:
+
+- A business parameter (a limit, a fee rate, a feature flag) reaches a use case through a gateway that reads it, or is a constant of the entity. It never comes through a config.
+- Code shared by several gateways, such as an HTTP client or a mapping, is a config (the client) or a plain function that is not a component. It is never another gateway.
+- A gateway that needs the current time or a new id gets it in its input; the use case asks for it once, at its start (B22).
+- One gateway cannot call another. For example, an outbox gateway cannot call a payment gateway: the sender of an outbox is a separate process, a controller that calls a use case (B34).
 
 ### B9. A use case has its own Request and Response types and does not return entities (Mandatory)
 
@@ -288,7 +293,7 @@ Why: queues and message brokers, caches, third-party services, the file system a
 
 ### B22. Every unpredictable value comes from a gateway of its own and is asked for once, at the start of the use case (Mandatory)
 
-Why: the current time, new ids, random tokens and salted hashes differ on every call. A use case that makes them itself cannot be tested with a known outcome, and one that asks twice can get two different "now"s within one operation. Fetched once at the start and passed to the entity functions as plain values, they make every function after them deterministic.
+Why: the current time, new ids, random tokens and salted hashes differ on every call. A use case that makes them itself cannot be tested with a known outcome, and one that asks twice can get two different "now"s within one operation. Fetched once at the start and passed to the entity functions, and to any gateway that needs them as part of its input (a gateway cannot call the clock gateway itself, B8), as plain values, they make every function after them deterministic.
 
 | Unpredictable value | Gateway contract, for example |
 | --- | --- |
@@ -480,7 +485,7 @@ Why: an effect run after the commit can still be lost, if the process stops betw
 
 1. The use case's gateway writes the message as a record in the same store, in the same transaction as the change it reports.
 2. The transaction commits: the change and the message are stored together, or neither is.
-3. Another process reads the stored messages that have not been sent, and sends each one.
+3. Another process reads the stored messages that have not been sent, and sends each one. That process is a controller that calls a use case; a gateway never calls another gateway to send (B8).
 4. Only after the receiver has accepted a message is it marked as sent.
 
 If the sending process stops between steps 3 and 4, the message is sent again when it restarts. Nothing is lost, but a message may arrive twice.

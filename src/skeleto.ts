@@ -9,13 +9,13 @@ import type { SkeletoOptions, WrapperHandler } from "./type.js";
 
 type Container = Map<string, FuncInstanceMetadata>;
 
-// Creation order of the kinds, and for each kind the kinds it may depend on. A use case never reaches another use case, and neither kind
-// reaches a plain action, which would bridge two use cases; a plain action is free.
+// Creation order of the kinds, and for each kind the kinds it may depend on. The structure is one straight line, use case -> gateway -> config:
+// a use case reaches gateways only, a gateway configs only, and neither reaches a plain action, which would bridge two use cases; a plain action is free.
 const ALLOWED_DEPENDENCIES: Record<string, string[]> = {
   Config: ["Config"],
   Wrapper: ["Config"],
-  Gateway: ["Config", "Gateway"],
-  UseCase: ["Config", "Gateway"],
+  Gateway: ["Config"],
+  UseCase: ["Gateway"],
   Action: ["Config", "Gateway", "UseCase", "Action"],
 };
 

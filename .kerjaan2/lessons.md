@@ -30,3 +30,4 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - Removing or adding a line in the README stock_transfer.ts JSDoc moves the line number cited by the REVIEW_CHECKLIST example finding; test/readme.test.ts checks it
 - CLAUDE.md 1.1 names docs/ as the practice documents: a change to how components are written must update docs/konsep and docs/teknis too, not only BEST_PRACTICES.md and TECHNICAL_PRACTICES.md; grep docs/ for the old form before handing over
 - Container order (and README printed output) follows creation order; reordering README wrappers changes the container listing lines in the text block
+- When a dependency rule changes, grep every copy of the kind table across README, CLAUDE.md and all of docs/ (e.g. grep -rn '`@Config`, `@Gateway`' docs), not only the files named in the ticket

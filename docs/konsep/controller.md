@@ -4,7 +4,7 @@
 
 **Controller** adalah pintu masuk aplikasi: kode yang menerima permintaan dari luar lalu memanggil use case. Contohnya handler HTTP, job terjadwal, konsumen antrean, perintah CLI, dan tes.
 
-Dokumen lama menyebutnya **caller**. Nama "controller" dipakai mulai 2026-11-21 (keputusan pemilik).
+Nama "controller" dipakai mulai 2026-11-21 (keputusan pemilik); sebelumnya disebut **caller**.
 
 Controller bukan komponen Skeleto. Ia tidak berpenanda dan tidak masuk container. Ia mengambil use case dari container satu kali saat aplikasi dimulai, lalu memanggilnya sebagai fungsi biasa.
 
@@ -37,7 +37,7 @@ const answers = { validation: "rejected", not_found: "unknown", conflict: "refus
 | Awal aplikasi, yang menyalakan Skeleto dan menyerahkan use case ke controller | `main.ts` di akar proyek |
 | Satu tes integrasi yang menyalakan Skeleto | `main.test.ts` di akar proyek |
 
-> **Usulan, belum diputuskan pemilik.** Dokumen lama tidak mengatur nama dan letak berkas controller selain `main.ts`. Kalau aplikasi punya banyak controller (banyak rute HTTP, banyak job), perlu aturan nama dan folder sendiri, misalnya `src/controller/<channel>/<use case snake>.ts`. Karena controller bukan komponen, berkas itu boleh di dalam `src/` tanpa penanda, atau di luar `src/`.
+> **Usulan, belum diputuskan pemilik.** Belum ada aturan nama dan letak berkas controller selain `main.ts`. Kalau aplikasi punya banyak controller (banyak rute HTTP, banyak job), perlu aturan nama dan folder sendiri, misalnya `src/controller/<channel>/<use case snake>.ts`. Karena controller bukan komponen, berkas itu boleh di dalam `src/` tanpa penanda, atau di luar `src/`.
 
 ## Aturan wajib
 

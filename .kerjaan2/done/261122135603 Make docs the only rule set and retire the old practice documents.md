@@ -24,14 +24,14 @@ Every later session and reviewer finds one rule set, `docs/`, with no contradict
 
 ## Done when
 
-- [ ] `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md` and `DEVELOPMENT_PROCESS.md` no longer hold rules: they are removed, or reduced to a pointer to `docs/`.
-- [ ] `CLAUDE.md`, `README.md` and `docs/README.md` name `docs/` as the only rule set, and no document says the old files still apply.
-- [ ] `REVIEW_CHECKLIST.md` uses the new rule numbers and lists every rule of `docs/`, including that a gateway depends on configs only.
-- [ ] The repository's tests that checked the old documents check `docs/` instead, including that the code excerpts in `docs/` match the README example.
-- [ ] `docs/` says that every use case carries `@Transaction`, and no rule says a query has none.
-- [ ] WRP-5 has one status everywhere (built) and sits among the rules that describe fixed behaviour, not the optional ones; the wrapper naming rule covers a wrapper that reads a main marker, such as the gateway observer wrapper.
-- [ ] `docs/` says plainly that moving or renaming a wrapper file can change the layering, and that wrappers whose order matters belong in one file.
-- [ ] Nothing in `docs/`, `REVIEW_CHECKLIST.md`, `README.md` or `CLAUDE.md` describes a plain `@Action` or a start option for it: the main markers are `@Config`, `@Wrapper`, `@UseCase` and `@Gateway` (261122135602).
+- [x] `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md` and `DEVELOPMENT_PROCESS.md` no longer hold rules: they are removed, or reduced to a pointer to `docs/`.
+- [x] `CLAUDE.md`, `README.md` and `docs/README.md` name `docs/` as the only rule set, and no document says the old files still apply.
+- [x] `REVIEW_CHECKLIST.md` uses the new rule numbers and lists every rule of `docs/`, including that a gateway depends on configs only.
+- [x] The repository's tests that checked the old documents check `docs/` instead, including that the code excerpts in `docs/` match the README example.
+- [x] `docs/` says that every use case carries `@Transaction`, and no rule says a query has none.
+- [x] WRP-5 has one status everywhere (built) and sits among the rules that describe fixed behaviour, not the optional ones; the wrapper naming rule covers a wrapper that reads a main marker, such as the gateway observer wrapper.
+- [x] `docs/` says plainly that moving or renaming a wrapper file can change the layering, and that wrappers whose order matters belong in one file.
+- [x] Nothing in `docs/`, `REVIEW_CHECKLIST.md`, `README.md` or `CLAUDE.md` describes a plain `@Action` or a start option for it: the main markers are `@Config`, `@Wrapper`, `@UseCase` and `@Gateway` (261122135602).
 
 ## Out of scope
 
@@ -78,3 +78,19 @@ Every later session and reviewer finds one rule set, `docs/`, with no contradict
 - Lane standard: documents and the repository's document tests only, no src/ change; reversible from git, but the test rewrite in test/readme.test.ts is large
 - Waits for 261122135602 (blocked_by): it needs that ticket's result, a checklist without the architecture test and docs/ that already state the plainActions option. Not solo: nothing else is queued, so it runs alone anyway.
 - Waits for 261122135602 (blocked_by): that ticket removes @Action and the copied architecture test, and the rewritten checklist and docs must build on main without them.
+- Content check of old files against docs/ (Q9): everything was already in docs/; only moved small items: the 'recommendations are not framework rules, Skeleto checks only what the Mesin rows say' paragraph into docs/README.md, and the 'screens versus use cases' reason into DEV-2. No new rule invented.
+
+## Handoff
+docs/ is now the only rule set. Old BEST/TECHNICAL/DEVELOPMENT files are one-paragraph pointers. REVIEW_CHECKLIST.md is Indonesian, one table per docs file, rows equal docs headings verbatim. Added UC-16 (every use case carries @Transaction, queries too), reworded UC-7, moved WRP-5 to mandatory (built), added WRP-7 (order-sensitive wrappers share one file; moving or renaming a file can change layering), widened WRP-1 naming to main markers. DEV-2 mandatory, note removed. test/readme.test.ts checks docs/ structurally; every docs code block is an excerpt of README or src/type.ts, or a whole file that runs. Do not break: checklist rows must match docs headings.
+
+## Review
+- 2026-11-22 standard, round 1, at 4021f88: passed.
+  1: the three old files are one-paragraph pointers to docs/README.md and its mapping table (read the diff); test 'docs/ is the only rule set' asserts one paragraph, the link, no rule headings
+  2: CLAUDE.md 1.1, README example line and docs/README.md Status name docs/ the only rule set; grep for masih berlaku/still apply/untuk sementara/old file names in docs, checklist, README, CLAUDE.md finds only the pointer sentence in docs/README.md
+  3: script comparing all 90 '### X-n.' headings of docs/ with checklist rows: same text and same level (section) for every rule; GW-12, UC-16, WRP-7 present; old B/T/P numbers only in the lookup line. Mutation (deleting the UC-16 row) makes the checklist test fail
+  4: test/readme.test.ts on a copy: 38 pass. Mutation of the LockWarehouses excerpt in docs/teknis/action.md makes the excerpt check fail ('not part of that README example file'); unchecked fence forms are refused by a test
+  5: UC-16 added, UC-7 reworded; grep finds no rule heading saying a query is without @Transaction; mutating UC-16 heading to 'Query tanpa @Transaction' fails the decisions test
+  6: WRP-5 under Aturan wajib, status terealisasi in wrapper.md and Mesin in checklist, no other status anywhere (grep); WRP-1 and naming tables in wrapper.md/komponen.md cover main markers with GatewayWrapper, which matches the README example
+  7: wrapper.md (Perilaku, WRP-5, WRP-7) and komponen.md KOM-8 row state that moving/renaming a wrapper file can change layering and order-sensitive wrappers share one file
+  8: grep for @Action/plain action: none in docs/ or the checklist; README and CLAUDE.md mention @Action only as a refused marker and dropped feature (ticket 261122135602), not as a marker or start option
+  note: full suite not rerun per brief; checks beyond tests used only package.json scripts and the repo test file

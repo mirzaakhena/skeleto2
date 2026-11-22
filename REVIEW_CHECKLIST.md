@@ -1,129 +1,196 @@
 # Review checklist
 
-Every rule of [BEST_PRACTICES.md](BEST_PRACTICES.md), [TECHNICAL_PRACTICES.md](TECHNICAL_PRACTICES.md) and [DEVELOPMENT_PROCESS.md](DEVELOPMENT_PROCESS.md), in one list, for whoever reviews a change to an application built on Skeleto: a person, or an agent given this file. The rules themselves, with their reasons and code, are in those three files; this one says only which rules there are, how strong each is, and who checks it.
+Setiap aturan di [docs/](docs/README.md), dalam satu daftar, untuk siapa pun yang mereview perubahan pada aplikasi yang dibangun di atas Skeleto: seorang manusia, atau agent yang diberi berkas ini. `docs/` adalah satu-satunya rangkaian aturan. Alasan dan kode setiap aturan ada di sana; berkas ini hanya menyebut aturan apa saja yang ada, seberapa kuat masing-masing, dan siapa yang memeriksanya. Teks setiap baris adalah judul aturannya, kata demi kata.
 
-## How to review
+## Cara mereview
 
-- **Machine** rules are checked by Skeleto at startup and by the [gap test](#the-gap-test) below. Start the application and run the test; a reviewer does not check them by reading.
-- **Reviewer** rules are checked by reading the change, or, for the process rules, the files in the repository. Skeleto checks none of them.
-- **Process** rules are checked with the owner, not in the code: a repository does not show them, so a reviewer does not look for them there.
-- A change that breaks a **Mandatory** rule gets a finding, always.
-- A change that departs from an **Optional** rule gets a finding only when it gives no reason in a comment.
-- Cite a rule by its number only (`B8`, `T11`, `P4`). Numbers are never reused, so a citation keeps its meaning.
+- Aturan **Mesin** diperiksa Skeleto saat startup dan oleh [tes celah](#tes-celah) di bawah. Nyalakan aplikasi dan jalankan tesnya; reviewer tidak memeriksanya dengan membaca.
+- Aturan **Reviewer** diperiksa dengan membaca perubahan, atau, untuk aturan proses, berkas di repo. Skeleto tidak memeriksa satu pun darinya.
+- Aturan **Proses** diperiksa bersama pemilik, bukan di kode: repo tidak memperlihatkannya, jadi reviewer tidak mencarinya di sana.
+- Perubahan yang melanggar aturan **Wajib** selalu mendapat temuan.
+- Perubahan yang menyimpang dari aturan **Opsional** mendapat temuan hanya kalau tidak menuliskan alasannya di komentar.
+- Kutip aturan hanya dengan nomornya (`UC-9`, `WRP-5`, `DEV-5`). Nomor tidak pernah dipakai ulang, jadi kutipan tetap bermakna. Nomor lama (`B8`, `T11`, `P4`) dicari di tabel pemetaan di [docs/README.md](docs/README.md#pemetaan-nomor-lama-ke-nomor-baru).
 
-## Writing a finding
+## Menulis temuan
 
-Every finding names one rule, one place and one fix, on one line:
+Setiap temuan menyebut satu aturan, satu tempat, dan satu perbaikan, dalam satu baris:
 
 > `<rule> <file>:<line>: <what breaks the rule>. Fix: <the change asked for>.`
 
-For example, in a copy of the README example where `implStockTransfer` also asks for `MemoryWarehouses`, an implementation of a gateway:
+Misalnya, pada salinan contoh README tempat `implStockTransfer` juga meminta `MemoryWarehouses`, implementasi sebuah gateway:
 
-> B18 src/usecase/stock/stock_transfer.ts:17: `implStockTransfer` depends on `MemoryWarehouses`, an implementation, and not on the contract type `LockWarehouses`. Fix: ask for the contract type and leave the choice of implementation to the application's start.
+> UC-9 src/usecase/stock/stock_transfer.ts:17: `implStockTransfer` depends on `MemoryWarehouses`, an implementation, and not on the contract type `LockWarehouses`. Fix: ask for the contract type and leave the choice of implementation to the application's start.
 
-The line is the line of the code that breaks the rule. A finding without a rule number, a place or a fix is not a finding: rewrite it until it has all three.
+Barisnya adalah baris kode yang melanggar aturan. Temuan tanpa nomor aturan, tempat, atau perbaikan bukan temuan: tulis ulang sampai ketiganya ada.
 
-## Best practices
+## Entity
 
-| Rule | What it says | Level | Checked by |
+Aturan di [docs/konsep/entity.md](docs/konsep/entity.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
 | --- | --- | --- | --- |
-| B1 | Start from the list of use cases, not from the list of screens | Optional | Reviewer |
-| B2 | Name and shape the Request and the Response after the business operation, not after a screen; no field exists only because a screen shows it | Mandatory | Reviewer |
-| B3 | A screen may call many use cases and a use case may serve many callers; the two are not paired one to one | Mandatory | Reviewer |
-| B4 | A view that needs data gathered for one screen is served on the caller's side, or by a query use case of its own, not by changing an existing use case | Optional | Reviewer |
-| B5 | Mark every use case `@UseCase` and every gateway `@Gateway` | Mandatory | Machine: Skeleto, at startup |
-| B6 | Put each use case in a file of its own, named after it | Mandatory | Reviewer |
-| B7 | A use case only orchestrates: it fetches through gateways, calls entity functions, and saves through gateways | Mandatory | Reviewer |
-| B8 | A use case never depends on another use case | Mandatory | Machine: Skeleto, at startup |
-| B9 | A use case has its own Request and Response types and does not return entities | Mandatory | Reviewer |
-| B10 | A query never writes: a use case without `@Transaction` depends only on gateways that read | Mandatory | Reviewer |
-| B11 | An entity is a plain type with pure functions that return new copies | Mandatory | Reviewer |
-| B12 | A new entity is brought into being only by `new<Entity>`, which holds the creation rules and the initial values | Mandatory | Reviewer |
-| B13 | An existing entity is changed only by entity functions, which check its invariants | Mandatory | Reviewer |
-| B14 | A use case never writes an entity literal | Mandatory | Reviewer |
-| B15 | A gateway that reads maps stored data to the type and applies no business rule: validate on write, not on read | Mandatory | Reviewer |
-| B16 | Let the store enforce the most important invariants as well | Optional | Reviewer |
-| B36 | A state that depends on time is derived from the stored state, its time and the current time; no scheduler changes stored state | Mandatory | Reviewer |
-| B37 | A derived status is never stored: store the result of the last action and its time, and compute the effective status with a function of the entity | Mandatory | Reviewer |
-| B17 | Entities import nothing outside entities | Mandatory | Reviewer |
-| B18 | A use case knows gateways only by their contract types | Mandatory | Reviewer |
-| B19 | Keep a gateway's contract apart from its implementation | Mandatory | Reviewer |
-| B20 | Give the gateways that insert, save, find one and find many their standard shapes | Optional | Reviewer |
-| B21 | Everything outside the process is reached through a gateway, not only stores | Mandatory | Reviewer |
-| B22 | Every unpredictable value comes from a gateway of its own and is asked for once, at the start of the use case | Mandatory | Reviewer |
-| B23 | A use case passes the context on and never reads it | Mandatory | Reviewer |
-| B24 | Check the shape of the input in the caller and the business rules in the entities | Mandatory | Reviewer |
-| B25 | Business errors are typed by kind: validation, not found, conflict, tech debt | Mandatory | Reviewer |
-| B26 | The caller translates business errors; entities and use cases never mention a transport | Mandatory | Reviewer |
-| B27 | A caller makes the context and calls use cases only, never a gateway | Mandatory | Reviewer |
-| B28 | A use case that reads, decides and then writes is protected by its gateways against a concurrent change | Mandatory | Reviewer |
-| B29 | The mechanism of the protection belongs to the gateway and its technology, and shows in the gateway's contract | Mandatory | Reviewer |
-| B30 | The entities a use case changes are locked once, by one gateway, which takes the locks in a fixed order | Mandatory | Reviewer |
-| B31 | Uniqueness is guarded by the store, not by checking first | Mandatory | Reviewer |
-| B32 | An atomic update that moves a business rule into the store is allowed only with a written reason | Optional | Reviewer |
-| B33 | No effect outside the transaction's store happens before the commit | Mandatory | Reviewer |
-| B34 | Choose the form of each effect by whether it may be lost: after commit when it may, an outbox when it must not | Mandatory | Reviewer |
-| B35 | The receiver of a message sent through an outbox tolerates duplicates | Mandatory | Reviewer |
+| ENT-1 | Entity adalah tipe biasa dengan fungsi murni yang mengembalikan salinan baru | Wajib | Reviewer |
+| ENT-2 | Entity baru hanya dibuat lewat `new<Entity>`, yang memegang aturan pembuatan dan nilai awalnya | Wajib | Reviewer |
+| ENT-3 | Entity yang sudah ada hanya diubah lewat fungsi entity, yang memeriksa invariant-nya | Wajib | Reviewer |
+| ENT-4 | Entity tidak mengimpor apa pun di luar entity | Wajib | Reviewer |
+| ENT-5 | Error bisnis dibedakan menurut jenisnya: `validation`, `not_found`, `conflict`, `tech_debt` | Wajib | Reviewer |
+| ENT-6 | Keadaan yang bergantung pada waktu diturunkan dari keadaan tersimpan, waktunya, dan waktu sekarang; tidak ada penjadwal yang mengubah keadaan tersimpan | Wajib | Reviewer |
+| ENT-7 | Status turunan tidak pernah disimpan: simpan hasil aksi terakhir dan waktunya, lalu hitung status efektifnya dengan fungsi entity | Wajib | Reviewer |
+| ENT-8 | Tes entity membandingkan objek utuh, bukan field yang dipilih | Wajib | Reviewer |
+| ENT-9 | Biarkan penyimpanan ikut menjaga invariant terpenting | Opsional | Reviewer |
 
-## Technical practices
+## Use case
 
-| Rule | What it says | Level | Checked by |
+Aturan di [docs/konsep/use-case.md](docs/konsep/use-case.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
 | --- | --- | --- | --- |
-| T1 | A component is a function that takes its dependencies and returns what it provides | Mandatory | Reviewer |
-| T2 | The outer step only keeps its dependencies; the work of a call happens in the handler | Mandatory | Reviewer |
-| T3 | Every component has a named type alias, and the alias is the component's name | Mandatory | Reviewer |
-| T4 | Every type used as a dependency is a named alias, never an inline or generic type | Mandatory | Reviewer |
-| T5 | The function behind a component is named `impl` followed by the component's name | Mandatory | Reviewer |
-| T6 | A dependency parameter is named after its type, with the first letter in lower case | Mandatory | Reviewer |
-| T7 | A component's name is built from the words of the table below, and from nothing else | Mandatory | Reviewer |
-| T8 | A file's path follows from the name of what it holds | Mandatory | Reviewer |
-| T9 | A JSDoc block holds the description first, then the markers, one per line, with nothing after a marker but its data | Mandatory | Reviewer |
-| T10 | The allowed markers are kept in one exported constant, which is always passed to `Skeleto.start` | Mandatory | Reviewer |
-| T11 | One wrapper per marker, named after it, whose first step returns the handler unchanged when its marker is absent | Mandatory | Reviewer |
-| T26 | A gateway observer wrapper hands every gateway call to the observer in the context, and passes the call through when there is none | Optional | Reviewer |
-| T12 | The transaction wrapper opens the transaction and keeps it in the context | Mandatory | Reviewer |
-| T13 | Gateways reach their resource only through a function of the context | Mandatory | Reviewer |
-| T14 | A transaction already in the context is joined, never doubled | Mandatory | Reviewer |
-| T15 | An effect outside the transaction's store happens only after commit | Mandatory | Reviewer |
-| T16 | An asynchronous config sets its own timeout | Mandatory | Reviewer |
-| T17 | Instances are taken from the container once, at startup, by the start of the application only | Mandatory | Reviewer |
-| T18 | A use case is tested by calling its `impl` function with hand-written fakes typed by the gateway contracts, without starting Skeleto and without a mock library | Mandatory | Reviewer |
-| T19 | The fakes fix every unpredictable value | Mandatory | Reviewer |
-| T23 | During development a gateway may be a dummy, in memory or hardcoded, behind the same contract as the real one | Optional | Reviewer |
-| T24 | Each use case can be run on its own | Mandatory | Reviewer |
-| T20 | A test compares whole objects, never picked fields | Mandatory | Reviewer |
-| T21 | One integration test starts Skeleto, and proves that the application starts | Mandatory | Reviewer |
-| T22 | Test files and generated files are left out of the scan | Mandatory | Reviewer |
-| T25 | A debt is marked in code, on the line above what it concerns, in one of three fixed forms, and no marker refers to a ticket number | Mandatory | Reviewer: every marker has one of the three forms, and names no ticket |
-| T27 | A test fails when a gap of a scenario map has neither a marker nor a recorded decision, or when a marker names a gap that is on no map | Mandatory | Machine: the gap test |
+| UC-1 | Setiap use case ditandai sebagai use case | Wajib | Mesin: Skeleto, saat startup |
+| UC-2 | Setiap use case berada di berkasnya sendiri, dinamai menurut use case itu | Wajib | Reviewer |
+| UC-3 | Use case hanya mengatur alur: mengambil lewat gateway, memanggil fungsi entity, dan menyimpan lewat gateway | Wajib | Reviewer |
+| UC-4 | Use case tidak pernah bergantung pada use case lain, dan hanya bergantung pada gateway | Wajib | Mesin: Skeleto, saat startup |
+| UC-5 | Use case punya tipe Request dan Response sendiri dan tidak mengembalikan entity | Wajib | Reviewer |
+| UC-6 | Request dan Response dinamai dan dibentuk menurut operasi bisnis, bukan menurut screen | Wajib | Reviewer |
+| UC-7 | Query tidak pernah menulis: ia hanya bergantung pada gateway yang kontraknya membaca | Wajib | Reviewer |
+| UC-16 | Setiap use case ditandai `@Transaction`, termasuk query | Wajib | Reviewer |
+| UC-8 | Use case tidak pernah menulis literal entity | Wajib | Reviewer |
+| UC-9 | Use case mengenal gateway hanya lewat tipe kontraknya | Wajib | Reviewer |
+| UC-10 | Setiap nilai tak terduga diminta dari gateway sekali, di awal use case | Wajib | Reviewer |
+| UC-11 | Use case meneruskan context tanpa pernah membacanya | Wajib | Reviewer |
+| UC-12 | Use case yang membaca, memutuskan, lalu menulis dilindungi gateway-nya dari perubahan yang terjadi bersamaan | Wajib | Reviewer |
+| UC-13 | Use case dites dengan memanggil fungsi `impl`-nya bersama fake buatan tangan yang bertipe kontrak gateway, tanpa menyalakan Skeleto dan tanpa pustaka mock | Wajib | Reviewer |
+| UC-14 | Fake menetapkan setiap nilai tak terduga | Wajib | Reviewer |
+| UC-15 | Setiap use case bisa dijalankan sendirian | Wajib | Reviewer |
 
-## Development process
+## Gateway
 
-| Rule | What it says | Level | Checked by |
+Aturan di [docs/konsep/gateway.md](docs/konsep/gateway.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
 | --- | --- | --- | --- |
-| P1 | Start from what the user tells, and interview until the business areas are visible | Mandatory | Process |
-| P2 | Classify every business area, never every use case, as Core, Supporting or Generic, by three questions asked in order | Mandatory | Process |
-| P3 | The owner decides the classification; the agent only proposes it, with its reasons | Mandatory | Process |
-| P4 | Record the classification in `docs/AREAS.md`, in the application's repository | Mandatory | Reviewer: `docs/AREAS.md` exists, and every row has a class, a reason and a decision |
-| P5 | Agree the words of the business in `docs/GLOSSARY.md` before any entity or use case is named | Mandatory | Reviewer: `docs/GLOSSARY.md` exists, and holds every entity name and business-area name |
-| P6 | Design only the Core areas first: their use cases, their basic entities and their flow | Mandatory | Process |
-| P7 | What a Core area needs from another area is handled in one of three ways, and each way is recorded | Mandatory | Process |
-| P8 | Write code only after P1 to P7, and write the Core first, in depth, before any other layer | Mandatory | Process |
-| P9 | Record the result of step 4 in `docs/CORE.md`, in the application's repository | Mandatory | Reviewer: `docs/CORE.md` exists, and holds the use cases, entities, gateways, decisions, stubs, assumptions and simplifications of the Core areas |
-| P10 | Write the flow of every business process as one scenario map, in `docs/scenarios/<process>.json` | Mandatory | Reviewer: one file for each business process, each with a `gaps` array of `{id, question}` whose ids are `<process>-<n>` and unique across files |
-| P11 | Build the Core first; build Supporting and Generic areas only as far as the Core's recorded debts need them | Mandatory | Process |
-| P12 | A Core area is done when every main-path step and every branch of its scenario map has a test, and every gap has a marker or a recorded decision | Mandatory | Reviewer: every gap of a map has a marker in the code or a `decision` field, and every branch has a test |
-| P13 | Debt that is not a gap is either Planned or Shortcut, and obsolete code is forbidden: it is removed in the change that replaces it | Mandatory | Reviewer: every such marker has one of the two kinds, and no replaced code is left |
-| P14 | Skeleton use cases are allowed only in the area being worked on | Mandatory | Reviewer: no area outside the one being worked on holds a use case that only throws "not implemented" |
+| GW-1 | Setiap gateway ditandai sebagai gateway | Wajib | Mesin: Skeleto, saat startup |
+| GW-2 | Semua yang di luar proses dijangkau lewat gateway, termasuk nilai tak terduga | Wajib | Reviewer |
+| GW-3 | Kontrak gateway dipisahkan dari implementasinya | Wajib | Reviewer |
+| GW-4 | Gateway pembaca memetakan data tersimpan ke tipe tanpa menerapkan aturan bisnis: validasi saat menulis, bukan saat membaca | Wajib | Reviewer |
+| GW-5 | Gateway menjangkau sumber dayanya hanya lewat fungsi dari context | Wajib | Reviewer |
+| GW-6 | Perlindungan dari perubahan bersamaan milik gateway dan teknologinya, dan terlihat di kontraknya | Wajib | Reviewer |
+| GW-7 | Entity yang diubah sebuah use case dikunci sekali, oleh satu gateway, dengan urutan kunci yang tetap | Wajib | Reviewer |
+| GW-8 | Keunikan dijaga penyimpanan, bukan dengan memeriksa lebih dulu | Wajib | Reviewer |
+| GW-9 | Tidak ada efek di luar penyimpanan transaksi yang terjadi sebelum commit | Wajib | Reviewer |
+| GW-10 | Bentuk setiap efek dipilih menurut boleh tidaknya ia hilang: setelah commit kalau boleh, outbox kalau tidak boleh | Wajib | Reviewer |
+| GW-11 | Penerima pesan yang dikirim lewat outbox tahan terhadap duplikat | Wajib | Reviewer |
+| GW-12 | Gateway hanya bergantung pada config | Wajib | Mesin: Skeleto, saat startup |
+| GW-13 | Pembaruan atomik atau optimisasi yang memindahkan aturan bisnis ke penyimpanan hanya boleh dengan alasan tertulis | Opsional | Reviewer |
+| GW-14 | Selama pengembangan, gateway boleh berupa dummy, di memori atau hardcode, di balik kontrak yang sama dengan yang asli | Opsional | Reviewer |
+| GW-15 | Gateway untuk menyisipkan, menyimpan, mencari satu, dan mencari banyak memakai bentuk standar | Opsional | Reviewer |
 
-## The gap test
+## Controller
 
-A gap on a scenario map (P10) is closed by a marker in the code (T25) or a recorded decision (P12). Skeleto knows nothing of maps or debts, so this test reads files only: it does not start the application. Copy it as it is to the root of your application, next to `main.test.ts` (T21).
+Aturan di [docs/konsep/controller.md](docs/konsep/controller.md).
 
-It fails, naming each gap or marker at fault:
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
+| --- | --- | --- | --- |
+| CTL-1 | Controller membuat context dan hanya memanggil use case, tidak pernah gateway | Wajib | Reviewer |
+| CTL-2 | Controller memeriksa bentuk input; aturan bisnis diperiksa entity | Wajib | Reviewer |
+| CTL-3 | Controller menerjemahkan error bisnis; entity dan use case tidak pernah menyebut transport | Wajib | Reviewer |
+| CTL-4 | Satu screen boleh memanggil banyak use case, dan satu use case boleh melayani banyak controller | Wajib | Reviewer |
+| CTL-5 | Instance diambil dari container satu kali, saat aplikasi dimulai, dan hanya oleh awal aplikasi | Wajib | Reviewer |
+| CTL-6 | Tampilan yang butuh data yang dikumpulkan untuk satu screen dilayani di sisi controller, atau oleh use case query tersendiri, bukan dengan mengubah use case yang sudah ada | Opsional | Reviewer |
 
-- when a gap of a map in `docs/scenarios/` has neither a marker `// TechDebt <gap id>: <reason>` in `src/` nor a `decision` field (T27);
-- when such a marker names an id that is on no map. `Planned` and `Shortcut` markers are not about a gap, and are left alone.
+## Komponen
+
+Aturan di [docs/teknis/komponen.md](docs/teknis/komponen.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
+| --- | --- | --- | --- |
+| KOM-1 | Komponen adalah fungsi yang menerima dependency-nya dan mengembalikan apa yang disediakannya | Wajib | Reviewer |
+| KOM-2 | Tahap luar hanya menyimpan dependency; pekerjaan sebuah panggilan terjadi di handler | Wajib | Reviewer |
+| KOM-3 | Setiap komponen punya alias tipe bernama, dan alias itulah nama komponennya | Wajib | Reviewer |
+| KOM-4 | Setiap tipe yang dipakai sebagai dependency adalah alias bernama, tidak pernah tipe inline atau generik | Wajib | Reviewer |
+| KOM-5 | Fungsi di balik komponen dinamai `impl` diikuti nama komponennya | Wajib | Reviewer |
+| KOM-6 | Parameter dependency dinamai menurut tipenya, dengan huruf pertama kecil | Wajib | Reviewer |
+| KOM-7 | Nama komponen disusun dari kata-kata di tabel berikut, dan tidak dari yang lain | Wajib | Reviewer |
+| KOM-8 | Path berkas mengikuti nama isinya | Wajib | Reviewer |
+| KOM-9 | Blok JSDoc berisi deskripsi lebih dulu, lalu penanda, satu per baris, tanpa apa pun setelah penanda selain datanya | Wajib | Reviewer |
+| KOM-10 | Penanda yang sah disimpan di satu konstanta yang diekspor, dan selalu diberikan ke `Skeleto.start` | Wajib | Reviewer |
+| KOM-11 | Satu tes integrasi menyalakan Skeleto dan membuktikan aplikasinya bisa menyala | Wajib | Reviewer |
+| KOM-12 | Berkas tes dan berkas hasil generator dikecualikan dari pemindaian | Wajib | Reviewer |
+
+## Action
+
+Aturan di [docs/teknis/action.md](docs/teknis/action.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
+| --- | --- | --- | --- |
+| ACT-1 | Setiap action adalah use case atau gateway: operasi bisnis ditulis sebagai use case dan jalan keluar sebagai gateway | Wajib | Mesin: Skeleto, saat startup |
+| ACT-2 | Handler hanya menerima context dan input; semua yang lain datang sebagai dependency | Wajib | Reviewer |
+| ACT-3 | Context adalah metadata untuk infrastruktur; data bisnis tidak pernah dititipkan di context | Wajib | Reviewer |
+
+## Wrapper
+
+Aturan di [docs/teknis/wrapper.md](docs/teknis/wrapper.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
+| --- | --- | --- | --- |
+| WRP-1 | Satu wrapper per penanda yang dibacanya, dinamai menurut penanda itu, dan langkah pertamanya mengembalikan handler apa adanya kalau penandanya tidak ada | Wajib | Reviewer |
+| WRP-2 | Wrapper transaksi membuka transaksi dan menyimpannya di context | Wajib | Reviewer |
+| WRP-3 | Transaksi yang sudah ada di context diikuti, tidak pernah digandakan | Wajib | Reviewer |
+| WRP-4 | Wrapper transaksi menjalankan efek yang diantrekan hanya setelah commit berhasil | Wajib | Reviewer |
+| WRP-5 | Urutan lapisan wrapper adalah urutan penulisannya | Wajib | Mesin: Skeleto, saat startup |
+| WRP-7 | Wrapper yang urutannya penting ditulis di satu berkas | Wajib | Reviewer |
+| WRP-6 | Wrapper pengamat gateway menyerahkan setiap panggilan gateway ke pengamat di context, dan meneruskan panggilannya kalau tidak ada pengamat | Opsional | Reviewer |
+
+## Config
+
+Aturan di [docs/teknis/config.md](docs/teknis/config.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
+| --- | --- | --- | --- |
+| CFG-1 | Config asinkron memasang batas waktunya sendiri | Wajib | Reviewer |
+| CFG-2 | Sumber daya yang harus dipakai di dalam transaksi diserahkan sebagai fungsi dari context, bukan sebagai koneksi | Wajib | Reviewer |
+| CFG-3 | Membangun nilai adalah pekerjaan config; config tidak menjalankan pekerjaan per permintaan | Wajib | Reviewer |
+
+## Pengembangan
+
+Aturan di [docs/proses/pengembangan.md](docs/proses/pengembangan.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
+| --- | --- | --- | --- |
+| DEV-1 | Mulai dari cerita pengguna, lalu wawancarai sampai area bisnisnya terlihat | Wajib | Proses |
+| DEV-2 | Screen adalah petunjuk: terima sebagai bahan, lalu gali use case-nya | Wajib | Proses |
+| DEV-3 | Klasifikasikan setiap area bisnis sebagai Core, Supporting, atau Generic | Wajib | Proses |
+| DEV-4 | Pemilik yang memutuskan klasifikasi; agent hanya mengusulkan beserta alasannya | Wajib | Proses |
+| DEV-5 | Catat klasifikasi di `docs/AREAS.md` | Wajib | Reviewer: `docs/AREAS.md` ada, dan setiap barisnya punya kelas, alasan, dan keputusan |
+| DEV-6 | Sepakati istilah bisnis di `docs/GLOSSARY.md` sebelum entity atau use case mana pun dinamai | Wajib | Reviewer: `docs/GLOSSARY.md` ada, dan memuat setiap nama entity dan nama area bisnis |
+| DEV-7 | Rancang hanya area Core lebih dulu: use case-nya, entity dasarnya, dan alurnya | Wajib | Proses |
+| DEV-8 | Kebutuhan Core dari area lain ditangani dengan salah satu dari tiga cara, dan setiap cara dicatat | Wajib | Proses |
+| DEV-9 | Catat hasil rancangan Core di `docs/CORE.md` | Wajib | Reviewer: `docs/CORE.md` ada, dan memuat use case, entity, gateway, keputusan, stub, anggapan, dan penyederhanaan area Core |
+| DEV-10 | Tulis alur setiap proses bisnis sebagai satu peta skenario di `docs/scenarios/<process>.json` | Wajib | Reviewer: satu berkas untuk setiap proses bisnis, masing-masing dengan array `gaps` berisi `{id, question}` yang id-nya `<process>-<n>` dan unik di semua berkas |
+| DEV-11 | Tulis kode hanya setelah kedua gerbang dan rancangan Core, dan tulis Core lebih dulu, sampai tuntas, sebelum lapis lain | Wajib | Proses |
+| DEV-12 | Bangun area Supporting dan Generic hanya sejauh yang dibutuhkan utang Core yang tercatat | Wajib | Proses |
+| DEV-13 | Di dalam satu area, kerja berputar satu use case setiap kali, dan satu area dikerjakan satu sesi AI | Wajib | Proses |
+| DEV-14 | Kerangka Core dan Core selesai | Wajib | Reviewer: setiap celah di peta punya penanda di kode atau field `decision`, dan setiap cabang punya tes |
+
+## Utang teknis
+
+Aturan di [docs/proses/utang-teknis.md](docs/proses/utang-teknis.md).
+
+| Aturan | Isinya | Tingkat | Diperiksa oleh |
+| --- | --- | --- | --- |
+| UTG-1 | Utang ditandai di kode, di baris tepat di atas yang bersangkutan, dengan salah satu dari tiga bentuk tetap, dan tidak ada penanda yang merujuk nomor tiket | Wajib | Reviewer: setiap penanda berbentuk salah satu dari tiga bentuk tetap, dan tidak ada yang menyebut tiket |
+| UTG-2 | Cabang tempat celah tercapai menolak dengan `tech_debt` yang membawa id celahnya | Wajib | Reviewer |
+| UTG-3 | Tes gagal kalau celah di peta tidak punya penanda maupun keputusan tercatat, atau kalau penanda menyebut celah yang tidak ada di peta mana pun | Wajib | Mesin: tes celah |
+| UTG-4 | Kode usang dihapus dalam perubahan yang menggantikannya, bersama penandanya | Wajib | Reviewer: tidak ada kode usang yang tersisa, dan tidak ada penanda yang utangnya sudah lunas |
+| UTG-5 | Kerangka use case hanya boleh ada di area yang sedang dikerjakan | Wajib | Reviewer: tidak ada area di luar yang sedang dikerjakan yang memuat use case yang hanya melempar "not implemented" |
+
+## Tes celah
+
+Celah di peta skenario (DEV-10) ditutup oleh penanda di kode (UTG-1) atau keputusan yang tercatat (DEV-14). Skeleto tidak tahu apa pun tentang peta atau utang, jadi tes ini hanya membaca berkas: ia tidak menyalakan aplikasi. Salin apa adanya ke akar aplikasi, di samping `main.test.ts` (KOM-11).
+
+Tes ini gagal, dengan menyebut setiap celah atau penanda yang bermasalah:
+
+- kalau celah di peta di `docs/scenarios/` tidak punya penanda `// TechDebt <gap id>: <reason>` di `src/` maupun field `decision` (UTG-3);
+- kalau penanda seperti itu menyebut id yang tidak ada di peta mana pun. Penanda `Planned` dan `Shortcut` bukan tentang celah, dan dibiarkan.
 
 ```ts
 // gaps.test.ts
@@ -141,7 +208,7 @@ function readGaps(): Gap[] {
     .flatMap((file) => (JSON.parse(readFileSync(`docs/scenarios/${file}`, "utf8")) as { gaps?: Gap[] }).gaps ?? []);
 }
 
-/** The gap ids named by the markers of `src`, each with the file that holds it: `// TechDebt <gap id>: <reason>` (T25). */
+/** The gap ids named by the markers of `src`, each with the file that holds it: `// TechDebt <gap id>: <reason>` (UTG-1). */
 function readMarkedIds(): Map<string, string> {
   const marked = new Map<string, string>();
   for (const file of readdirSync("src", { recursive: true, encoding: "utf8" }).filter((name) => name.endsWith(".ts"))) {
@@ -150,17 +217,17 @@ function readMarkedIds(): Map<string, string> {
   return marked;
 }
 
-test("T27: every gap has a marker or a recorded decision", () => {
+test("UTG-3: every gap has a marker or a recorded decision", () => {
   const marked = readMarkedIds();
   const open = readGaps().filter((gap) => !marked.has(gap.id) && !gap.decision).map((gap) => gap.id);
   assert.deepEqual(open, []);
 });
 
-test("T27: every marker names a gap that is on a map", () => {
+test("UTG-3: every marker names a gap that is on a map", () => {
   const ids = new Set(readGaps().map((gap) => gap.id));
   const unknown = [...readMarkedIds()].filter(([id]) => !ids.has(id)).map(([id, file]) => `${id} in ${file}`);
   assert.deepEqual(unknown, []);
 });
 ```
 
-Run it from the root of the application, as `tsx --test gaps.test.ts`: the paths it reads are relative to the folder it runs in.
+Jalankan dari akar aplikasi, sebagai `tsx --test gaps.test.ts`: path yang dibacanya relatif terhadap folder tempat ia dijalankan.

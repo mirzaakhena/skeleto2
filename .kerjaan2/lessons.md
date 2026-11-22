@@ -32,3 +32,4 @@ What earlier tickets learned about this project. Newest last; k2 keeps the last 
 - Container order (and README printed output) follows creation order; reordering README wrappers changes the container listing lines in the text block
 - When a dependency rule changes, grep every copy of the kind table across README, CLAUDE.md and all of docs/ (e.g. grep -rn '`@Config`, `@Gateway`' docs), not only the files named in the ticket
 - When removing a concept, grep every document for all its phrasings (e.g. 'action polos', 'tiga jenis action', '@Action', '@action', 'tes arsitektur'), not only the lines already edited
+- Every docs/ code block must be an excerpt of README or src/type.ts (first line '// path (excerpt)') or a whole file at a new path; no bare fences, even ASCII diagrams

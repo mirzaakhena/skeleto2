@@ -314,3 +314,4 @@ Reviewer independen (tidak membaca `TEMUAN.md` dan papan) memeriksa `src/`, tes,
 - Concern 12: `@Action` polos ditolak mesin lewat opsi `Skeleto.start`, dan tes arsitektur salinan dihapus (261122135602).
 - Kontradiksi 8: `docs/` menjadi satu-satunya sumber aturan, dan tiga dokumen lama dipensiunkan (261122135603), bersama kontradiksi 7 (semua use case ber-`@Transaction`, termasuk query), 9 (status WRP-5), 10 (aturan nama wrapper), dan penegasan concern 11 di dokumen (wrapper yang urutannya penting ditaruh di satu berkas).
 - Urutan kerja: 261122135601, lalu 261122135602, lalu 261122135603.
+- **Perubahan keputusan (2026-11-22):** setelah dibahas kenapa `@Action` polos ada, pemilik memutuskan: "Ya sudah, hapus saja `@Action`." Tidak ada opsi start. Penanda utama tinggal `@Config`, `@Wrapper`, `@UseCase`, `@Gateway`; setiap action adalah use case atau gateway. Tiket 261122135602 ditulis ulang ("Remove the plain @Action marker").

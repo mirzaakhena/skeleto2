@@ -82,7 +82,8 @@ function listFiles(root: string, folder: string, exclude: readonly string[], err
   const found: string[] = [];
   try {
     for (const entry of readdirSync(join(root, folder), { withFileTypes: true })) {
-      const path = join(folder, entry.name);
+      // Always "/", never the separator of the operating system: paths are sorted as text, and "\\" sorts after letters and digits where "/" sorts before them.
+      const path = folder === "" ? entry.name : `${folder}/${entry.name}`;
       if (exclude.some((name) => (name.startsWith("*") ? !entry.isDirectory() && entry.name.endsWith(name.slice(1)) : name === entry.name))) continue;
       // A folder may be named like a .ts file, so the kind of the entry decides, never its name.
       if (entry.isDirectory()) found.push(...listFiles(root, path, exclude, errors));
@@ -132,8 +133,17 @@ function readFunction(
     }
   }
 
-  // A default export has no name to import it by, so only the plain `export function` form counts.
-  if (!declaration.hasExportKeyword() || declaration.hasDefaultKeyword()) report(`is marked @${mainDecorator.name} but is not exported by name`);
+  // A default export has no name to import it by, so only the plain `export function` form counts, one way only.
+  if (!declaration.hasExportKeyword() || declaration.hasDefaultKeyword()) {
+    const listed = declaration.getSourceFile().getExportDeclarations().some((list) => list.getNamedExports().some((entry) => entry.getName() === declaration.getName()));
+    report(
+      listed
+        ? `is marked @${mainDecorator.name} and exported through an export list; only the form "export function ${declaration.getName()}" counts, write that`
+        : `is marked @${mainDecorator.name} but is not exported by name`,
+    );
+  }
+  // Without a body there is nothing to call: the import would give no function, and startup would fail after earlier configs were built.
+  if (declaration.hasDeclareKeyword() || !declaration.hasBody()) report(`is marked @${mainDecorator.name} but is declared without a body (declare); a component needs a function with a body`);
   const returnType = declaration.getReturnTypeNode();
   // Decided by what is written, never by what a type resolves to: only a literal `Promise<X>` is a promise here, and it is opened once.
   const promised = Node.isTypeReference(returnType) && returnType.getTypeName().getText() === "Promise" ? returnType.getTypeArguments() : [];
@@ -147,6 +157,8 @@ function readFunction(
 
   const dependencies: string[] = [];
   for (const parameter of declaration.getParameters()) {
+    // `this` only types the receiver; it is not passed as an argument, so it is no dependency and must not shift the others.
+    if (parameter.getName() === "this") continue;
     const type = parameter.getTypeNode()?.getText();
     if (type === undefined) report(`parameter ${parameter.getName()} has no type annotation`);
     else dependencies.push(type);
@@ -155,8 +167,8 @@ function readFunction(
 }
 
 /**
- * Reports a main marker on something that can never be a component: an exported constant of the file, or a function inside a
- * namespace. Such a block is otherwise skipped, and a wrapper written that way would be missing from every action without a word.
+ * Reports a main marker on something that can never be a component: an exported constant of the file, a function inside a
+ * namespace, or a method of a class. Such a block is otherwise skipped, and a wrapper written that way would be missing from every action without a word.
  */
 function reportMisplaced(sourceFile: SourceFile, report: (name: string, message: string) => void): void {
   function check(node: JSDocableNode, name: string, what: string): void {
@@ -173,6 +185,9 @@ function reportMisplaced(sourceFile: SourceFile, report: (name: string, message:
     if (statement.hasExportKeyword()) check(statement, statement.getDeclarations().map((declaration) => declaration.getName()).join(", "), "an exported constant");
   }
   sourceFile.getModules().forEach(enter);
+  for (const declaration of sourceFile.getClasses()) {
+    for (const method of declaration.getMethods()) check(method, `${declaration.getName() ?? "(anonymous)"}.${method.getName()}`, "a method of a class");
+  }
 }
 
 function checkMainData(decorator: Decorator): string | undefined {

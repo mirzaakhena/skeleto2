@@ -84,6 +84,8 @@ Inilah spesifikasi yang harus dipenuhi. Setiap butir di sini harus punya tes.
   - fungsi dengan lebih dari satu penanda utama;
   - parameter tanpa anotasi tipe;
   - dua fungsi yang mengembalikan nama tipe yang sama;
+  - fungsi berpenanda utama yang diekspor lewat daftar ekspor (`export { implX }`) dan bukan `export function implX`: hanya bentuk kedua yang dihitung, satu cara saja (keputusan pemilik, 2026-11-22); pesannya menyebut fungsinya dan meminta `export function` (tes di `test/scanner.test.ts`);
+  - fungsi berpenanda utama yang ditulis dengan `declare` (tidak punya isi untuk dipanggil): dilaporkan sebelum berkas mana pun diimpor, menyebut fungsinya (tes di `test/scanner.test.ts` dan `test/skeleto.test.ts`);
   - butir `exclude` yang tidak bisa dinyatakan aturan di atas: memuat pemisah path (`generated/models`), memuat `*` selain di karakter pertama (`foo*`, `*.test.*`, `**/x`), hanya `*`, atau string kosong. Pesannya menyebut butir itu.
 - Fungsi tingkat atas tanpa penanda utama, dan penanda utama di tempat lain (konstanta, fungsi di dalam namespace, method), dibiarkan tanpa pesan **kecuali** kalau `SkeletoOptions.decorators` diberikan. Dengan daftar itu, kesalahan penanda yang salah tulis atau salah tempat dilaporkan (4.5).
 
@@ -93,7 +95,7 @@ Inilah spesifikasi yang harus dipenuhi. Setiap butir di sini harus punya tes.
 - Pengecualian satu-satunya: `@Config` yang return type-nya tertulis `Promise<X>` adalah **config asinkron**, dan nama komponennya `X`, bukan `Promise<X>`. Yang dibaca tetap hanya teks anotasinya: hanya tulisan `Promise<...>` dengan tepat satu argumen yang dibuka, dan hanya satu lapis. Alias dari promise, `PromiseLike<X>`, atau `Promise<X> | undefined` tetap bernama seperti tertulis dan tidak ditunggu.
 - Karena namanya sama, config yang mengembalikan `X` dan config yang mengembalikan `Promise<X>` adalah dua fungsi yang mengembalikan nama tipe yang sama (kesalahan 4.2).
 - `@Wrapper`, `@UseCase`, `@Gateway`, dan `@Action` selalu sinkron. Return type `Promise<...>` pada semuanya adalah kesalahan yang menyebut nama fungsinya, dilaporkan bersama kesalahan lain sebelum ada berkas yang diimpor. Komponen yang bergantung padanya tidak dilaporkan lagi sebagai dependency yang tidak ada.
-- **Dependency** adalah teks anotasi tipe setiap parameter, sesuai urutan parameter.
+- **Dependency** adalah teks anotasi tipe setiap parameter, sesuai urutan parameter. Parameter `this` (`this: void`) hanya mengetik penerima, bukan argumen: ia bukan dependency dan tidak menggeser yang lain (tes di `test/scanner.test.ts` dan `test/skeleto.test.ts`).
 - Dependency dicocokkan dengan nama komponen. Dependency yang tidak ada adalah kesalahan.
 - Dependency yang tidak ada dilaporkan **satu kali** untuk setiap pasangan komponen dan nama dependency, walaupun nama itu tertulis di dua parameter. Dua komponen yang kehilangan dependency yang sama masing-masing mendapat satu baris.
 
@@ -109,12 +111,12 @@ Data lain adalah kesalahan, satu pesan untuk semua jenis data: `@Wrapper {"order
 ### 4.5 Penanda tambahan dan daftar decorator
 
 - Penanda selain penanda utama dan tag standar adalah **penanda tambahan** (`@Logging`, `@Transaction`). Nama dan datanya disimpan di `additionalDecorators`, sesuai urutan tulisannya.
-- `SkeletoOptions.decorators` adalah daftar nama penanda tambahan yang sah, misalnya `["Logging", "Transaction"]`.
+- `SkeletoOptions.decorators` adalah daftar nama penanda tambahan yang sah, misalnya `["Logging", "Transaction"]`. Butir yang tidak diawali huruf besar atau memuat `@` (`"logging"`, `"@Logging"`) tidak akan pernah cocok dengan penanda mana pun: itu kesalahan opsi yang menyebut butirnya dan menyarankan tulisan yang benar, dilaporkan bersama kesalahan lain sebelum berkas diimpor; butir itu lalu dibuang dari daftar (tes di `test/skeleto.test.ts`).
 - Kalau daftar itu diberikan, penanda tambahan yang tidak ada di dalamnya adalah kesalahan, misalnya `@Transction`.
 - Kalau daftar itu diberikan, tiga hal berikut juga kesalahan, dilaporkan bersama kesalahan lain sebelum berkas aplikasi diimpor. Setiap pesannya menyebut nama fungsi atau konstanta, berkasnya, dan penandanya:
   - blok JSDoc fungsi tingkat atas yang memuat penanda (diawali huruf besar) tetapi tanpa penanda utama. Ini mencakup penanda utama yang salah tulis (`@Wraper`, `@Actions`, `@Usecases`) dan penanda tambahan tanpa penanda utama;
   - tag berhuruf kecil di fungsi tingkat atas mana pun, komponen atau bukan, yang sama dengan penanda utama atau penanda yang sah kalau huruf besar dan kecil tidak dibedakan (`@transaction`, `@action`, `@wrapper`), juga kalau bloknya tidak memuat penanda sama sekali. Tag berhuruf kecil lain (`@param`, `@returns`, `@defaultValue`) tetap diabaikan;
-  - penanda utama di blok JSDoc konstanta tingkat atas yang di-`export` atau fungsi di dalam namespace. Pesannya menyatakan bahwa hanya deklarasi fungsi tingkat atas yang bisa menjadi komponen.
+  - penanda utama di blok JSDoc konstanta tingkat atas yang di-`export`, fungsi di dalam namespace, atau method class (static atau bukan; pesannya menyebut `Kelas.method`). Pesannya menyatakan bahwa hanya deklarasi fungsi tingkat atas yang bisa menjadi komponen.
 - Kalau daftar itu tidak diberikan, semua penanda tambahan diterima, dan ketiga hal di atas dibiarkan tanpa pesan: wrapper bertanda `@Wraper` dilewati dan startup tetap berhasil.
 - Yang tidak diperiksa, dengan atau tanpa daftar: penanda di komentar biasa (`//`, `/* */`) dan penanda di overload signature.
 
@@ -136,12 +138,12 @@ Data lain adalah kesalahan, satu pesan untuk semua jenis data: `@Wrapper {"order
 
 - Urutannya: semua `@Config`, lalu semua `@Wrapper`, lalu semua `@Gateway`, lalu semua `@UseCase`, lalu semua `@Action` polos. Di dalam setiap kelompok, dependency selalu dibuat lebih dulu.
 - Setiap fungsi dipanggil **tepat satu kali**, dengan dependency sesuai urutan parameternya.
-- Hasil config asinkron (4.3) **ditunggu** sebelum komponen berikutnya dibuat. Yang disimpan di container dan disuntikkan ke setiap komponen yang bergantung padanya adalah nilai jadinya, instance yang sama untuk semuanya, bukan promise. Config asinkron ditunggu satu per satu menurut urutan pembuatan, tidak berbarengan.
+- Hasil config asinkron (4.3) **ditunggu** sebelum komponen berikutnya dibuat. Yang disimpan di container dan disuntikkan ke setiap komponen yang bergantung padanya adalah nilai jadinya, instance yang sama untuk semuanya, bukan promise. Config asinkron ditunggu satu per satu menurut urutan pembuatan, tidak berbarengan (tes di `test/skeleto.test.ts`).
 - Startup **tidak memasang batas waktu**: ia menunggu selama config itu menunggu. Batas waktu adalah urusan config itu sendiri (keputusan pemilik, 2026-11-16).
 - Config asinkron yang gagal (promise-nya ditolak) menghentikan startup sama seperti config yang melempar error: pesannya menyebut nama komponen dan fungsinya, error aslinya menjadi `cause`, komponen sesudahnya tidak dibuat, dan startup berikutnya memindai ulang.
 - Hasil komponen lain disimpan apa adanya dan tidak pernah ditunggu.
 - Hasil `@UseCase`, `@Gateway`, dan `@Action` dibungkus oleh **semua** `@Wrapper`. Wrapper dipanggil sebagai `wrapper(handler, metadata)` dan hasilnya menggantikan handler.
-- Urutan pembungkusan adalah urutan penulisan, seperti kulit bawang: wrapper yang ditulis **pertama** menjadi lapisan **terdalam** (dipasang paling dulu), yang ditulis terakhir menjadi lapisan **terluar** dan berjalan paling dulu saat dipanggil. Antarberkas, urutannya mengikuti urutan pemindaian: berkas menurut urutan path, fungsi menurut urutan tulisnya. Tidak ada aturan teknis tentang berkas tempat wrapper ditulis; satu berkas `src/wrappers.ts` hanya bawaan opsional di dokumen praktik (keputusan pemilik, 2026-11-22). Wrapper tetap dibuat menurut urutan dependency; hanya pelapisannya yang mengikuti urutan penulisan.
+- Urutan pembungkusan adalah urutan penulisan, seperti kulit bawang: wrapper yang ditulis **pertama** menjadi lapisan **terdalam** (dipasang paling dulu), yang ditulis terakhir menjadi lapisan **terluar** dan berjalan paling dulu saat dipanggil. Antarberkas, urutannya mengikuti urutan pemindaian: berkas menurut urutan path, fungsi menurut urutan tulisnya. Path dibandingkan dengan `/` sebagai pemisah di semua sistem operasi (di Windows `\\` terurut lain daripada `/`), jadi `a/b.ts` terurut sebelum `a0.ts` (tes di `test/skeleto.test.ts`). Tidak ada aturan teknis tentang berkas tempat wrapper ditulis; satu berkas `src/wrappers.ts` hanya bawaan opsional di dokumen praktik (keputusan pemilik, 2026-11-22). Wrapper tetap dibuat menurut urutan dependency; hanya pelapisannya yang mengikuti urutan penulisan.
 - Wrapper yang mengembalikan `handler` apa adanya berarti tidak membungkus.
 - Fungsi `@UseCase`, `@Gateway`, `@Action`, fungsi `@Wrapper`, dan **setiap** pembungkusan harus menghasilkan fungsi. Hasil lain (`undefined`, objek, promise) menghentikan startup sama seperti komponen yang melempar error, dan startup berikutnya memindai ulang. Pesannya menyebut yang bersalah: action (dari jenis apa pun) dan fungsinya, atau wrapper dan fungsinya; untuk pembungkusan, wrapper dan fungsinya beserta action yang sedang dibungkus. Hasil `@Config` tidak diperiksa.
 - Action (dari jenis apa pun) yang disuntikkan ke komponen lain adalah versi yang **sudah** dibungkus.

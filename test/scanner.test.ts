@@ -283,7 +283,7 @@ for (const [label, allowed] of [["without a list", undefined], ["with a list", [
 
 // ---- functions that are not components ----
 
-const REPORTED_WITH_LIST = ["a function with only an additional marker", "an arrow function", "a function inside a namespace"];
+const REPORTED_WITH_LIST = ["a function with only an additional marker", "an arrow function", "a function inside a namespace", "a class method"];
 const notComponents: Record<string, string> = {
   "a function without JSDoc": `export function plain(): Plain { return null as any; }\n`,
   "a function whose JSDoc has no marker at all": `/** Just a description, mail me@Action.example. */\nexport function described(x): Described { return null as any; }\n`,
@@ -516,8 +516,10 @@ test("an empty list scans everything, so the default exclusions do produce compo
   const result = await withFixture(trapFiles, (directory) => scanDirectory(directory, undefined, []));
   assert.deepEqual(names(result).sort(), trapNames);
   // The three extra functions returning Normal are now seen, which is the trap the default list avoids.
-  assert.equal(result.errors.length, 3, JSON.stringify(result.errors));
-  for (const error of result.errors) assert.match(error, /^Normal: returned by both/);
+  assert.equal(result.errors.length, 4, JSON.stringify(result.errors));
+  // The fourth is the declaration in types.d.ts, which has no body to call.
+  assert.equal(result.errors.filter((error) => /^makeDeclared \(types\.d\.ts\): .*declare/.test(error)).length, 1, JSON.stringify(result.errors));
+  for (const error of result.errors.filter((error) => !error.startsWith("makeDeclared"))) assert.match(error, /^Normal: returned by both/);
 });
 
 test("the default list plus one entry leaves out the defaults and that entry, as a folder or as a file at any depth", async () => {
@@ -699,4 +701,38 @@ test("a component with a lowercase near-marker is still a component, and all its
   for (const pattern of [/@logging\b.*write @Logging/, /@action\b.*write @Action/, /@Cache is not an allowed marker/, /not exported/]) {
     assert.ok(result.errors.some((line) => line.startsWith("makeSave (a.ts): ") && pattern.test(line)), String(pattern));
   }
+});
+
+// ---- mistakes visible in the source, reported before any import (4.2, 4.5, 4.7) ----
+
+test("a marked function declared with declare is a mistake naming the function", async () => {
+  const result = await scan({ "a.ts": `/** @Config */\nexport declare function implAmbient(): Ambient;\n` });
+  assertOneError(result, /^implAmbient \(a\.ts\): .*declare/);
+});
+
+test("a marked function exported through an export list is a mistake that says to write export function", async () => {
+  const result = await scan({ "a.ts": `/** @Config */\nfunction implListed(): Listed { return {} as Listed; }\nexport { implListed };\n` });
+  assert.equal(result.errors.length, 1, result.errors.join("\n"));
+  assert.match(result.errors[0] ?? "", /implListed \(a\.ts\): .*export list.*"export function implListed"/);
+  const renamed = await scan({ "a.ts": `/** @Config */\nfunction implLocal(): Listed { return {} as Listed; }\nexport { implLocal as implOther };\n` });
+  assert.match(renamed.errors[0] ?? "", /implLocal \(a\.ts\): .*export list/);
+});
+
+test("a this parameter is no dependency and does not shift the others", async () => {
+  const result = await scan({ "a.ts": `/** @Config */\nexport function implY(this: void, db: Db, cache: Cache): Y { return {} as Y; }\n` });
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.functions[0]?.metadata.dependencies, ["Db", "Cache"]);
+});
+
+test("a main marker on a class method is a mistake naming class and method when a list of markers is given, and left alone without it", async () => {
+  const files = { "a.ts": `export class Holder {\n  /** @Action */\n  static makeIt(): Item { return {} as Item; }\n}\n/** @Config */\nexport function implOk(): Ok { return {} as Ok; }\n` };
+  const flagged = await scan(files, []);
+  assert.equal(flagged.errors.length, 1, flagged.errors.join("\n"));
+  assert.match(flagged.errors[0] ?? "", /Holder\.makeIt \(a\.ts\): is marked @Action .*a method.*only top-level function declarations can be components/);
+  assert.deepEqual((await scan(files)).errors, []);
+});
+
+test("files are listed with / as separator on every system, so that a/b.ts sorts before a0.ts", async () => {
+  const result = await scan({ "a0.ts": `/** @Config */\nexport function implLate(): Late { return {} as Late; }\n`, "a/b.ts": `/** @Config */\nexport function implEarly(): Early { return {} as Early; }\n` });
+  assert.deepEqual(result.functions.map((found) => found.metadata.name), ["Early", "Late"]);
 });

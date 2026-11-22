@@ -376,9 +376,9 @@ test("an empty options.exclude scans everything, and a list of the defaults plus
   });
 });
 
-test("with an empty options.exclude a marked declaration in a .d.ts file is a component again, which then has nothing to call", async () => {
+test("with an empty options.exclude a marked declaration in a .d.ts file is a component again, which is then reported as having no body", async () => {
   const error = await failure({ "types.d.ts": declared }, { exclude: [] });
-  assert.match(error.message, /Declared: function makeDeclared .* failed while/);
+  assert.match(error.message, /makeDeclared \(types\.d\.ts\): .*declare/);
 });
 
 for (const entry of ["generated/models", "foo*", "*.test.*", "**/x", "*", ""]) {
@@ -929,3 +929,62 @@ for (const kind of ["Wrapper", "Action"] as const) {
     assert.equal(lateLines.length, kind === "Wrapper" ? 2 : 1, error.message);
   });
 }
+
+// ---- mistakes visible in the source and in the options, before any import (4.2, 4.5, 4.7) ----
+
+for (const [entry, suggestion] of [["logging", "Logging"], ["@Logging", "Logging"]] as const) {
+  test(`options.decorators entry ${JSON.stringify(entry)} is an option mistake naming the entry, reported with the others and before any import`, async () => {
+    const boom = `throw new Error("module was imported");\n`;
+    const error = await failure({ "a.ts": boom + component("Action", "SaveUser", ["Nowhere"]) }, { decorators: [entry, "Transaction"] });
+    assert.doesNotMatch(error.message, /module was imported/);
+    const lines = problems(error);
+    assert.equal(lines.length, 2, error.message);
+    assert.ok(lines[0]?.includes(`options.decorators entry ${JSON.stringify(entry)}`) && lines[0].includes(`write "${suggestion}"`), lines[0]);
+    assert.match(lines[1] ?? "", /SaveUser: dependency Nowhere is not a known component/);
+    assert.deepEqual(shared.skeletoTest.calls, []);
+  });
+}
+
+test("a marked declare function, an export list, and a class method stop startup together, naming each, before any import", async () => {
+  const boom = `throw new Error("module was imported");\n`;
+  const files = {
+    "a.ts": boom + `/** @Config */\nexport declare function makeAmbient(): Ambient;\n`,
+    "b.ts": `/** @Config */\nfunction makeListed(): Listed { return null as any; }\nexport { makeListed };\n`,
+    "c.ts": `export class Holder {\n  /** @Action */\n  static makeIt(): Item { return null as any; }\n}\n`,
+  };
+  const error = await failure({ ...files, "d.ts": component("Config", "Ok") }, { decorators: ["Logging"] });
+  assert.doesNotMatch(error.message, /module was imported/);
+  const lines = problems(error);
+  assert.equal(lines.length, 3, error.message);
+  assert.match(lines[0] ?? "", /makeAmbient \(a\.ts\): .*declare/);
+  assert.match(lines[1] ?? "", /makeListed \(b\.ts\): .*export list.*"export function makeListed"/);
+  assert.match(lines[2] ?? "", /Holder\.makeIt \(c\.ts\): .*@Action.*method/);
+  assert.deepEqual(shared.skeletoTest.calls, []);
+});
+
+test("a this parameter is not passed: the arguments are the dependencies in order", async () => {
+  const state = reset();
+  const source = `/** @Config */\nexport function makeAlpha(): Alpha { return "alpha" as any; }\n/** @Config */\nexport function makeBeta(this: void, a: Alpha): Beta {\n  ${S}.calls.push(["Beta", [a]]);\n  return "beta" as any;\n}\n`;
+  await withFixture({ "a.ts": source }, async (directory) => {
+    await Skeleto.start(directory);
+    assert.deepEqual(state.calls, [["Beta", ["alpha"]]]);
+  });
+});
+
+test("wrapper layering compares paths with / as separator: a wrapper in a/ is inside one in a0.ts, as on every operating system", async () => {
+  reset();
+  const files = { "a0.ts": component("Wrapper", "Outer"), "a/b.ts": component("Wrapper", "Inner"), "z.ts": component("Action", "SaveUser") };
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["Outer", "Inner", "SaveUser"]);
+  });
+});
+
+test("two independent async configs are awaited one after the other, never at the same time", async () => {
+  const state = reset();
+  const files = { "a.ts": asyncConfig("Alpha", [], undefined, 40) + asyncConfig("Beta", [], undefined, 10) };
+  await withFixture(files, async (directory) => {
+    await Skeleto.start(directory);
+    assert.deepEqual(state.calls.map(([name]) => name), ["Alpha", "Alpha ready", "Beta", "Beta ready"]);
+  });
+});

@@ -54,9 +54,19 @@ function listOption(options: SkeletoOptions | undefined, name: "decorators" | "e
   return undefined;
 }
 
+/** A marker is written with an uppercase first letter and no "@", so an entry written otherwise could never match one; it is reported and dropped. */
+function checkMarkerNames(names: string[] | undefined, errors: string[]): string[] | undefined {
+  return names?.filter((entry) => {
+    if (/^[A-Z][A-Za-z0-9_]*$/.test(entry)) return true;
+    const suggestion = entry.replace(/^@+/, "");
+    errors.push(`options.decorators entry ${JSON.stringify(entry)}: a marker name starts with an uppercase letter and is written without "@"; write ${JSON.stringify(suggestion.charAt(0).toUpperCase() + suggestion.slice(1))}`);
+    return false;
+  });
+}
+
 async function build(root: string, options: SkeletoOptions | undefined): Promise<Container> {
   const optionErrors: string[] = [];
-  const scanned = scanDirectory(root, listOption(options, "decorators", optionErrors), listOption(options, "exclude", optionErrors));
+  const scanned = scanDirectory(root, checkMarkerNames(listOption(options, "decorators", optionErrors), optionErrors), listOption(options, "exclude", optionErrors));
   const { functions } = scanned;
   const errors = [...optionErrors, ...scanned.errors];
   const byName = new Map<string, ScannedFunction>();

@@ -61,18 +61,22 @@ Every later session and reviewer finds one rule set, `docs/`, with no contradict
   → (a) Yes: content of the old files missing from docs/ is moved into the matching docs file in Indonesian, with no new rule invented, and listed in the handover (owner chose 'Ya, pindahkan yang belum ada'). (owner, 2026-11-22)
 
 ## Assumptions
-- A1 [unseen] The old-to-new number table in docs/README.md stays, as the lookup for B/T/P citations in existing code and tickets. Its status block and every 'old files still apply' or 'rencana WRP-5' wording go, and CLAUDE.md 1.1's 'untuk sementara BEST_PRACTICES.md ...' is removed.
+- A1 [confirmed] The old-to-new number table in docs/README.md stays, as the lookup for B/T/P citations in existing code and tickets. Its status block and every 'old files still apply' or 'rencana WRP-5' wording go, and CLAUDE.md 1.1's 'untuk sementara BEST_PRACTICES.md ...' is removed.
   Why: Done when: nothing may say the old files still apply. Citations by number keep their meaning (docs/README.md: numbers are never reused).
   If wrong: Delete the table
-- A2 [unseen] TEMUAN.md and the .kerjaan2 board files keep their mentions of the old files and numbers: they are a record of past decisions, not rules. Only CLAUDE.md, README.md, REVIEW_CHECKLIST.md, docs/ and the tests are changed.
+  Confirmed by owner, 2026-11-22
+- A2 [confirmed] TEMUAN.md and the .kerjaan2 board files keep their mentions of the old files and numbers: they are a record of past decisions, not rules. Only CLAUDE.md, README.md, REVIEW_CHECKLIST.md, docs/ and the tests are changed.
   Why: TEMUAN.md is the record of findings and decisions (CLAUDE.md 1.1), and board history is never rewritten
   If wrong: Edit TEMUAN.md as well
-- A3 [unseen] WRP-1 and the wrapper 'Nama dan berkas' table are widened from 'one additional marker' to 'one marker it reads, additional or main', so GatewayWrapper (reads mainDecorator.name Gateway) is named after its marker. The KOM-7 word table gets the same wording if it says 'additional'.
+  Confirmed by owner, 2026-11-22
+- A3 [confirmed] WRP-1 and the wrapper 'Nama dan berkas' table are widened from 'one additional marker' to 'one marker it reads, additional or main', so GatewayWrapper (reads mainDecorator.name Gateway) is named after its marker. The KOM-7 word table gets the same wording if it says 'additional'.
   Why: Done when line 6 asks for the naming rule to cover a wrapper that reads a main marker; WRP-1 already says main markers are read via mainDecorator.name
   If wrong: Revert the wording
-- A4 [unseen] The REVIEW_CHECKLIST example finding is re-cited with the new number (old B18 is UC-9) at the real line, and the repo test keeps checking that line. The controller-naming 'Usulan, belum diputuskan pemilik' note in controller.md stays as a marked proposal: it is not a contradiction.
+  Confirmed by owner, 2026-11-22
+- A4 [confirmed] The REVIEW_CHECKLIST example finding is re-cited with the new number (old B18 is UC-9) at the real line, and the repo test keeps checking that line. The controller-naming 'Usulan, belum diputuskan pemilik' note in controller.md stays as a marked proposal: it is not a contradiction.
   Why: The lessons say the example finding cites a real line that the test checks; docs/README.md defines Usulan as not yet in force
   If wrong: Change the example finding
+  Confirmed by owner, 2026-11-22
 
 ## Decisions
 - Lane standard: documents and the repository's document tests only, no src/ change; reversible from git, but the test rewrite in test/readme.test.ts is large

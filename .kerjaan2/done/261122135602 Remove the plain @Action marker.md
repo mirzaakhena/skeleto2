@@ -57,12 +57,14 @@ On 2026-11-22 the owner first chose a start option to refuse plain actions, then
   Why: 261122135603 retires the old documents only after this ticket, and the lessons say docs/ must be updated together with the old files (CLAUDE.md 1.1)
   If wrong: Revert the document edits
   Overturned by owner, 2026-11-22
-- A5 [unseen] @Action is refused whether or not options.decorators is given, also when listed in it and also beside another main marker. One line per function, naming component (if any), function and file, saying to mark it @UseCase or @Gateway. With decorators given, lowercase @action is still a near-marker error with the same advice. @Action on a constant, namespace function or method is reported only with decorators, as other misplaced main markers are.
+- A5 [confirmed] @Action is refused whether or not options.decorators is given, also when listed in it and also beside another main marker. One line per function, naming component (if any), function and file, saying to mark it @UseCase or @Gateway. With decorators given, lowercase @action is still a near-marker error with the same advice. @Action on a constant, namespace function or method is reported only with decorators, as other misplaced main markers are.
   Why: Done when 1 says a function marked @Action stops startup; CLAUDE.md 2 fails early, 4.5 is how placement mistakes are reported today
   If wrong: Narrow the check in src/scanner.ts and its tests
-- A6 [unseen] Only the marker and kind go: ActionHandler, the 'action' word for use cases and gateways together, and docs/teknis/action.md stay. ALLOWED_DEPENDENCIES loses Action; the empty-directory message and every marker list name four main markers. In docs/, ACT-1 keeps its number and becomes 'every action is a use case or a gateway'. Old B5 keeps its heading, and its checklist row becomes 'Machine: Skeleto, at startup'. 'How to review' names Skeleto at startup and the gap test. The two README tests of the copied test are deleted.
+  Confirmed by owner, 2026-11-22
+- A6 [confirmed] Only the marker and kind go: ActionHandler, the 'action' word for use cases and gateways together, and docs/teknis/action.md stay. ALLOWED_DEPENDENCIES loses Action; the empty-directory message and every marker list name four main markers. In docs/, ACT-1 keeps its number and becomes 'every action is a use case or a gateway'. Old B5 keeps its heading, and its checklist row becomes 'Machine: Skeleto, at startup'. 'How to review' names Skeleto at startup and the gap test. The two README tests of the copied test are deleted.
   Why: Out of scope excludes renaming the handler type; rule numbers are never reused; checklist rows must match headings verbatim
   If wrong: Revert the wording; no data is affected
+  Confirmed by owner, 2026-11-22
 
 ## Decisions
 - Lane standard: a new start option and its check in src/skeleto.ts, plus document edits; no data, login or money, cheap to undo

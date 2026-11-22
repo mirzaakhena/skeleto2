@@ -37,3 +37,5 @@
 {"t":"2026-11-22 15:45:36","event":"agent","role":"reviewer","agent":"a8c67d06685317604","step":"review:2:0:0","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
 {"t":"2026-11-22 15:46:15","event":"verdict","result":"pass","round":2,"commit":"79f8cc7","session":"3581ac0f-c58f-4349-b833-c978731fcea8","by":"reviewer:a8c67d06685317604"}
 {"t":"2026-11-22 15:46:29","event":"landed","branch":"k2/261122135602-remove-the-plain-action","files":["BEST_PRACTICES.md","CLAUDE.md","README.md","REVIEW_CHECKLIST.md","TECHNICAL_PRACTICES.md","docs/README.md","docs/konsep/gateway.md","docs/konsep/use-case.md","docs/teknis/action.md","docs/teknis/komponen.md","docs/teknis/use-case-gateway-bawaan.md","docs/teknis/wrapper.md","src/scanner.ts","src/skeleto.ts","test/decorator.test.ts","test/readme.test.ts","test/scanner.test.ts","test/skeleto.test.ts","test/type.test.ts"],"session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:01:10","event":"assumption-confirmed","key":"A5","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}
+{"t":"2026-11-22 16:01:10","event":"assumption-confirmed","key":"A6","session":"3581ac0f-c58f-4349-b833-c978731fcea8"}

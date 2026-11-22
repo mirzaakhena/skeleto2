@@ -493,17 +493,39 @@ test("every wrapper wraps every action and receives the action's metadata", asyn
   });
 });
 
-test("a larger ordinal is further outside; among equal ordinals the name that sorts later in code-unit order is further outside", async () => {
+test("wrappers written in one file layer from the first written (innermost) to the last written (outermost), whatever their names", async () => {
   reset();
-  const wrapper = (name: string, ordinal?: number): string => component("Wrapper", name, [], undefined, ordinal === undefined ? "@Wrapper" : `@Wrapper {"ordinal": ${ordinal}}`);
   const files = {
-    // "Zebra" < "apple" in code units, while a locale comparison would put "apple" first.
-    "a.ts": wrapper("Middle", 0) + wrapper("Outer", 10) + wrapper("apple") + wrapper("Inner", -5) + wrapper("Zebra") + wrapper("Second", 2),
+    "a.ts": component("Wrapper", "Zebra") + component("Wrapper", "apple") + component("Wrapper", "Middle"),
     "b.ts": component("Action", "SaveUser"),
   };
   await withFixture(files, async (directory) => {
     const container = (await Skeleto.start(directory)).getContainer();
-    assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["Outer", "Second", "apple", "Zebra", "Middle", "Inner", "SaveUser"]);
+    assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["Middle", "apple", "Zebra", "SaveUser"]);
+  });
+});
+
+test("wrappers in two files: those of the file first in path order are inside those of the later file", async () => {
+  reset();
+  const files = {
+    "b.ts": component("Wrapper", "OuterOne") + component("Wrapper", "OuterTwo"),
+    "a.ts": component("Wrapper", "InnerOne") + component("Wrapper", "InnerTwo"),
+    "c.ts": component("Action", "SaveUser"),
+  };
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["OuterTwo", "OuterOne", "InnerTwo", "InnerOne", "SaveUser"]);
+  });
+});
+
+test("the layering follows the written order even when a wrapper is created later because of its dependency", async () => {
+  reset();
+  const files = {
+    "a.ts": component("Wrapper", "First", ["Late"]) + component("Wrapper", "Second") + component("Config", "Late") + component("Action", "SaveUser"),
+  };
+  await withFixture(files, async (directory) => {
+    const container = (await Skeleto.start(directory)).getContainer();
+    assert.deepEqual(await trace(container.get("SaveUser")?.getInstance()), ["Second", "First", "SaveUser"]);
   });
 });
 
@@ -536,7 +558,7 @@ test("the container holds every component of all kinds under its name, with inst
   const state = reset();
   const files = {
     "config/log.ts": component("Config", "winston.Logger"),
-    "wrap.ts": component("Wrapper", "Audit", ["winston.Logger"], "(handler: any) => handler", `@Wrapper {"ordinal": 3}`),
+    "wrap.ts": component("Wrapper", "Audit", ["winston.Logger"], "(handler: any) => handler"),
     "user/save.ts": component("Action", "SaveUser", ["winston.Logger"], undefined, "@Action\n * @Transaction"),
   };
   await withFixture(files, async (directory) => {
@@ -547,7 +569,7 @@ test("the container holds every component of all kinds under its name, with inst
     assert.equal(container.get("Audit")?.getInstance(), state.raw["Audit"]);
     assert.equal(container.get("SaveUser")?.getInstance(), state.raw["SaveUser"]);
     assert.deepEqual(container.get("winston.Logger")?.getMetadata(), { name: "winston.Logger", dependencies: [], mainDecorator: { name: "Config", data: undefined }, additionalDecorators: [] });
-    assert.deepEqual(container.get("Audit")?.getMetadata(), { name: "Audit", dependencies: ["winston.Logger"], mainDecorator: { name: "Wrapper", data: { ordinal: 3 } }, additionalDecorators: [] });
+    assert.deepEqual(container.get("Audit")?.getMetadata(), { name: "Audit", dependencies: ["winston.Logger"], mainDecorator: { name: "Wrapper", data: undefined }, additionalDecorators: [] });
     assert.deepEqual(container.get("SaveUser")?.getMetadata(), {
       name: "SaveUser",
       dependencies: ["winston.Logger"],
@@ -699,7 +721,7 @@ for (const [written, described] of [["undefined", "undefined"], ["null", "null"]
 test("a wrapper that returns the handler only for actions with a certain marker stops startup naming the wrapper and the action without it", async () => {
   const wrap = `(handler: any, metadata: any) => { ${S}.seen.push(["Transactional", metadata.name]); if (metadata.additionalDecorators.some((marker: any) => marker.name === "Transaction")) return handler; }`;
   const files = {
-    "w.ts": component("Wrapper", "Transactional", [], wrap) + component("Wrapper", "Outer", [], undefined, `@Wrapper {"ordinal": 5}`),
+    "w.ts": component("Wrapper", "Transactional", [], wrap) + component("Wrapper", "Outer"),
     "a.ts": component("Action", "FindUser", [], undefined, "@Action\n * @Transaction") + component("Action", "SaveUser", ["FindUser"]),
   };
   const error = await failure(files);

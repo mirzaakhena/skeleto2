@@ -82,7 +82,8 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
   if (errors.length > 0) throw new Error(`Skeleto cannot start ${root}, ${errors.length} problem(s):\n${errors.map((line) => `- ${line}`).join("\n")}`);
 
   const container: Container = new Map();
-  const wrappers: { name: string; at: string; ordinal: number; wrap: WrapperHandler }[] = [];
+  const scanIndex = new Map(functions.map((found, index) => [found.metadata.name, index]));
+  const wrappers: { name: string; at: string; wrap: WrapperHandler }[] = [];
   // A kind depends on earlier kinds or on itself only, so filtering the one sorted order by kind keeps dependencies first.
   for (const kind of Object.keys(ALLOWED_DEPENDENCIES)) {
     for (const name of sorted.order) {
@@ -119,10 +120,10 @@ async function build(root: string, options: SkeletoOptions | undefined): Promise
       }
       if (notFunction) throw new Error(notFunction);
       container.set(name, new FuncInstanceMetadata(instance, metadata));
-      if (kind === "Wrapper") wrappers.push({ name, at, ordinal: metadata.mainDecorator.data?.ordinal ?? 0, wrap: instance });
+      if (kind === "Wrapper") wrappers.push({ name, at, wrap: instance });
     }
-    // Plain code-unit comparison of names, so the layering does not depend on the locale of the machine.
-    if (kind === "Wrapper") wrappers.sort((a, b) => a.ordinal - b.ordinal || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+    // Layering follows the scan order (files in sorted path order, functions as written), not the creation order: the first written is the innermost.
+    if (kind === "Wrapper") wrappers.sort((a, b) => scanIndex.get(a.name)! - scanIndex.get(b.name)!);
   }
   return container;
 }

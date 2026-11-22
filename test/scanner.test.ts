@@ -212,8 +212,8 @@ test("three functions returning the same type name give one mistake per extra fu
 
 // ---- 4.4: data of the main marker ----
 
-for (const marker of ["Config", "Action", "UseCase", "Gateway"]) {
-  for (const data of [`{"readTypeArguments": true}`, `{}`, `some text`, `{"ordinal": 1}`]) {
+for (const marker of ["Config", "Wrapper", "Action", "UseCase", "Gateway"]) {
+  for (const data of [`{"readTypeArguments": true}`, `{}`, `some text`, `{"ordinal": 1}`, `{"ordinal": 10}`, `{"ordinal": -10}`, `1`]) {
     test(`@${marker} with data ${data} is a mistake naming the function`, async () => {
       const result = await scan({ "a.ts": `/** @${marker} ${data} */\nexport function implWithData(): WithData { return null as any; }\n` });
       assertOneError(result, /implWithData/, new RegExp(`@${marker} takes no data`));
@@ -232,32 +232,11 @@ test("@Action followed by another marker on the same line is a mistake, because 
   assertOneError(result, /implInline/, /@Action takes no data/, /@Transaction/);
 });
 
-for (const [data, expected] of [["", undefined], [`{"ordinal": 5}`, { ordinal: 5 }], [`{"ordinal": 0}`, { ordinal: 0 }], [`{"ordinal": -3}`, { ordinal: -3 }]] as const) {
-  test(`@Wrapper accepts ${data === "" ? "no data" : data}`, async () => {
-    const result = await scan({ "a.ts": `/** @Wrapper ${data} */\nexport function implWrap(): Wrap { return null as any; }\n` });
-    assert.deepEqual(result.errors, []);
-    assert.deepEqual(result.functions[0]?.metadata.mainDecorator, { name: "Wrapper", data: expected });
-  });
-}
-
-const badWrapperData = [
-  `{"ordinal": 1.5}`,
-  `{"ordinal": "1"}`,
-  `{"ordinal": null}`,
-  `{"ordinal": true}`,
-  `{"order": 1}`,
-  `{"ordinal": 1, "extra": 2}`,
-  `{"readTypeArguments": true}`,
-  `{}`,
-  `outermost`,
-  `1`,
-];
-for (const data of badWrapperData) {
-  test(`@Wrapper with data ${data} is a mistake naming the function`, async () => {
-    const result = await scan({ "a.ts": `/** @Wrapper ${data} */\nexport function implWrap(): Wrap { return null as any; }\n` });
-    assertOneError(result, /implWrap/, /@Wrapper takes no data or \{"ordinal": <integer>\}/);
-  });
-}
+test("@Wrapper alone is a main marker without data", async () => {
+  const result = await scan({ "a.ts": `/** @Wrapper */\nexport function implWrap(): Wrap { return null as any; }\n` });
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.functions[0]?.metadata.mainDecorator, { name: "Wrapper", data: undefined });
+});
 
 // ---- 4.5: additional markers and the allowed list; invalid JSON ----
 
@@ -343,7 +322,7 @@ test("one scan returns every mistake of a fixture with several different ones", 
         `/**\n * @Action\n * @Wrapper\n */\nexport function implBoth(): Both { return null as any; }`,
         `/** @Action */\nexport function implLoose(untyped): Loose { return null as any; }`,
         `/** @Action {"readTypeArguments": true} */\nexport function implLegacy(): Legacy { return null as any; }`,
-        `/** @Wrapper {"ordinal": 1.5} */\nexport function implWrap(): Wrap { return null as any; }`,
+        `/** @Wrapper {"ordinal": 10} */\nexport function implWrap(): Wrap { return null as any; }`,
         `/**\n * @Action\n * @Transction\n */\nexport function implTypo(): Typo { return null as any; }`,
         `/**\n * @Action\n * @Logging {"level": }\n */\nexport function implBadJson(): BadJson { return null as any; }`,
         `/** @Config */\nexport function implDup(): Dup { return null as any; }`,
@@ -362,7 +341,7 @@ test("one scan returns every mistake of a fixture with several different ones", 
     [/implBoth/, /more than one main marker/],
     [/implLoose/, /parameter untyped/],
     [/implLegacy/, /@Action takes no data/],
-    [/implWrap/, /@Wrapper takes no data or/],
+    [/implWrap/, /@Wrapper takes no data, but has \{"ordinal":10\}/],
     [/implTypo/, /@Transction is not an allowed marker/],
     [/implBadJson/, /@Logging has invalid JSON/],
     [/implLateAction/, /is marked @Action but returns Promise<LateAction>/],
@@ -661,11 +640,11 @@ const MISTAKES: [string, string, string, RegExp[]][] = [
   ["a marker outside the list and no main marker, not exported", `/**\n * Text.\n * @Cache {"ttl": 1}\n */\nfunction helper()${body}`, "helper", [/@Cache/, /no main marker/]],
   ["@transaction on an action", `/**\n * @Action\n * @transaction\n */\nexport function makeSave()${body}`, "makeSave", [/@transaction\b/, /write @Transaction/]],
   ["@action alone", `/** @action */\nexport function makeSave()${body}`, "makeSave", [/@action\b/, /write @Action/]],
-  ["@wrapper alone", `/** @wrapper {"ordinal": 1} */\nexport function makeAudit()${body}`, "makeAudit", [/@wrapper\b/, /write @Wrapper/]],
+  ["@wrapper alone", `/** @wrapper */\nexport function makeAudit()${body}`, "makeAudit", [/@wrapper\b/, /write @Wrapper/]],
   ["@config alone, not exported", `/** @config */\nfunction makeSettings()${body}`, "makeSettings", [/@config\b/, /write @Config/]],
   ["@lOGGING among ordinary tags", `/**\n * @param a x\n * @lOGGING\n * @returns y\n */\nexport function helper(a: string)${body}`, "helper", [/@lOGGING/, /write @Logging/]],
   ["a main marker on an exported constant", `/** @Action */\nexport const makeSave = (): Thing => null as any;\n`, "makeSave", [/@Action/, /exported constant/, /only top-level function declarations can be components/]],
-  ["a main marker on an exported constant holding a function expression", `/** @Wrapper {"ordinal": 2} */\nexport const makeAudit = function ()${body}`, "makeAudit", [/@Wrapper/, /only top-level function declarations can be components/]],
+  ["a main marker on an exported constant holding a function expression", `/** @Wrapper */\nexport const makeAudit = function ()${body}`, "makeAudit", [/@Wrapper/, /only top-level function declarations can be components/]],
   ["a main marker on a function inside a namespace", `export namespace users {\n  /** @Action */\n  export function makeSave()${body}}\n`, "makeSave", [/@Action/, /namespace users/, /only top-level function declarations can be components/]],
   ["a main marker on a function inside a nested namespace", `namespace a.b {\n  namespace c {\n    /** @Config */\n    function makeSettings()${body}  }\n}\n`, "makeSettings", [/@Config/, /namespace c/, /only top-level function declarations can be components/]],
 ];

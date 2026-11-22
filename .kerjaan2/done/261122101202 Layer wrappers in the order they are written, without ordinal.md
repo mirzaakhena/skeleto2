@@ -24,11 +24,11 @@ The layering of wrappers follows the order in which they are written, first writ
 
 ## Done when
 
-- [ ] With three wrappers written in one file, the first written is the innermost layer and the last written is the outermost, proven by a test that records the order of a call.
-- [ ] With wrappers in two files, those of the file that comes first in path order are inside those of the later file, proven by a test.
-- [ ] A wrapper marker that carries any data, such as `{"ordinal": 10}`, stops startup with the same "takes no data" message as `@Config` and `@Action`.
-- [ ] `CLAUDE.md` states the new layering rule, with a test, and no longer mentions the number.
-- [ ] The README example and its printed output, the practice documents and `docs/` describe and show the new order, recommend one wrappers file as an optional default, and nothing in them still uses the number.
+- [x] With three wrappers written in one file, the first written is the innermost layer and the last written is the outermost, proven by a test that records the order of a call.
+- [x] With wrappers in two files, those of the file that comes first in path order are inside those of the later file, proven by a test.
+- [x] A wrapper marker that carries any data, such as `{"ordinal": 10}`, stops startup with the same "takes no data" message as `@Config` and `@Action`.
+- [x] `CLAUDE.md` states the new layering rule, with a test, and no longer mentions the number.
+- [x] The README example and its printed output, the practice documents and `docs/` describe and show the new order, recommend one wrappers file as an optional default, and nothing in them still uses the number.
 
 ## Out of scope
 
@@ -59,3 +59,17 @@ The layering of wrappers follows the order in which they are written, first writ
 - Not solo and not blocked: shares files with 261122101201 only; the layering rule does not depend on the new action kinds
 - Waits for 261122101201 (owner chose sequential work): both rewrite the README example wrappers, CLAUDE.md 4.4/4.7 and the creation loop in src/skeleto.ts
 - A1 and A2 speak of a one-file rule that the owner dropped in Q1; there is no such rule and no such message. A3 replaces them
+
+## Handoff
+Wrapper layering now follows the scan order (files in sorted path order, functions as written): the first written is innermost. Creation still follows dependency order; src/skeleto.ts sorts the wrapper list by scan index after the Wrapper group. @Wrapper takes no data: checkMainData in src/scanner.ts gives one message for every kind. README example wrappers reordered (gateway observer, transaction, audit) and its printed container order changed. CLAUDE.md 4.4, 4.7 and 8, TECHNICAL_PRACTICES, docs/teknis/wrapper.md (WRP-5) and komponen.md updated; no public document may contain the word ordinal (tested). Must not break: no technical one-file rule.
+
+## Review
+- 2026-11-22 standard, round 1, at f51235f: passed.
+  1: ran the one-file layering test (pass): written Zebra, apple, Middle gives trace Middle, apple, Zebra, SaveUser, which the old name tie-break would fail; the dependency-created-later layering test also passes
+  2: ran 'wrappers in two files: those of the file first in path order are inside those of the later file' (pass); scanner sorts paths (src/scanner.ts:41), skeleto.ts sorts wrappers by scan index
+  3: ran '@Wrapper with data {"ordinal": 1|10|-10} is a mistake naming the function' (pass); combined test asserts '@Wrapper takes no data, but has {"ordinal":10}'; one message for all main markers
+  4: CLAUDE.md 4.4, 4.7 and 8 rewritten; ran 'CLAUDE.md states that wrappers layer in written order, and no public document mentions ordinal any more' (pass); grep finds no ordinal in CLAUDE.md
+  5: README example reordered, README example output test passes; TECHNICAL_PRACTICES T11/T26, wrapper.md WRP-5, komponen.md call one wrappers file optional; grep outside test/ finds ordinal only in TEMUAN.md
+  note: TEMUAN.md:232 still says WRP-5 is 'Belum diputuskan'; a findings record not named in Done when 5, so not blocking
+  note: scenario-explorer's wrapper with {"ordinal": -10} will now fail startup; out of scope, ticket says it needs its own follow-up
+  note: only targeted tests run via k2 test; full typecheck/test/build already recorded on dfdb52a278

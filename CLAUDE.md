@@ -101,11 +101,10 @@ Inilah spesifikasi yang harus dipenuhi. Setiap butir di sini harus punya tes.
 
 | Penanda | Data yang sah |
 | --- | --- |
-| `@Config` | tidak ada |
+| `@Config`, `@Wrapper` | tidak ada |
 | `@UseCase`, `@Gateway`, `@Action` | tidak ada |
-| `@Wrapper` | tidak ada, atau `{"ordinal": <bilangan bulat>}` |
 
-Data lain adalah kesalahan. Dengan begitu sisa `{"readTypeArguments": true}` dari kode lama menghentikan startup.
+Data lain adalah kesalahan, satu pesan untuk semua jenis data: `@Wrapper {"order": 10}` sama salahnya dengan `@Config {}`. Dengan begitu sisa `{"readTypeArguments": true}` dari kode lama menghentikan startup.
 
 ### 4.5 Penanda tambahan dan daftar decorator
 
@@ -142,7 +141,7 @@ Data lain adalah kesalahan. Dengan begitu sisa `{"readTypeArguments": true}` dar
 - Config asinkron yang gagal (promise-nya ditolak) menghentikan startup sama seperti config yang melempar error: pesannya menyebut nama komponen dan fungsinya, error aslinya menjadi `cause`, komponen sesudahnya tidak dibuat, dan startup berikutnya memindai ulang.
 - Hasil komponen lain disimpan apa adanya dan tidak pernah ditunggu.
 - Hasil `@UseCase`, `@Gateway`, dan `@Action` dibungkus oleh **semua** `@Wrapper`. Wrapper dipanggil sebagai `wrapper(handler, metadata)` dan hasilnya menggantikan handler.
-- Urutan pembungkusan menurut `ordinal` (tanpa `ordinal` dianggap `0`): **angka lebih besar menjadi lapisan lebih luar**. Untuk `ordinal` yang sama, urutannya stabil menurut nama wrapper, dan nama yang **lebih akhir** (urutan teks) menjadi lapisan lebih luar (keputusan pemilik).
+- Urutan pembungkusan adalah urutan penulisan, seperti kulit bawang: wrapper yang ditulis **pertama** menjadi lapisan **terdalam** (dipasang paling dulu), yang ditulis terakhir menjadi lapisan **terluar** dan berjalan paling dulu saat dipanggil. Antarberkas, urutannya mengikuti urutan pemindaian: berkas menurut urutan path, fungsi menurut urutan tulisnya. Tidak ada aturan teknis tentang berkas tempat wrapper ditulis; satu berkas `src/wrappers.ts` hanya bawaan opsional di dokumen praktik (keputusan pemilik, 2026-11-22). Wrapper tetap dibuat menurut urutan dependency; hanya pelapisannya yang mengikuti urutan penulisan.
 - Wrapper yang mengembalikan `handler` apa adanya berarti tidak membungkus.
 - Fungsi `@UseCase`, `@Gateway`, `@Action`, fungsi `@Wrapper`, dan **setiap** pembungkusan harus menghasilkan fungsi. Hasil lain (`undefined`, objek, promise) menghentikan startup sama seperti komponen yang melempar error, dan startup berikutnya memindai ulang. Pesannya menyebut yang bersalah: action (dari jenis apa pun) dan fungsinya, atau wrapper dan fungsinya; untuk pembungkusan, wrapper dan fungsinya beserta action yang sedang dibungkus. Hasil `@Config` tidak diperiksa.
 - Action (dari jenis apa pun) yang disuntikkan ke komponen lain adalah versi yang **sudah** dibungkus.
@@ -191,7 +190,7 @@ Letak berkas terlihat dari `src/` dan `test/`. Yang tidak terlihat dari kode:
 - Tes pemindai dan startup menulis fixture ke direktori sementara (`mkdtemp`), satu direktori per kasus, dan menghapusnya setelah selesai.
 - Setiap butir di bagian 4 punya minimal satu tes. Tes kesalahan memeriksa bahwa pesannya menyebut nama fungsi atau tipe yang bermasalah.
 - Ada tes yang membuktikan startup gagal **sebelum** berkas aplikasi diimpor: berkas fixture berisi `throw` di tingkat modul, dan errornya tetap error validasi, bukan error dari `throw` itu.
-- Ada tes yang membuktikan urutan wrapper menurut `ordinal`.
+- Ada tes yang membuktikan urutan wrapper menurut urutan penulisan, dalam satu berkas dan antarberkas.
 
 ## 9. Perintah
 

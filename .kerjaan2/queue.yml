@@ -1,3 +1,2 @@
 goal: Built-in @UseCase and @Gateway kinds guarded at startup, then wrapper layering by scan order without ordinal
 order:
-  - 261122101202   # Layer wrappers in the order they are written, without ordinal

@@ -284,7 +284,7 @@ export function implStockTransfer(lockWarehouses: LockWarehouses, saveWarehouses
 }
 ```
 
-Wrappers. **Every** wrapper is offered **every** action, together with the action's metadata. A wrapper that returns the handler it was given leaves that action alone. The wrapper with the larger `ordinal` ends up further outside; without one the `ordinal` is `0`, and wrappers with equal ordinals are layered by name, the later name outside.
+Wrappers. **Every** wrapper is offered **every** action, together with the action's metadata. A wrapper that returns the handler it was given leaves that action alone. The order in which wrappers are written is the layering, like the skin of an onion: the wrapper written **first** is the **innermost** layer, so the file reads from the core outward, and the wrapper written last is the outermost and runs first on a call. Wrappers in several files follow the order of the scan (files in sorted path order, functions as written). Keeping all wrappers in one `src/wrappers.ts` is an optional default that makes the order easy to read; Skeleto does not require it.
 
 The gateway observer wrapper is **Optional**. When the context carries an observer at `ctx.data.gatewayObserver`, it hands each gateway call to it, with the gateway's name, its input and a way to call through; when there is none, it returns the handler's own result and changes nothing.
 
@@ -306,27 +306,11 @@ function marked(metadata: FuncMetadata, marker: string): boolean {
   return metadata.additionalDecorators.some((decorator) => decorator.name === marker);
 }
 
-/** @Wrapper {"ordinal": 10} */
-export function implAuditWrapper(logger: Logger): AuditWrapper {
-  return (handler, metadata) => {
-    // Only what is marked @Audit: the gateways a use case calls are details of it.
-    if (!marked(metadata, "Audit")) return handler;
-    return async (ctx, input) => {
-      logger(`enter ${metadata.name}`);
-      try {
-        return await handler(ctx, input);
-      } finally {
-        logger(`leave ${metadata.name}`);
-      }
-    };
-  };
-}
-
 /**
  * Optional: only an application that lets a tool outside it observe a run needs this wrapper.
- * It is the innermost wrapper, so what it reports is the gateway call itself, without the transaction or the audit around it.
+ * It is written first, which makes it the innermost wrapper, so what it reports is the gateway call itself, without the transaction or the audit around it.
  *
- * @Wrapper {"ordinal": -10}
+ * @Wrapper
  */
 export function implGatewayWrapper(): GatewayWrapper {
   return (handler, metadata) => {
@@ -368,6 +352,22 @@ export function implTransactionWrapper(connection: Connection, logger: Logger): 
       // Effects run only once the change is stored; on a rollback they are dropped with the rest of the context.
       for (const effect of afterCommit) await effect();
       return result;
+    };
+  };
+}
+
+/** @Wrapper */
+export function implAuditWrapper(logger: Logger): AuditWrapper {
+  return (handler, metadata) => {
+    // Only what is marked @Audit: the gateways a use case calls are details of it.
+    if (!marked(metadata, "Audit")) return handler;
+    return async (ctx, input) => {
+      logger(`enter ${metadata.name}`);
+      try {
+        return await handler(ctx, input);
+      } finally {
+        logger(`leave ${metadata.name}`);
+      }
     };
   };
 }
@@ -422,22 +422,22 @@ refused: warehouse south holds 3 units, not 50
 Connection: @Config {"dependencies":[],"additionalDecorators":[]}
 Database: @Config {"dependencies":[],"additionalDecorators":[]}
 Logger: @Config {"dependencies":[],"additionalDecorators":[]}
-AuditWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
 GatewayWrapper: @Wrapper {"dependencies":[],"additionalDecorators":[]}
 TransactionWrapper: @Wrapper {"dependencies":["Connection","Logger"],"additionalDecorators":[]}
+AuditWrapper: @Wrapper {"dependencies":["Logger"],"additionalDecorators":[]}
 NotifyWarehouses: @Gateway {"dependencies":["Logger"],"additionalDecorators":[]}
 LockWarehouses: @Gateway {"dependencies":["Database"],"additionalDecorators":[]}
 SaveWarehouses: @Gateway {"dependencies":["Database"],"additionalDecorators":[]}
 StockTransfer: @UseCase {"dependencies":["LockWarehouses","SaveWarehouses","NotifyWarehouses"],"additionalDecorators":[{"name":"Transaction"},{"name":"Audit","data":{"level":"info"}}]}
 ```
 
-The output shows the layering: `AuditWrapper` (ordinal 10) is outside `TransactionWrapper` (ordinal 0), and `GatewayWrapper` (ordinal -10) is inside both. `AuditWrapper` wraps only the use case marked `@Audit`, so the gateways do not appear in its log, and `GatewayWrapper` does nothing here because no observer is in the context. The report of the changed stock comes after the commit, and the failed transfer rolls back without one. The entity's functions are not in the container.
+The output shows the layering: `GatewayWrapper` is written first and is innermost, `TransactionWrapper` is around it, and `AuditWrapper`, written last, is outside both. `AuditWrapper` wraps only the use case marked `@Audit`, so the gateways do not appear in its log, and `GatewayWrapper` does nothing here because no observer is in the context. The report of the changed stock comes after the commit, and the failed transfer rolls back without one. The entity's functions are not in the container.
 
 ## Rules worth knowing
 
 - A component must be an exported top-level `function` declaration with a return type annotation, and every parameter needs a type annotation. Arrow functions and methods are not picked up. A marked function that is a default export is a mistake, not something skipped: only a named `export` counts, and startup says so.
 - One component per type name. To offer two things of the same shape, give each its own type alias, as `AuditWrapper` and `TransactionWrapper` do above.
-- A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config`, `@UseCase`, `@Gateway` and `@Action` take no data; `@Wrapper` takes none or `{"ordinal": <integer>}`. Any tag that starts with a lowercase letter (`@param`, `@returns`, `@example`, ...) is a standard JSDoc tag and is ignored.
+- A marker starts its line inside the JSDoc block. Text after it is its data: JSON when it starts with `{`, otherwise plain text. `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` and `@Action` take no data. Any tag that starts with a lowercase letter (`@param`, `@returns`, `@example`, ...) is a standard JSDoc tag and is ignored.
 - **Where markers go.** Write the description first, then the markers, one per line, with nothing after a marker but its data. Data runs on to the next marker, so a sentence written after a marker becomes that marker's data: after `@UseCase` that stops startup (it takes no data), and after an additional marker such as `@Audit` it silently becomes the data of that marker. For the same reason a line inside an `@example` body that starts with a main marker is read as a real marker and turns that function into a component; do not begin an example line with `@Config`, `@Wrapper`, `@UseCase`, `@Gateway` or `@Action`.
 - Pass `decorators` to catch markers that are misspelt or misplaced. Without it, a function with no main marker is not looked at, so a wrapper marked `@Wraper` is skipped and every action runs without it. With it, these stop startup, each naming the function or constant, its file and the marker:
   - a top-level function whose JSDoc block has markers but no main marker (`@Wraper`, `@Actions`, or only `@Transaction`);

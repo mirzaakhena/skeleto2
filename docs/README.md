@@ -4,7 +4,7 @@ Dokumen di folder ini disusun **per komponen**: setiap berkas membahas satu hal,
 
 ## Status
 
-Folder ini adalah **satu-satunya rangkaian aturan** untuk aplikasi yang dibangun di atas Skeleto. Tidak ada dokumen praktik lain. `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md`, dan `DEVELOPMENT_PROCESS.md` di akar repo hanya penunjuk ke sini, dan `REVIEW_CHECKLIST.md` memuat setiap aturan folder ini dalam satu daftar untuk reviewer. Tes repo (`test/readme.test.ts`) memeriksa strukturnya: nomor aturan, setiap kutipan nomor, isi checklist, dan contoh kodenya terhadap contoh di README.
+Folder ini adalah **satu-satunya rangkaian aturan** untuk aplikasi yang dibangun di atas Skeleto. Tidak ada dokumen praktik lain. Tiga berkas di akar repo (`BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md`, `DEVELOPMENT_PROCESS.md`) sudah dihapus; tabel nomor lama ke nomor baru di bawah tetap ada untuk kutipan B, T, dan P di riwayat papan dan `TEMUAN.md`. Selain itu, `REVIEW_CHECKLIST.md` memuat setiap aturan folder ini dalam satu daftar untuk reviewer. Tes repo (`test/readme.test.ts`) memeriksa strukturnya: nomor aturan, setiap kutipan nomor, isi checklist, dan contoh kodenya terhadap contoh di README.
 
 Aturan di sini untuk aplikasi yang Anda bangun, bukan aturan framework. Yang dijaga Skeleto sendiri saat startup (jenis komponen dan dependency-nya, urutan lapisan wrapper) ditandai **Mesin** di checklist; selebihnya Skeleto tidak memeriksanya, dan aplikasi yang tersusun lain tetap menyala.
 

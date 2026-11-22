@@ -19,6 +19,11 @@ The three pointer files are gone, and nothing in the repository still points to 
 
 ## Done when
 
-- [ ] `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md` and `DEVELOPMENT_PROCESS.md` no longer exist.
-- [ ] No document, test or configuration links to them; `docs/README.md` may still name them where it explains its old-to-new number table, without a link.
-- [ ] The repository's tests pass.
+- [x] `BEST_PRACTICES.md`, `TECHNICAL_PRACTICES.md` and `DEVELOPMENT_PROCESS.md` no longer exist.
+- [x] No document, test or configuration links to them; `docs/README.md` may still name them where it explains its old-to-new number table, without a link.
+- [x] The repository's tests pass.
+
+<!-- k2:record — written by k2 only; do not edit by hand -->
+
+## Handoff
+Deleted BEST_PRACTICES.md, TECHNICAL_PRACTICES.md, DEVELOPMENT_PROCESS.md. The test in test/readme.test.ts that checked they were one-paragraph pointers now asserts they do not exist. docs/README.md status paragraph names them without links and says the old-to-new number table stays. Do not recreate them; the README test still bans their names in README.md. Note the docs README test bans the phrase 'dokumen lama'.

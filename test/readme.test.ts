@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { readFileSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { test } from "node:test";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { DEFAULT_EXCLUDE } from "../src/index.js";
@@ -489,14 +489,8 @@ test("every old rule number in the table of docs/README.md maps to rules that ex
   for (const [, old, replacement] of rows) for (const [number] of (replacement ?? "").matchAll(/[A-Z]+-\d+/g)) assert.ok(known.has(number), `${old} maps to ${number}, which does not exist`);
 });
 
-test("docs/ is the only rule set: the old documents are pointers, and nothing says they still apply", () => {
-  for (const [file, prefix] of [["BEST_PRACTICES.md", "B"], ["TECHNICAL_PRACTICES.md", "T"], ["DEVELOPMENT_PROCESS.md", "P"]]) {
-    const text = readFileSync(`${repo}${file}`, "utf8");
-    const paragraphs = text.split("\n").filter((line) => line.trim() !== "" && !line.startsWith("# "));
-    assert.equal(paragraphs.length, 1, `${file} is not a one-paragraph pointer`);
-    assert.match(text, /\]\(docs\/README\.md\)/, `${file} does not point to docs/README.md`);
-    assert.doesNotMatch(text, new RegExp(`^### ${prefix}\\d+\\.`, "m"), `${file} still holds rules`);
-  }
+test("docs/ is the only rule set: the old documents are deleted, and nothing says they still apply", () => {
+  for (const file of ["BEST_PRACTICES.md", "TECHNICAL_PRACTICES.md", "DEVELOPMENT_PROCESS.md"]) assert.equal(existsSync(`${repo}${file}`), false, `${file} must stay deleted`);
   const guide = readFileSync(`${repo}CLAUDE.md`, "utf8");
   for (const [document, text] of Object.entries({ ...docs, "README.md": readme, "CLAUDE.md": guide, "REVIEW_CHECKLIST.md": checklist })) {
     assert.doesNotMatch(text, /masih berlaku|untuk sementara|rancangan pengganti|dokumen lama|Rencana, belum terealisasi|still apply|until the owner decides/i, `${document} suggests that the old documents still apply`);

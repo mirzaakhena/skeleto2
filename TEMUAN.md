@@ -25,6 +25,7 @@ Dimulai: 2026-11-21.
 | 17 | Definisi Core, Supporting, Generic menurut pemilik berbeda dari yang tertulis | diputuskan; ditulis di DEV-3 dan DEV-14 |
 | 18 | Aturan dependency use case dan gateway lebih ketat: use case → gateway saja, gateway → config saja | selesai: main `78d4ab8` (tiket 261122113801) |
 | 19 | Hasil review independen kode dan aturan (main `78d4ab8`) | selesai: tiga tiket digabung (`299895a`, `cd2e5a3`, `a7b7917`) |
+| 20 | Permintaan nukitu: Response disaring menurut pengguna | diputuskan pemilik (2026-11-23): ditunda, tanpa aturan baru; ditulis bersama aturan identitas dan otorisasi (temuan 15) |
 
 ---
 
@@ -168,7 +169,7 @@ Dimulai: 2026-11-21.
   5. **Panggilan lambat di dalam transaksi.** Efek luar sudah diatur (setelah commit atau outbox), tetapi membaca layanan luar yang lambat sambil memegang kunci belum diatur.
   6. **Lebih dari satu proses.** Kunci di memori hanya berlaku di satu proses. Dokumen tidak menyatakan bahwa kunci harus milik penyimpanan bersama ketika aplikasi berjalan di beberapa instance.
 - **Urusan lain yang belum diatur sama sekali:**
-  1. **Identitas dan otorisasi.** Tidak ada aturan di mana "siapa pengguna ini" disimpan dan siapa yang memeriksa haknya. UC-11 melarang use case membaca context, jadi identitas harus datang lewat Request atau gateway, tetapi itu tidak tertulis. Aturan hak ("hanya pemilik gudang boleh memindahkan stok") adalah aturan bisnis, jadi seharusnya di entity.
+  1. **Identitas dan otorisasi.** **Catatan (2026-11-23):** permintaan nukitu agar Response disaring menurut pengguna (temuan 20) ditunda ke aturan ini; tulis keduanya bersama. Tidak ada aturan di mana "siapa pengguna ini" disimpan dan siapa yang memeriksa haknya. UC-11 melarang use case membaca context, jadi identitas harus datang lewat Request atau gateway, tetapi itu tidak tertulis. Aturan hak ("hanya pemilik gudang boleh memindahkan stok") adalah aturan bisnis, jadi seharusnya di entity.
   2. **Idempotensi permintaan masuk.** GW-11 hanya mengatur penerima pesan outbox. Permintaan ganda dari controller (tombol ditekan dua kali, retry HTTP) belum diatur.
   3. **Batas waktu dan percobaan ulang panggilan keluar** (HTTP ke pihak ketiga) di gateway.
   4. **Error program** (bukan `BusinessError`): bagaimana controller menjawab dan mencatatnya.
@@ -322,3 +323,13 @@ Reviewer independen (tidak membaca `TEMUAN.md` dan papan) memeriksa `src/`, tes,
 - 261122135602 (`@Action` dihapus; penanda utama tinggal `@Config`, `@Wrapper`, `@UseCase`, `@Gateway`) digabung di `cd2e5a3`.
 - 261122135603 (`docs/` satu-satunya sumber aturan; tiga dokumen lama menjadi penunjuk; `REVIEW_CHECKLIST.md` berbahasa Indonesia dengan nomor baru; UC-16 semua use case ber-`@Transaction`; WRP-5 wajib, WRP-7 baru) digabung di `a7b7917`. Ini menutup temuan 13.
 - Pengingat #1: `src/` sekarang 510 baris.
+
+## 20. Permintaan nukitu: Response disaring menurut pengguna, 2026-11-23
+
+- **Asal:** pemilik aplikasi nukitu memutuskan (2026-11-23) bahwa data Response yang dikirim server ke aplikasi client harus difilter supaya tidak membuka data yang tidak relevan bagi penggunanya. nukitu punya tiga jenis pengguna (Customer, Partner, Admin), masing-masing dengan aplikasi client sendiri, melihat Contract yang sama. Pemilik nukitu setuju ini aturan umum milik Skeleto, bukan milik nukitu.
+- **Fakta:** UC-5 (use case punya Response sendiri, tidak mengembalikan entity) dan UC-6 (Response dibentuk menurut operasi bisnis, bukan screen) belum mengatur penyaringan per pengguna. Temuan 15 (urusan lain, butir 1) mencatat bahwa identitas dan otorisasi belum punya aturan; UC-11 melarang use case membaca context, jadi identitas hanya bisa datang lewat Request atau gateway.
+- **Pilihan:**
+  1. **Tunda sampai aturan identitas dan otorisasi (temuan 15) ada**, lalu tulis keduanya bersama. Tidak ada aturan baru sekarang; nukitu menunggu.
+  2. **Tulis aturan UC baru sekarang**, berdiri sendiri: Response memuat hanya yang relevan bagi peran peminta; peran datang lewat Request (bukan context); tiap peran yang berbeda mendapat operasi bisnis dan tipe Response sendiri, bukan satu Response lebar yang disaring controller atau wrapper. Aturan ini memberi nomor, baris di `REVIEW_CHECKLIST.md`, dan contoh README.
+- **Keputusan pemilik (2026-11-23):** pilihan 1. "Tunda: catat sebagai temuan 20 saja, tanpa aturan baru; aturannya ditulis nanti bersama aturan identitas dan otorisasi (temuan 15)." Tidak ada aturan, nomor, baris checklist, atau perubahan README sekarang.
+- **Status:** diputuskan (ditunda). Saat aturan identitas dan otorisasi ditulis (temuan 15), aturan penyaringan Response per pengguna ditulis bersamanya, di dekat UC-5 dan UC-6. Pemberitahuan hasil ke sesi nukitu dilakukan di luar repo ini.

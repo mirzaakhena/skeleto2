@@ -34,9 +34,10 @@ Skeleto's rules tell an application how to keep each user from receiving data th
   → Tunda (yang dikerjakan): catat sebagai temuan 20 saja, tanpa aturan baru; aturannya ditulis nanti bersama aturan identitas dan otorisasi (temuan 15). (owner, 2026-11-23)
 
 ## Manual checks
-- M1 [waiting] (item 3) 1. Answer Q1 on the ticket.
+- M1 [ok] (item 3) 1. Answer Q1 on the ticket.
   2. Tell the nukitu session the outcome (it keeps a ticket waiting to consume it).
   3. If a rule was chosen, open a follow-up ticket to write it.
+  Checked by owner, 2026-11-23
 
 ## Handoff
 Added TEMUAN 20 recording nukitu's request to filter Response data per user. Owner decided 2026-11-23: defer, no new rule; the rule will be written together with the identity and authorization rule (TEMUAN 15), near UC-5/UC-6. Finding 15 item 1 carries a pointer so whoever writes that rule sees this request. Docs-only: no rule number, checklist row or README change. Telling the nukitu session is done outside the repo (M1).

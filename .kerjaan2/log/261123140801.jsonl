@@ -20,3 +20,4 @@
 {"t":"2026-11-23 16:37:47","event":"agent","role":"reviewer","agent":"a97b4dadaea9219b9","step":"review:2:0:0","session":"d9ca6a0b-a030-41be-82c0-cd5caded27a2"}
 {"t":"2026-11-23 16:38:47","event":"verdict","result":"pass","round":2,"commit":"eb8753d","session":"d9ca6a0b-a030-41be-82c0-cd5caded27a2","by":"reviewer:a97b4dadaea9219b9"}
 {"t":"2026-11-23 16:39:01","event":"landed","branch":"k2/261123140801-permintaan-nukitu-aturan-penyaringan","files":["TEMUAN.md"],"session":"d9ca6a0b-a030-41be-82c0-cd5caded27a2"}
+{"t":"2026-11-23 16:39:26","event":"manual-ok","key":"M1","session":"d9ca6a0b-a030-41be-82c0-cd5caded27a2"}
